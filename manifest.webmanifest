@@ -1,0 +1,9 @@
+{
+  "name":"KultiApp — Costos y producción 3D",
+  "short_name":"KultiApp",
+  "start_url":".",
+  "display":"standalone",
+  "background_color":"#f4f7fa",
+  "theme_color":"#0f2742",
+  "description":"Costos y producción 3D para Kultiverso Pop. Powered by ELARA."
+}
