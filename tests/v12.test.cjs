@@ -1,0 +1,93 @@
+// Run with jsdom@26.1.0 on NODE_PATH; no requests reach Supabase.
+const {JSDOM}=require('jsdom');
+const fs=require('node:fs');
+const path=require('node:path');
+const assert=require('node:assert/strict');
+const source=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8')
+ .replace(/^import[^\n]+\n/,'')
+ .replace(/const supabase=createClient\([^\n]+\n/,'const supabase={};\n')
+ .replace('dashboard()}init();','dashboard()}');
+function boot(saved={}){
+ const dom=new JSDOM('<div id="app"></div>',{url:'https://costos3d.vercel.app',runScripts:'outside-only'});
+ dom.window.confirm=()=>true;
+ dom.window.structuredClone=structuredClone;
+ dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true};
+ dom.window.HTMLDialogElement.prototype.close=function(){this.open=false;this.onclose?.()};
+ for(const[k,v]of Object.entries(saved))dom.window.localStorage.setItem(k,v);
+ dom.window.eval(source+';window.run=code=>eval(code);S.session={user:{id:"owner"}};S.workspace={id:"workspace",role:"owner"};');
+ return dom;
+}
+async function test(){
+ let dom=boot(),run=s=>dom.window.run(s);
+ run('newProduct();q("#name").value="Cuadro multicolor";refresh();q("[data-editor-tab=prints]").click();q("#addP").click();q(".addF").click()');
+ run('q(".fn").value="Rojo PLA";q(".fg").value=100;q(".fw").value=10;q(".fp").value=16000;refresh();q(".addF").click();qa(".fn")[1].value="Azul PLA";qa(".fg")[1].value=50;qa(".fw")[1].value=5;qa(".fp")[1].value=20000;refresh()');
+ assert.equal(run('S.product.prints[0].grams'),165);
+ assert.equal(run('S.product.prints[0].filament_cost'),2860);
+ assert.equal(run('q(".pf").readOnly'),true);
+ assert.equal(run('qa(".filament-subtotal")[1].textContent'),'$1.100');
+ run('q(".ph").value=2;q(".calcP").click()');
+ assert.equal(run('S.product.prints[0].electricity_cost'),826);
+ run('q(".dupP").click()');
+ assert.equal(run('S.product.prints.length'),2);
+ run('qa(".fg")[2].value=1;refresh()');
+ assert.equal(run('S.product.prints[0].filaments[0].grams'),100);
+ assert.equal(run('S.product.prints[1].filaments[0].grams'),1);
+ run('qa(".rmP")[1].click();q("#qty").value=2;refresh();q("[data-editor-tab=costs]").click();q(".ca").value=1000;refresh();q("#addD").click()');
+ const saved=Object.fromEntries(Object.keys(dom.window.localStorage).map(k=>[k,dom.window.localStorage.getItem(k)]));
+ dom=boot(saved);run=s=>dom.window.run(s);
+ assert.equal(run('restoreActiveDraft()'),true);run('render()');
+ assert.equal(run('S.editorTab'),'costs');
+ assert.equal(run('q("#name").value'),'Cuadro multicolor');
+ assert.equal(run('S.product.prints[0].filaments.length'),2);
+ assert.equal(run('q(".ca").value'),'1000');
+ assert.equal(run('qa(".cost-row.direct").length'),5);
+ const t=run('totals()');
+ assert(Math.abs(t.finalNet+t.finalIva-t.rounded)<1e-8);
+ assert(Math.abs(t.utilityUnit-(t.finalNet-t.unit))<1e-8);
+ run('q("#iva").checked=false;refresh()');
+ assert.equal(run('totals().finalIva'),0);
+ run('q("#iva").checked=true;refresh();q("[data-editor-tab=summary]").click();q("#quote").click()');
+ const html=run('q("#quoteSheet").innerHTML');
+ assert(!/Costo|Utilidad|Margen|2860/.test(html));
+ assert(html.includes('Cuadro multicolor'));
+ run('q("#closeQuote").click()');
+ assert.equal(run('q("#quoteDialog")'),null);
+ run('q("[data-editor-tab=prints]").click()');
+ for(let i=2;i<7;i++)run('q(".addF").click()');
+ assert.equal(run('qa(".filament-row").length'),7);
+ assert.equal(run('q(".addF").disabled'),true);
+ run('q(".rmF").click()');
+ assert.equal(run('qa(".filament-row").length'),6);
+ assert.equal(run('q(".addF").disabled'),false);
+ run('S.product.photo_data="data:image/jpeg;base64,YWJj";render()');
+ assert.equal(run('qa(".product-photo").length'),1);
+ assert.equal(run('validPhoto("data:image/svg+xml;base64,YWJj")'),false);
+ run('q("#removePhoto").click()');
+ assert.equal(run('S.product.photo_data'),null);
+ run('saveSettings=async()=>{};supabase.rpc=async()=>({error:{message:"Offline"}})');
+ await run('saveProduct()');
+ assert.equal(run('readDraft("new").product.name'),'Cuadro multicolor');
+ run('supabase.rpc=async(name,args)=>{window.payload={name,args};return{data:"saved-product",error:null}}');
+ await run('saveProduct()');
+ assert.equal(dom.window.payload.name,'save_product_bundle_v2');
+ assert.equal(dom.window.payload.args.p_prints[0].filaments.length,6);
+ assert.equal(run('activeDraftId()'),null);
+ assert.equal(run('S.dirty'),false);
+ assert(run('q("#draftStatus").textContent.includes("Guardado en la nube")'));
+ run('q("#name").value="Otro nombre";refresh()');
+ assert.equal(run('S.dirty'),true);
+ assert(run('q("#draftStatus").textContent.includes("Borrador")'));
+ run('S.workspace.role="viewer";product()');
+ assert.equal(run('q("#addP").disabled'),true);
+ assert.equal(run('q("#quote").disabled'),false);
+ run('q("[data-editor-tab=summary]").click();q("#quote").click()');
+ assert.equal(run('q("#quoteDialog").open'),true);
+ run('q("#closeQuote").click();S.session.user.id="other"');
+ assert.equal(run('restoreActiveDraft()'),false);
+ run('S.workspace.role="owner";S.products=[];S.mode="dashboard";dashboard()');
+ assert.equal(run('q(".dashboard-extra").querySelectorAll(".metric").length'),2);
+ assert.equal(run('q(".kpi-grid").children.length'),2);
+ console.log('PASS V1.2: multicolor/purge, legacy-compatible totals, duplication, seven-color limit, reload/drafts, cloud success/failure, photo safety, quote privacy, viewer permissions and compact dashboard.');
+ dom.window.close();
+}
+test().catch(error=>{console.error(error);process.exitCode=1});
