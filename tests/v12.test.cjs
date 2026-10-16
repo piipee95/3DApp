@@ -69,7 +69,7 @@ async function test(){
  assert.equal(run('readDraft("new").product.name'),'Cuadro multicolor');
  run('supabase.rpc=async(name,args)=>{window.payload={name,args};return{data:"saved-product",error:null}}');
  await run('saveProduct()');
- assert.equal(dom.window.payload.name,'save_product_bundle_v2');
+ assert.equal(dom.window.payload.name,'save_product_bundle_v3');
  assert.equal(dom.window.payload.args.p_prints[0].filaments.length,6);
  assert.equal(run('activeDraftId()'),null);
  assert.equal(run('S.dirty'),false);
@@ -90,4 +90,5 @@ async function test(){
  console.log('PASS V1.2: multicolor/purge, legacy-compatible totals, duplication, seven-color limit, reload/drafts, cloud success/failure, photo safety, quote privacy, viewer permissions and compact dashboard.');
  dom.window.close();
 }
-test().catch(error=>{console.error(error);process.exitCode=1});
+module.exports={boot};
+if(require.main===module)test().catch(error=>{console.error(error);process.exitCode=1});
