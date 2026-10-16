@@ -19,8 +19,12 @@ function boot(saved={}){
 }
 async function test(){
  let dom=boot(),run=s=>dom.window.run(s);
+ run('q("#app").innerHTML=filamentPanel({filaments:[{name:"Anterior",grams:100,purge_grams:10,price_per_kg:16000}]})');
+ assert.equal(run('q(".fg").value'), '110');
+ assert.equal(run('filamentTotals(collectFilaments(q("#app"))).cost'),1760);
  run('newProduct();q("#name").value="Cuadro multicolor";refresh();q("[data-editor-tab=prints]").click();q("#addP").click();q(".addF").click()');
- run('q(".fn").value="Rojo PLA";q(".fg").value=100;q(".fw").value=10;q(".fp").value=16000;refresh();q(".addF").click();qa(".fn")[1].value="Azul PLA";qa(".fg")[1].value=50;qa(".fw")[1].value=5;qa(".fp")[1].value=20000;refresh()');
+ run('q(".fn").value="Rojo PLA";q(".fg").value=110;q(".fp").value=16000;refresh();q(".addF").click();qa(".fn")[1].value="Azul PLA";qa(".fg")[1].value=55;qa(".fp")[1].value=20000;refresh()');
+ assert.equal(run('q(".fw")'),null);
  assert.equal(run('S.product.prints[0].grams'),165);
  assert.equal(run('S.product.prints[0].filament_cost'),2860);
  assert.equal(run('q(".pf").readOnly'),true);
@@ -30,7 +34,7 @@ async function test(){
  run('q(".dupP").click()');
  assert.equal(run('S.product.prints.length'),2);
  run('qa(".fg")[2].value=1;refresh()');
- assert.equal(run('S.product.prints[0].filaments[0].grams'),100);
+ assert.equal(run('S.product.prints[0].filaments[0].grams'),110);
  assert.equal(run('S.product.prints[1].filaments[0].grams'),1);
  run('qa(".rmP")[1].click();q("#qty").value=2;refresh();q("[data-editor-tab=costs]").click();q(".ca").value=1000;refresh();q("#addD").click()');
  const saved=Object.fromEntries(Object.keys(dom.window.localStorage).map(k=>[k,dom.window.localStorage.getItem(k)]));
