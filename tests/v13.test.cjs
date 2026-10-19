@@ -21,7 +21,7 @@ async function test(){
  assert.equal(run('S.product.sale_price'),null);
  run(`q('#salePrice').value=4990;refresh();saveSettings=async()=>{};supabase.rpc=async(name,args)=>{window.bundle={name,args};return{data:'product1',error:null}}`);
  await run('saveProduct()');
- assert.equal(dom.window.bundle.name,'save_product_bundle_v3');
+ assert.equal(dom.window.bundle.name,'save_product_bundle_v4');
  assert.equal(dom.window.bundle.args.p_sale_price,4990);
  assert.equal(dom.window.bundle.args.p_prints[0].power_kw,.5);
  run('showNewOrder()');
@@ -46,7 +46,7 @@ async function test(){
  assert(!/Costo|Utilidad|Margen/.test(run('q("#quoteSheet").textContent')));
  run(`q('#closeQuote').click();q('#orderDialog [data-close]').click()`);
  assert(Math.abs(run('orderNumbers(S.orders[0]).actualProfit')-(14970/1.19-7500))<1e-8);
- run(`S.mode='resources';resourcesView();q('[data-edit-resource=f1]').click();q('#resourcePrice').value=25000;q('#resourceForm').dispatchEvent(new SubmitEvent('submit',{bubbles:true,cancelable:true,submitter:q('#resourceForm button[type=submit]')}))`);
+ run(`S.mode='inventory';inventoryView();q('[data-inventory-edit=f1]').click();q('#invCost').value=25;q('#inventoryForm').dispatchEvent(new SubmitEvent('submit',{bubbles:true,cancelable:true,submitter:q('#inventoryForm button[type=submit]')}))`);
  await flush();
  assert.equal(run('S.resources.find(r=>r.id==="f1").price_per_kg'),25000);
  assert.equal(run('S.product.prints[0].filaments[0].price_per_kg'),20000);
@@ -59,7 +59,7 @@ async function test(){
  assert.equal(run('q("#orderForm button[type=submit]")'),null);
  run(`q('#orderDialog [data-close]').click();S.mode='resources';resourcesView()`);
  assert.equal(run('qa("[data-add-resource]").length'),0);
- assert.equal(run('qa(".app-nav button").length'),3);
+ assert.equal(run('qa(".app-nav button").length'),4);
  console.log('PASS V1.3: catalog selection, resource snapshots, printer electricity, manual price/quote/margins, saved bundle, order creation and actuals, filters and viewer restrictions.');
  dom.window.close();
 }

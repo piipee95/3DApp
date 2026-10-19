@@ -73,7 +73,7 @@ async function test(){
  assert.equal(run('readDraft("new").product.name'),'Cuadro multicolor');
  run('supabase.rpc=async(name,args)=>{window.payload={name,args};return{data:"saved-product",error:null}}');
  await run('saveProduct()');
- assert.equal(dom.window.payload.name,'save_product_bundle_v3');
+ assert.equal(dom.window.payload.name,'save_product_bundle_v4');
  assert.equal(dom.window.payload.args.p_prints[0].filaments.length,6);
  assert.equal(run('activeDraftId()'),null);
  assert.equal(run('S.dirty'),false);

@@ -1,0 +1,41 @@
+const assert=require('node:assert/strict');
+const{boot}=require('./v12.test.cjs');
+const flush=()=>new Promise(r=>setImmediate(r));
+async function test(){
+ const dom=boot(),run=s=>dom.window.run(s);
+ run(`S.resources=[{id:'f1',kind:'filament',name:'Rojo',material:'PLA',color:'#ff0000',unit:'g',unit_cost:16,price_per_kg:16000,stock_qty:1000,reserved_qty:100,min_stock:200,counted:true,active:true},{id:'m1',kind:'supply',name:'Marco',unit:'un',unit_cost:1500,stock_qty:5,reserved_qty:4,min_stock:2,counted:true,active:true}];newProduct();q('[data-editor-tab=costs]').click();q('#addRecipe').click();q('#recipeAmount').value=2;q('#recipeForm').dispatchEvent(new SubmitEvent('submit',{cancelable:true,submitter:q('#recipeForm button[type=submit]')}));`);
+ assert.equal(run('S.product.materials[0].quantity'),2);
+ assert.equal(run('totals().total'),3000);
+ assert.equal(run('recipeRequirements()[0].quantity'),2);
+ assert(run('q("#recipeStock .loss-text")'));
+ run(`q('[data-editor-tab=prints]').click();q('#addP').click();q('.addF').click();q('.filamentSelect').value='f1';q('.filamentSelect').dispatchEvent(new Event('change'));q('.fg').value=100;refresh();q('.dupP').click();`);
+ assert.equal(run('S.product.prints[1].filaments[0].resource_id'),'f1');
+ assert.equal(run('recipeRequirements().find(x=>x.id==="f1").quantity'),200);
+ assert.equal(run('totals().total'),6200);
+ run(`S.product.id='product';S.dirty=false;showNewOrder();q('#orderQty').value=2;q('#orderQty').dispatchEvent(new Event('input'));`);
+ assert(run('q("#newOrderStock").textContent.includes("400 g")'));
+ run(`q('#newOrderDialog').close();S.resources[0].unit_cost=20;S.resources[0].price_per_kg=20000;S.resources[1].unit_cost=2000;loadResources=async()=>{};q('#refreshMaterialPrices').click()`);
+ await flush();
+ assert.equal(run('totals().total'),8000);
+ assert.equal(run('S.product.materials[0].unit_cost'),2000);
+ // Durable draft includes inventory IDs and quantities after a page reload.
+ run('persistDraft()');const saved=Object.fromEntries(Object.keys(dom.window.localStorage).map(k=>[k,dom.window.localStorage.getItem(k)]));
+ const reload=boot(saved);reload.window.run(`S.products=[{id:'product',status:'active'}];restoreActiveDraft();render()`);
+ assert.equal(reload.window.run('S.product.materials[0].resource_id'),'m1');reload.window.close();
+ run(`S.mode='inventory';inventoryView()`);
+ assert.equal(run('inventoryLow().length'),1);
+ assert(run('q("main").textContent.includes("Reservado")'));
+ run(`showStockMovement(S.resources[0]);q('#stockQuantity').value=1000;q('#stockPrice').value=15990;q('#stockPrice').dispatchEvent(new Event('input'))`);
+ assert(run('q("#stockPreview").textContent.includes("15,99")'));
+ run(`q('#stockDialog').close();window.calls=[];supabase.rpc=async(name,args)=>{window.calls.push({name,args});return{error:null}};loadOrders=async()=>{S.orders=[{id:'order1',inventory_state:'consumed',quantity:1,unit_price:5000,estimated_cost:1000,status:'ready'}]};productionView=()=>{};showOrder=()=>{};showOrderConsumption({id:'order1',order_no:1},[{resource_id:'f1',name:'Rojo',quantity:100,unit:'g'}]);q('#consumeQty0').value=120;q('#consumeForm').dispatchEvent(new SubmitEvent('submit',{cancelable:true,submitter:q('#consumeForm button[type=submit]')}))`);
+ await flush();
+ assert.equal(run('window.calls[0].name'),'inventory_consume_order');
+ assert.equal(run('window.calls[0].args.p_actual.f1'),120);
+ run(`S.workspace.role='viewer';S.mode='inventory';inventoryView()`);
+ assert.equal(run('q("#addInventory")'),null);
+ assert.equal(run('qa("[data-stock]").length'),0);
+ assert.equal(run('qa("[data-ledger]").length'),2);
+ console.log('PASS V1.4: recipe cost/quantities, linked colors, duplication, shortages, proportional order reservations, explicit price refresh, durable drafts, movement preview, actual-consumption RPC and viewer controls.');
+ dom.window.close();
+}
+test().catch(e=>{console.error(e);process.exitCode=1});
