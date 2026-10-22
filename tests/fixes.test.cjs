@@ -26,7 +26,7 @@ async function test(){
  run('S.settings.electricity_rate_clp_kwh=236;restoreDraft("new")');
  assert.equal(run('S.settings.electricity_rate_clp_kwh'),236);
  assert.equal(run('S.settingsDirty'),false);
- run(`S.mode='product';render();q('#cfgElec').value=300;q('#cfgElec').dispatchEvent(new Event('input'));S.settings.electricity_rate_clp_kwh=236;S.settingsDirty=false;restoreDraft("new")`);
+ run(`S.mode='product';render();q('#cfgElec').value=300;q('#cfgElec').dispatchEvent(new Event('input'));persistDraft(false);S.settings.electricity_rate_clp_kwh=236;S.settingsDirty=false;restoreDraft("new")`);
  assert.equal(run('S.settings.electricity_rate_clp_kwh'),300);
  assert.equal(run('S.settingsDirty'),true);
  dom.window.close();

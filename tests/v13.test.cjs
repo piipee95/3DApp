@@ -21,7 +21,7 @@ async function test(){
  assert.equal(run('S.product.sale_price'),null);
  run(`q('#salePrice').value=4990;refresh();saveSettings=async()=>{};supabase.rpc=async(name,args)=>{window.bundle={name,args};return{data:'product1',error:null}}`);
  await run('saveProduct()');
- assert.equal(dom.window.bundle.name,'save_product_bundle_v4');
+ assert.equal(dom.window.bundle.name,'save_product_bundle_v5');
  assert.equal(dom.window.bundle.args.p_sale_price,4990);
  assert.equal(dom.window.bundle.args.p_prints[0].power_kw,.5);
  run('showNewOrder()');
