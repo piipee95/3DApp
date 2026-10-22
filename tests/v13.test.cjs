@@ -46,7 +46,7 @@ async function test(){
  assert(!/Costo|Utilidad|Margen/.test(run('q("#quoteSheet").textContent')));
  run(`q('#closeQuote').click();q('#orderDialog [data-close]').click()`);
  assert(Math.abs(run('orderNumbers(S.orders[0]).actualProfit')-(14970/1.19-7500))<1e-8);
- run(`S.mode='inventory';inventoryView();q('[data-inventory-edit=f1]').click();q('#invCost').value=25;q('#inventoryForm').dispatchEvent(new SubmitEvent('submit',{bubbles:true,cancelable:true,submitter:q('#inventoryForm button[type=submit]')}))`);
+ run(`S.mode='inventory';inventoryView();q('[data-inventory-edit=f1]').click();q('#invCost').value=25000;q('#inventoryForm').dispatchEvent(new SubmitEvent('submit',{bubbles:true,cancelable:true,submitter:q('#inventoryForm button[type=submit]')}))`);
  await flush();
  assert.equal(run('S.resources.find(r=>r.id==="f1").price_per_kg'),25000);
  assert.equal(run('S.product.prints[0].filaments[0].price_per_kg'),20000);

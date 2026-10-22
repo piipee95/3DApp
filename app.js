@@ -2574,11 +2574,11 @@ function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
       '</select></div>' +
       fieldHtml('Color', 'invColor', r.color || '#303030', 'color') +
       fieldHtml(
-        'Costo por unidad de control CLP',
+        r.kind === 'filament' ? 'Precio por kg CLP' : 'Costo por unidad de control CLP',
         'invCost',
-        r.unit_cost ?? 0,
+        r.kind === 'filament' ? Math.round(n(r.price_per_kg) * 100) / 100 : (r.unit_cost ?? 0),
         'number',
-        'min="0" max="1000000000" step="0.001" required ' + (r.counted ? 'readonly' : '')
+        'min="0" max="1000000000" step="0.001" required'
       ) +
       fieldHtml(
         'Stock mínimo de alerta',
@@ -2589,7 +2589,7 @@ function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
       ) +
       '</div><p class="small muted">' +
       (r.counted
-        ? 'El costo se actualiza con compras. Para corregir una existencia utiliza Movimiento.'
+        ? 'Las compras promedian el costo automáticamente; aquí puedes corregirlo. Los productos toman el nuevo precio al usar «Actualizar precios». Para corregir una existencia utiliza Movimiento.'
         : 'Después de guardar podrás registrar la cantidad inicial contada y su costo.') +
       '</p><label class="small"><input id="invActive" type="checkbox" ' +
       (r.active ? 'checked' : '') +
@@ -2598,6 +2598,8 @@ function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
   q('#invKind').value = r.kind;
   q('#invUnit').value = r.unit || 'un';
   const updateKind = () => {
+    q('label[for=invCost]').textContent =
+      q('#invKind').value === 'filament' ? 'Precio por kg CLP' : 'Costo por unidad de control CLP';
     if (q('#invKind').value === 'filament') {
       q('#invUnit').value = 'g';
       q('#invUnit').disabled = true;
@@ -2607,7 +2609,7 @@ function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
   q('#invKind').onchange = updateKind;
   q('#inventoryForm').onsubmit = async e => {
     e.preventDefault();
-    const b = e.submitter;
+    const b = e.submitter || e.target.querySelector('button[type=submit]');
     b.disabled = true;
     try {
       const kind = q('#invKind').value,
@@ -2619,7 +2621,8 @@ function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
           color: q('#invColor').value,
           min_stock: n(q('#invMin').value),
           active: q('#invActive').checked,
-          ...(!r.counted ? { unit_cost: cost, price_per_kg: kind === 'filament' ? cost * 1000 : 0 } : {})
+          unit_cost: kind === 'filament' ? cost / 1000 : cost,
+          price_per_kg: kind === 'filament' ? cost : 0
         };
       const query = r.id
         ? supabase.from('workspace_resources').update(v).eq('id', r.id).eq('workspace_id', S.workspace.id)

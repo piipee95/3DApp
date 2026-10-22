@@ -106,6 +106,19 @@ async function test() {
   // Viewers cannot edit stock or prices.
   run(`S.workspace.role='viewer';render()`);
   assert.equal(run('qa("[data-quick]").length'), 0);
+  // Counted filaments keep an editable price per kg (fixes typos like $1.541/kg).
+  run(`S.workspace.role='owner';requests.length=0;showInventoryForm(S.resources[0])`);
+  assert.equal(run("q('label[for=invCost]').textContent"), 'Precio por kg CLP');
+  assert.equal(run("q('#invCost').readOnly"), false);
+  assert.equal(run("q('#invCost').value"), '20000');
+  run(`q('#invCost').value=15400;q('#inventoryForm').requestSubmit()`);
+  await flush();
+  await flush();
+  const inv = JSON.parse(
+    run('JSON.stringify(requests.find(r=>r.table==="workspace_resources"&&r.op==="update").value)')
+  );
+  assert.equal(inv.price_per_kg, 15400);
+  assert.equal(inv.unit_cost, 15.4);
   dom.window.close();
   console.log(
     'PASS V1.7: filament picker with availability, product stock card, fabrication for stock (already made), customer order from stock, stock filter/sales exclusion and quick price/stock edit.'
