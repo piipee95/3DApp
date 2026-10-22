@@ -159,7 +159,7 @@ async function saveSettings() {
   S.settings = { ...S.settings, ...v };
 }
 const PRODUCT_LIST_COLUMNS =
-  'id,workspace_id,name,description,quantity,iva_enabled,iva_rate,target_margin,round_to,status,sale_price,photo_path,created_at,updated_at';
+  'id,workspace_id,name,description,quantity,iva_enabled,iva_rate,target_margin,round_to,status,sale_price,photo_path,stock_qty,stock_reserved,created_at,updated_at';
 async function loadProducts() {
   let { data, error } = await supabase
     .from('products')
@@ -255,6 +255,13 @@ function productThumb(p) {
     ? '<img class="product-thumb" src="' + esc(src) + '" alt="" loading="lazy">'
     : '<span class="thumb-empty">' + icon('package') + '</span>';
 }
+function stockCell(p) {
+  const s = productStock(p);
+  if (!s.qty) return '<span class="muted">—</span>';
+  return (
+    '<b>' + s.available + '</b>' + (s.reserved ? '<span class="sub"> +' + s.reserved + ' res.</span>' : '')
+  );
+}
 function productMenu(p) {
   if (!canEdit()) return '';
   return (
@@ -273,7 +280,11 @@ function productMenu(p) {
         p.id +
         '">' +
         icon('copy') +
-        'Duplicar</button><button type="button" class="btn" data-arc="' +
+        'Duplicar</button><button type="button" class="btn" data-quick="' +
+        p.id +
+        '">' +
+        icon('pencil') +
+        'Precio y stock</button><button type="button" class="btn" data-arc="' +
         p.id +
         '">' +
         icon('archive') +
@@ -340,7 +351,7 @@ function dashboard() {
     arch.length +
     '</span></button></div><select id="profitFilter" class="select-compact" aria-label="Rentabilidad"><option value="all">Margen: todos</option><option value="positive">Sin pérdida</option><option value="loss">Con pérdida</option><option value="uncosted">Sin costos registrados</option></select><select id="productSort" class="select-compact" aria-label="Ordenar"><option value="recent">Más recientes</option><option value="name">Nombre A–Z</option><option value="price">Precio mayor a menor</option><option value="cost">Costo mayor a menor</option><option value="margin">Margen mayor a menor</option></select></div><section class="panel product-panel">' +
     (rows.length
-      ? '<table class="data-table products-table"><thead><tr><th>Producto</th><th class="r">Costo unit.</th><th class="r">Precio final</th><th>Margen</th><th>Actualizado</th><th></th></tr></thead><tbody>' +
+      ? '<table class="data-table products-table"><thead><tr><th>Producto</th><th class="r">Costo unit.</th><th class="r">Precio final</th><th>Margen</th><th class="r">Stock</th><th>Actualizado</th><th></th></tr></thead><tbody>' +
         rows
           .map(
             p =>
@@ -360,6 +371,8 @@ function dashboard() {
               price(p) +
               '</td><td>' +
               marginChip(p) +
+              '</td><td class="r num">' +
+              stockCell(p) +
               '</td><td class="sub">' +
               relativeDate(p.updated_at) +
               '</td><td class="r">' +
@@ -383,6 +396,7 @@ function dashboard() {
               (productNumbers(p).unit > 0
                 ? 'Costo ' + clp(productNumbers(p).unit)
                 : 'Sin costos registrados') +
+              (productStock(p).qty ? ' · Stock ' + productStock(p).available : '') +
               '</span></span><span class="lr-end"><b class="num">' +
               (productNumbers(p).unit > 0 || p.sale_price != null ? clp(productNumbers(p).price) : '') +
               '</b>' +
@@ -434,6 +448,9 @@ function dashboard() {
   });
   qa('[data-dup]').forEach(b => (b.onclick = () => duplicateProduct(b.dataset.dup)));
   qa('[data-arc]').forEach(b => (b.onclick = () => archiveProduct(b.dataset.arc)));
+  qa('[data-quick]').forEach(
+    b => (b.onclick = () => showQuickEdit(S.products.find(p => p.id === b.dataset.quick)))
+  );
   qa('[data-rest]').forEach(b => (b.onclick = () => restoreProduct(b.dataset.rest)));
 }
 function newProduct() {
@@ -1623,6 +1640,12 @@ function setupV13() {
           .join('');
       row.querySelector('.color-field').prepend(picker);
       picker.value = row.dataset.resourceId || '';
+      const f = { resource_id: row.dataset.resourceId };
+      row.classList.toggle('linked', !!S.resources.find(r => r.id === f.resource_id));
+      row.insertAdjacentHTML('afterbegin', filamentChip(f));
+      const chip = row.querySelector('.pickF');
+      chip.disabled = !canEdit();
+      chip.onclick = () => showFilamentPicker(row);
     });
   });
   const order = document.createElement('button');
@@ -1631,6 +1654,32 @@ function setupV13() {
   order.innerHTML = icon('clipboard-list') + 'Crear pedido';
   order.disabled = !canEdit();
   q('.quote-actions').append(order);
+  const st = productStock(S.product),
+    stockBox = document.createElement('section');
+  stockBox.className = 'stock-card';
+  stockBox.innerHTML =
+    '<div class="stock-figure">' +
+    icon('boxes') +
+    '<div><span class="small muted">En stock</span><b id="stockFigure">' +
+    st.available +
+    (st.available === 1 ? ' unidad' : ' unidades') +
+    '</b>' +
+    (st.reserved
+      ? '<span class="small muted">' +
+        st.reserved +
+        (st.reserved === 1 ? ' reservada' : ' reservadas') +
+        ' para pedidos</span>'
+      : '') +
+    '</div></div><div class="row"><button type="button" class="btn btn-secondary" id="makeStock"' +
+    (canEdit() ? '' : ' disabled') +
+    '>' +
+    icon('plus') +
+    'Fabricar para stock</button><button type="button" class="btn btn-ghost" id="adjustStock"' +
+    (canEdit() && S.product.id ? '' : ' disabled') +
+    '>' +
+    icon('pencil') +
+    'Ajustar conteo</button></div>';
+  q('.quote-actions').after(stockBox);
   updatePriceStatus();
   enhanceFields();
 }
@@ -1655,6 +1704,12 @@ function bindV13() {
     if (!S.product.id || S.dirty) await saveProduct();
     if (S.product.id && !S.dirty) showNewOrder();
   };
+  q('#makeStock').onclick = async () => {
+    if (!canEdit() || S.photoBusy || S.saving) return;
+    if (!S.product.id || S.dirty) await saveProduct();
+    if (S.product.id && !S.dirty) showNewOrder('stock');
+  };
+  q('#adjustStock').onclick = () => showStockAdjust(S.product);
   if (!canEdit()) return;
   qa('.filamentSelect').forEach(
     select =>
@@ -1837,34 +1892,74 @@ function localToday() {
     String(d.getDate()).padStart(2, '0')
   );
 }
-function showNewOrder() {
+// kind 'customer': sale to a client (optionally served from finished stock);
+// kind 'stock': fabrication that adds finished units when it is marked ready.
+function showNewOrder(kind = 'customer') {
   if (!canEdit() || !S.product?.id) return;
   const p = S.product,
     t = totals(),
+    stock = productStock(p),
+    forStock = kind === 'stock',
     grams = p.prints.reduce((s, x) => s + n(x.grams), 0),
     minutes = p.prints.reduce((s, x) => s + n(x.hours) * 60 + n(x.minutes), 0);
   const dialog = showDialog(
     'newOrderDialog',
-    '<div class="section-title"><h2>Nuevo pedido</h2><button class="btn btn-ghost" data-close>Volver</button></div><form id="newOrderForm" class="grid"><b>' +
+    '<div class="section-title"><h2>' +
+      (forStock ? 'Fabricar para stock' : 'Pedido de cliente') +
+      '</h2><button class="btn btn-ghost" data-close>Volver</button></div><form id="newOrderForm" class="grid"><b>' +
       esc(p.name) +
       '</b>' +
-      fieldHtml('Cliente / referencia', 'orderCustomer') +
+      (forStock
+        ? '<p class="small muted">Las unidades se suman al stock del producto cuando el pedido pasa a «Listo». Los materiales se reservan ahora y se descuentan al terminar.</p>'
+        : fieldHtml('Cliente / referencia', 'orderCustomer')) +
       '<div class="grid grid-2">' +
-      fieldHtml('Cantidad', 'orderQty', t.qty, 'number', 'min="1" step="1" required') +
-      fieldHtml('Precio final por unidad', 'orderPrice', t.rounded, 'number', 'min="0" step="1" required') +
-      fieldHtml('Fecha de entrega', 'orderDue', '', 'date') +
-      '</div><details class="print-advanced"><summary>Revisar estimación del lote</summary><p class="small muted">Se ajusta proporcionalmente al cambiar la cantidad. Verifica tiempos y costos si imprimes varias piezas en una misma cama.</p><div class="grid grid-2">' +
+      fieldHtml('Cantidad', 'orderQty', forStock ? 1 : t.qty, 'number', 'min="1" step="1" required') +
+      (forStock
+        ? ''
+        : fieldHtml(
+            'Precio final por unidad',
+            'orderPrice',
+            t.rounded,
+            'number',
+            'min="0" step="1" required'
+          )) +
+      fieldHtml(forStock ? 'Fecha objetivo' : 'Fecha de entrega', 'orderDue', '', 'date') +
+      '</div>' +
+      (forStock
+        ? '<label class="check-row"><input type="checkbox" id="orderAlreadyMade"> <span><b>Ya está fabricado</b><span class="small muted">Descuenta el filamento y suma las unidades al stock ahora.</span></span></label>'
+        : stock.available > 0
+          ? '<label class="check-row"><input type="checkbox" id="orderFromStock"> <span><b>Entregar desde stock</b><span class="small muted">' +
+            stock.available +
+            (stock.available === 1 ? ' unidad disponible' : ' unidades disponibles') +
+            '. No reserva materiales: descuenta unidades terminadas al entregar.</span></span></label>'
+          : '') +
+      '<details class="print-advanced"><summary>Revisar estimación del lote</summary><p class="small muted">Se ajusta proporcionalmente al cambiar la cantidad. Verifica tiempos y costos si imprimes varias piezas en una misma cama.</p><div class="grid grid-2">' +
       fieldHtml(
         'Costo estimado del lote',
         'orderEstimate',
-        t.total,
+        forStock ? Math.round(t.total / t.qty) : t.total,
         'number',
         'min="0" step="0.01" required'
       ) +
-      fieldHtml('Gramos estimados', 'orderGrams', grams, 'number', 'min="0" step="0.01"') +
-      fieldHtml('Horas estimadas', 'orderHours', minutes / 60, 'number', 'min="0" step="0.01"') +
-      '</div></details><div class="field"><label for="orderNotes">Notas de producción</label><textarea id="orderNotes"></textarea></div><p class="small muted">Se guardará una copia del precio y la estimación. Cambiar el producto después no altera este pedido.</p><div class="small" id="orderFeedback" role="status"></div><button class="btn btn-primary" type="submit">Confirmar pedido</button></form>'
+      fieldHtml(
+        'Gramos estimados',
+        'orderGrams',
+        forStock ? Math.round((grams / t.qty) * 100) / 100 : grams,
+        'number',
+        'min="0" step="0.01"'
+      ) +
+      fieldHtml(
+        'Horas estimadas',
+        'orderHours',
+        forStock ? Math.round((minutes / 60 / t.qty) * 100) / 100 : minutes / 60,
+        'number',
+        'min="0" step="0.01"'
+      ) +
+      '</div></details><div class="field"><label for="orderNotes">Notas de producción</label><textarea id="orderNotes"></textarea></div><p class="small muted">Se guardará una copia del precio y la estimación. Cambiar el producto después no altera este pedido.</p><div class="small" id="orderFeedback" role="status"></div><button class="btn btn-primary" type="submit">' +
+      (forStock ? 'Confirmar fabricación' : 'Confirmar pedido') +
+      '</button></form>'
   );
+  const fromStock = () => !!q('#orderFromStock')?.checked;
   q('#orderQty').oninput = () => {
     const ratio = Math.max(1, n(q('#orderQty').value)) / t.qty;
     q('#orderEstimate').value = Math.round(t.total * ratio);
@@ -1873,42 +1968,68 @@ function showNewOrder() {
     updateNewOrderStock();
   };
   mountNewOrderInventory();
+  q('#orderFromStock')?.addEventListener('change', () => {
+    q('#newOrderStock').closest('.notice').hidden = fromStock();
+    q('#orderQty').max = fromStock() ? stock.available : '';
+  });
   q('#newOrderForm').onsubmit = async e => {
     e.preventDefault();
     const b = e.submitter || e.target.querySelector('button[type=submit]');
     if (b.disabled) return;
     b.disabled = true;
+    const qty = Math.max(1, Math.floor(n(q('#orderQty').value))),
+      made = forStock && q('#orderAlreadyMade').checked;
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('production_orders')
         .insert({
           workspace_id: S.workspace.id,
           product_id: p.id,
           title: p.name,
-          customer_name: q('#orderCustomer').value.trim(),
-          quantity: Math.max(1, Math.floor(n(q('#orderQty').value))),
-          unit_price: n(q('#orderPrice').value),
+          kind,
+          from_stock: fromStock(),
+          customer_name: forStock ? '' : q('#orderCustomer').value.trim(),
+          quantity: qty,
+          unit_price: forStock ? 0 : n(q('#orderPrice').value),
           iva_enabled: p.iva_enabled,
           iva_rate: p.iva_rate,
           estimated_cost: n(q('#orderEstimate').value),
-          estimated_grams: n(q('#orderGrams').value),
-          estimated_minutes: n(q('#orderHours').value) * 60,
+          estimated_grams: fromStock() ? 0 : n(q('#orderGrams').value),
+          estimated_minutes: fromStock() ? 0 : n(q('#orderHours').value) * 60,
           due_date: q('#orderDue').value || null,
           notes: q('#orderNotes').value.trim()
         })
         .select()
         .single();
       if (error) throw error;
+      if (made) {
+        const { error: readyError } = await supabase
+          .from('production_orders')
+          .update({ status: 'ready' })
+          .eq('id', data.id);
+        if (readyError) throw readyError;
+      }
       dialog.close();
-      await loadResources();
-      S.orderFilter = 'open';
+      await Promise.all([loadResources(), refreshProductStock(p.id)]);
+      S.orderFilter = made ? 'all' : 'open';
       await goMode('production');
+      S.msg = made
+        ? qty +
+          (qty === 1 ? ' unidad sumada' : ' unidades sumadas') +
+          ' al stock de ' +
+          p.name +
+          '. Filamento descontado.'
+        : forStock
+          ? 'Fabricación creada. Al marcarla «Lista» se suma al stock.'
+          : 'Pedido creado.';
+      render();
     } catch (error) {
       q('#orderFeedback').textContent = error.message;
     } finally {
       b.disabled = false;
     }
   };
+  return dialog;
 }
 function showOrder(order) {
   const t = orderNumbers(order);
@@ -1920,25 +2041,44 @@ function showOrder(order) {
       esc(order.title) +
       '</b>' +
       orderChip(order) +
-      '</div><button class="btn btn-secondary btn-sm" id="orderQuote" type="button">' +
-      icon('file-text') +
-      'Cotización</button></div><dl class="facts"><div><dt>Cliente</dt><dd>' +
-      esc(order.customer_name || '—') +
+      '</div>' +
+      (order.kind === 'stock'
+        ? '<span class="chip c-stock">Fabricación para stock</span>'
+        : '<button class="btn btn-secondary btn-sm" id="orderQuote" type="button">' +
+          icon('file-text') +
+          'Cotización</button>') +
+      '</div><dl class="facts"><div><dt>Cliente</dt><dd>' +
+      esc(orderCustomer(order)) +
       '</dd></div><div><dt>Cantidad</dt><dd>' +
       order.quantity +
       ' un.</dd></div><div><dt>Entrega</dt><dd class="' +
       (orderIsLate(order) ? 'down' : '') +
       '">' +
       shortDate(order.due_date) +
-      '</dd></div><div><dt>Venta</dt><dd>' +
-      clp(t.sales) +
-      '</dd></div><div><dt>Costo estimado</dt><dd>' +
-      clp(order.estimated_cost) +
-      '</dd></div><div><dt>Utilidad estimada</dt><dd class="' +
-      (t.estimatedProfit < 0 ? 'down' : 'up') +
-      '">' +
-      clp(t.estimatedProfit) +
-      '</dd></div></dl>' +
+      '</dd></div>' +
+      (order.kind === 'stock'
+        ? '<div><dt>Costo estimado</dt><dd>' +
+          clp(order.estimated_cost) +
+          '</dd></div><div><dt>Costo por unidad</dt><dd>' +
+          clp(n(order.estimated_cost) / Math.max(1, n(order.quantity))) +
+          '</dd></div><div><dt>Stock</dt><dd>' +
+          (order.stock_state === 'added' ? 'Sumado' : 'Al quedar listo') +
+          '</dd></div>'
+        : '<div><dt>Venta</dt><dd>' +
+          clp(t.sales) +
+          '</dd></div><div><dt>Costo estimado</dt><dd>' +
+          clp(order.estimated_cost) +
+          '</dd></div><div><dt>Utilidad estimada</dt><dd class="' +
+          (t.estimatedProfit < 0 ? 'down' : 'up') +
+          '">' +
+          clp(t.estimatedProfit) +
+          '</dd></div>') +
+      '</dl>' +
+      (order.from_stock
+        ? '<p class="notice small">Se entrega desde el stock de producto terminado: al marcarlo «Listo» o «Entregado» se descuentan ' +
+          order.quantity +
+          ' un. del stock; no consume materiales.</p>'
+        : '') +
       '</div><form id="orderForm" class="grid"><div class="field"><label for="orderStatus">Estado</label><select id="orderStatus">' +
       Object.entries(ORDER_STATUSES)
         .map(([key, label]) => '<option value="' + key + '">' + label + '</option>')
@@ -1974,21 +2114,22 @@ function showOrder(order) {
       (canEdit() ? '<button class="btn btn-primary" type="submit">Guardar avance</button>' : '') +
       '</form>'
   );
-  q('#orderQuote').onclick = () =>
-    showQuote({
-      folio: 'PED-' + order.order_no,
-      client: order.customer_name || '',
-      name: order.title,
-      description: '',
-      photo: photoSrc(S.products.find(p => p.id === order.product_id)),
-      quantity: order.quantity,
-      price: n(order.unit_price),
-      ivaEnabled: order.iva_enabled,
-      ivaRate: n(order.iva_rate),
-      ...(order.due_date
-        ? { delivery: 'Entrega estimada: ' + order.due_date.split('-').reverse().join('/') }
-        : {})
-    });
+  if (q('#orderQuote'))
+    q('#orderQuote').onclick = () =>
+      showQuote({
+        folio: 'PED-' + order.order_no,
+        client: order.customer_name || '',
+        name: order.title,
+        description: '',
+        photo: photoSrc(S.products.find(p => p.id === order.product_id)),
+        quantity: order.quantity,
+        price: n(order.unit_price),
+        ivaEnabled: order.iva_enabled,
+        ivaRate: n(order.iva_rate),
+        ...(order.due_date
+          ? { delivery: 'Entrega estimada: ' + order.due_date.split('-').reverse().join('/') }
+          : {})
+      });
   q('#orderStatus').value = order.status;
   const getActual = () => ({
     actual_cost: q('#actualCost').value === '' ? null : n(q('#actualCost').value),
@@ -2108,6 +2249,8 @@ function bindV12() {
         p.filament_cost = Math.round(total.cost);
         S.dirty = true;
         render();
+        const rows = qa('.print-card')[i]?.querySelectorAll('.filament-row');
+        if (rows?.length && activeResources('filament').length) showFilamentPicker(rows[rows.length - 1]);
       })
   );
   qa('.rmF').forEach(
@@ -3263,6 +3406,301 @@ function showPasswordDialog() {
 }
 
 // Lucide icons (ISC license), inlined so the app needs no icon CDN.
+// ---------------------------------------------------------------------------
+// V1.7: finished-goods stock, fabrication for stock, quick price/stock edits
+// and the filament picker.
+// ---------------------------------------------------------------------------
+function productStock(p) {
+  const qty = n(p?.stock_qty),
+    reserved = n(p?.stock_reserved);
+  return { qty, reserved, available: Math.max(0, qty - reserved) };
+}
+// Keep the open product and the list in sync after a stock change.
+async function refreshProductStock(id) {
+  await loadProducts();
+  const listed = S.products.find(p => p.id === id);
+  if (listed && S.product?.id === id) {
+    S.product.stock_qty = listed.stock_qty;
+    S.product.stock_reserved = listed.stock_reserved;
+  }
+}
+const STOCK_MOVES = { production: 'Fabricación', sale: 'Venta', adjustment: 'Ajuste' };
+function showStockAdjust(p) {
+  if (!canEdit() || !p?.id) return;
+  const s = productStock(p);
+  const dialog = showDialog(
+    'stockAdjustDialog',
+    '<div class="section-title"><h2>Stock de ' +
+      esc(p.name) +
+      '</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><dl class="facts"><div><dt>Disponible</dt><dd>' +
+      s.available +
+      ' un.</dd></div><div><dt>Reservado</dt><dd>' +
+      s.reserved +
+      ' un.</dd></div><div><dt>Físico</dt><dd>' +
+      s.qty +
+      ' un.</dd></div></dl><form id="stockAdjustForm" class="grid">' +
+      fieldHtml(
+        'Unidades contadas (stock real)',
+        'adjustCount',
+        s.qty,
+        'number',
+        'min="' + s.reserved + '" max="100000" step="1" required'
+      ) +
+      fieldHtml('Motivo', 'adjustNote', '', 'text', 'maxlength="200" placeholder="Ej. conteo de bodega"') +
+      '<p class="small muted">El ajuste no descuenta materiales. Para registrar algo que fabricaste usa «Fabricar para stock».</p><div id="adjustFeedback" class="small" role="status"></div><div class="dialog-actions"><button class="btn btn-primary" type="submit">Guardar conteo</button></div></form><h3 class="form-section">Historial</h3><div id="stockHistory" class="small muted">Cargando…</div>'
+  );
+  q('#stockAdjustForm').onsubmit = async e => {
+    e.preventDefault();
+    const b = e.submitter || e.target.querySelector('button[type=submit]'),
+      count = Math.round(n(q('#adjustCount').value));
+    b.disabled = true;
+    try {
+      const { error } = await supabase.rpc('adjust_product_stock', {
+        p_product: p.id,
+        p_count: count,
+        p_note: q('#adjustNote').value.trim()
+      });
+      if (error) throw error;
+      await refreshProductStock(p.id);
+      dialog.close();
+      S.msg = 'Stock actualizado: ' + count + ' un.';
+      render();
+    } catch (error) {
+      q('#adjustFeedback').textContent = error.message;
+    } finally {
+      b.disabled = false;
+    }
+  };
+  loadStockHistory(p.id, dialog);
+  return dialog;
+}
+async function loadStockHistory(productId, dialog) {
+  try {
+    const { data, error } = await supabase
+      .from('product_stock_movements')
+      .select('*')
+      .eq('product_id', productId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (error) throw error;
+    if (!dialog.isConnected) return;
+    q('#stockHistory').innerHTML = data?.length
+      ? data
+          .map(
+            m =>
+              '<div class="resource-row"><span><b>' +
+              STOCK_MOVES[m.kind] +
+              '</b> · ' +
+              esc(new Date(m.created_at).toLocaleDateString('es-CL')) +
+              (m.note ? ' · ' + esc(m.note) : '') +
+              '</span><b class="num ' +
+              (m.quantity < 0 ? 'down' : 'up') +
+              '">' +
+              (m.quantity > 0 ? '+' : '') +
+              m.quantity +
+              ' un.</b></div>'
+          )
+          .join('')
+      : 'Sin movimientos todavía.';
+  } catch (error) {
+    if (dialog.isConnected)
+      q('#stockHistory').textContent = 'No se pudo cargar el historial: ' + error.message;
+  }
+}
+// Quick edit from the product list: selling price, target margin and real stock.
+function showQuickEdit(p) {
+  if (!canEdit() || !p) return;
+  const { unit } = productNumbers(p),
+    auto = productNumbers({ ...p, sale_price: null }).price,
+    s = productStock(p);
+  const dialog = showDialog(
+    'quickEditDialog',
+    '<div class="section-title"><h2>' +
+      esc(p.name) +
+      '</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><dl class="facts"><div><dt>Costo unitario</dt><dd>' +
+      (unit > 0 ? clp(unit) : '—') +
+      '</dd></div><div><dt>Precio automático</dt><dd>' +
+      clp(auto) +
+      '</dd></div><div><dt>Stock disponible</dt><dd>' +
+      s.available +
+      ' un.</dd></div></dl><form id="quickEditForm" class="grid"><div class="grid grid-2">' +
+      fieldHtml(
+        'Precio de venta final' + (p.iva_enabled ? ' (con IVA)' : ''),
+        'qePrice',
+        p.sale_price == null ? '' : Math.round(n(p.sale_price)),
+        'number',
+        'min="0" step="1" placeholder="Automático: ' + clp(auto) + '"'
+      ) +
+      fieldHtml(
+        'Margen objetivo %',
+        'qeMargin',
+        Math.round(n(p.target_margin) * 100),
+        'number',
+        'min="0" max="94" step="1" required'
+      ) +
+      fieldHtml(
+        'Stock real (unidades)',
+        'qeStock',
+        s.qty,
+        'number',
+        'min="' + s.reserved + '" max="100000" step="1" required'
+      ) +
+      fieldHtml(
+        'Motivo del ajuste',
+        'qeNote',
+        '',
+        'text',
+        'maxlength="200" placeholder="Solo si cambias el stock"'
+      ) +
+      '</div><div id="qePreview" class="notice small" role="status"></div><div id="qeFeedback" class="small" role="status"></div><div class="dialog-actions"><button type="button" class="btn btn-ghost" id="qeOpen">Abrir editor completo</button><button class="btn btn-primary" type="submit">Guardar</button></div></form>'
+  );
+  const read = () => {
+    const raw = q('#qePrice').value,
+      margin = Math.min(0.94, Math.max(0, n(q('#qeMargin').value) / 100)),
+      sale = raw === '' ? null : Math.max(0, Math.round(n(raw)));
+    return { sale, margin, count: Math.round(n(q('#qeStock').value)) };
+  };
+  const preview = () => {
+    const v = read(),
+      t = productNumbers({ ...p, sale_price: v.sale, target_margin: v.margin });
+    q('#qePreview').innerHTML =
+      'Precio final: <b>' +
+      clp(t.price) +
+      '</b>' +
+      (v.sale == null ? ' (automático)' : '') +
+      (t.margin == null
+        ? ''
+        : ' · Margen <b class="' +
+          (t.margin < 0 ? 'down' : '') +
+          '">' +
+          pct(t.margin) +
+          '</b> · Utilidad / un. ' +
+          clp(t.profit));
+  };
+  dialog.querySelectorAll('input').forEach(el => (el.oninput = preview));
+  preview();
+  q('#qeOpen').onclick = () => {
+    dialog.close();
+    openProduct(p.id);
+  };
+  q('#quickEditForm').onsubmit = async e => {
+    e.preventDefault();
+    const b = e.submitter || e.target.querySelector('button[type=submit]'),
+      v = read();
+    b.disabled = true;
+    try {
+      if (
+        v.sale !== (p.sale_price == null ? null : Math.round(n(p.sale_price))) ||
+        Math.abs(v.margin - n(p.target_margin)) > 1e-9
+      ) {
+        const { error } = await supabase
+          .from('products')
+          .update({ sale_price: v.sale, target_margin: v.margin })
+          .eq('id', p.id)
+          .eq('workspace_id', S.workspace.id);
+        if (error) throw error;
+      }
+      if (v.count !== s.qty) {
+        const { error } = await supabase.rpc('adjust_product_stock', {
+          p_product: p.id,
+          p_count: v.count,
+          p_note: q('#qeNote').value.trim() || 'Ajuste rápido'
+        });
+        if (error) throw error;
+      }
+      await refreshProductStock(p.id);
+      dialog.close();
+      S.msg = 'Cambios guardados en ' + p.name + '.';
+      render();
+    } catch (error) {
+      q('#qeFeedback').textContent = error.message;
+    } finally {
+      b.disabled = false;
+    }
+  };
+  return dialog;
+}
+// Filament picker: searchable grid of catalog filaments with color and available grams.
+function filamentChip(f) {
+  const r = f.resource_id && S.resources.find(x => x.id === f.resource_id);
+  if (!r)
+    return (
+      '<button type="button" class="fil-chip pickF empty">' +
+      icon('search') +
+      '<span class="fil-text"><b>Elegir del inventario</b><span>o escribe el color abajo</span></span></button>'
+    );
+  return (
+    '<button type="button" class="fil-chip pickF" title="Cambiar filamento"><span class="swatch lg" style="background:' +
+    (/^#[0-9a-f]{6}$/i.test(r.color || '') ? r.color : '#303a4d') +
+    '"></span><span class="fil-text"><b>' +
+    esc(r.name) +
+    '</b><span>' +
+    (r.material ? esc(r.material) + ' · ' : '') +
+    clp(r.price_per_kg) +
+    '/kg · ' +
+    stockNumber(availableStock(r)) +
+    ' g disp.</span></span>' +
+    icon('chevron-down') +
+    '</button>'
+  );
+}
+function showFilamentPicker(row) {
+  const list = activeResources('filament').sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  if (!list.length) return toast('Agrega filamentos en Inventario para elegirlos aquí.', 'error');
+  const needed = n(row.querySelector('.fg')?.value),
+    current = row.dataset.resourceId || '';
+  const dialog = showDialog(
+    'filamentPicker',
+    '<div class="section-title"><h2>Elegir filamento</h2><button class="btn btn-ghost" data-close>Cerrar</button></div>' +
+      searchBox('filSearch', 'Buscar color o marca', '') +
+      '<div class="fil-grid" id="filGrid"></div>' +
+      (current
+        ? '<button type="button" class="btn btn-ghost" id="filUnlink">Usar sin inventario</button>'
+        : '')
+  );
+  const choose = id => {
+    const select = row.querySelector('.filamentSelect');
+    select.value = id;
+    select.dispatchEvent(new Event('change'));
+    dialog.close();
+    collect();
+    render();
+  };
+  const draw = () => {
+    const term = q('#filSearch').value.toLocaleLowerCase('es'),
+      rows = list.filter(r => (r.name + ' ' + (r.material || '')).toLocaleLowerCase('es').includes(term));
+    q('#filGrid').innerHTML =
+      rows
+        .map(r => {
+          const avail = availableStock(r);
+          return (
+            '<button type="button" class="fil-option' +
+            (r.id === current ? ' on' : '') +
+            '" data-pick="' +
+            r.id +
+            '"><span class="swatch lg" style="background:' +
+            (/^#[0-9a-f]{6}$/i.test(r.color || '') ? r.color : '#303a4d') +
+            '"></span><span class="fil-text"><b>' +
+            esc(r.name) +
+            '</b><span>' +
+            esc(r.material || 'Sin marca') +
+            ' · ' +
+            clp(r.price_per_kg) +
+            '/kg</span></span><span class="fil-stock ' +
+            (!r.counted ? 'warn' : avail < needed ? 'down' : '') +
+            '">' +
+            (r.counted ? stockNumber(avail) + ' g' : 'Sin conteo') +
+            '</span></button>'
+          );
+        })
+        .join('') || '<p class="muted small">Sin coincidencias.</p>';
+    qa('#filGrid [data-pick]').forEach(b => (b.onclick = () => choose(b.dataset.pick)));
+  };
+  q('#filSearch').oninput = draw;
+  q('#filUnlink')?.addEventListener('click', () => choose(''));
+  draw();
+  return dialog;
+}
 const ICONS = {
   house:
     '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />',
@@ -3651,7 +4089,7 @@ function clpShort(v) {
 // Sales and estimated profit for orders created in a given month (canceled excluded).
 function monthTotals(year, month) {
   const list = S.orders.filter(o => {
-    if (o.status === 'canceled' || !o.created_at) return false;
+    if (o.status === 'canceled' || o.kind === 'stock' || !o.created_at) return false;
     const d = new Date(o.created_at);
     return d.getFullYear() === year && d.getMonth() === month;
   });
@@ -3726,13 +4164,13 @@ function homeView() {
             ' · ' +
             o.quantity +
             ' un.</div></td><td>' +
-            esc(o.customer_name || '—') +
+            esc(o.kind === 'stock' ? 'Para stock' : o.customer_name || '—') +
             '</td><td class="num">' +
             shortDate(o.due_date) +
             '</td><td>' +
             orderChip(o) +
             '</td><td class="r num">' +
-            clp(orderNumbers(o).sales) +
+            (o.kind === 'stock' ? '—' : clp(orderNumbers(o).sales)) +
             '</td></tr>'
         )
         .join('') +
@@ -3745,11 +4183,11 @@ function homeView() {
             '"><span class="lr-main"><b>' +
             esc(o.title) +
             '</b><span>' +
-            esc(o.customer_name || 'Sin cliente') +
+            esc(orderCustomer(o)) +
             ' · ' +
             shortDate(o.due_date) +
             '</span></span><span class="lr-end"><b class="num">' +
-            clp(orderNumbers(o).sales) +
+            (o.kind === 'stock' ? o.quantity + ' un.' : clp(orderNumbers(o).sales)) +
             '</b>' +
             orderChip(o) +
             '</span></button>'
@@ -3926,9 +4364,15 @@ function orderMatches(o, filter) {
   if (filter === 'all') return true;
   if (filter === 'open') return orderIsOpen(o);
   if (filter === 'late') return orderIsLate(o);
+  if (filter === 'stock') return o.kind === 'stock';
   return o.status === filter;
 }
+function orderCustomer(o) {
+  if (o.kind === 'stock') return 'Para stock';
+  return (o.customer_name || 'Sin cliente') + (o.from_stock ? ' · desde stock' : '');
+}
 function orderProfitCell(o) {
+  if (o.kind === 'stock') return '<span class="muted">—</span>';
   const t = orderNumbers(o),
     real = t.actualProfit != null,
     v = real ? t.actualProfit : t.estimatedProfit;
@@ -3961,6 +4405,7 @@ function productionView() {
   const pills = [
     ['open', 'En curso', count('open')],
     ['late', 'Atrasados', count('late')],
+    ['stock', 'Fabricación', count('stock')],
     ...Object.entries(ORDER_STATUSES).map(([k, label]) => [k, label, count(k)]),
     ['all', 'Todos', S.orders.length]
   ].filter(([k, , c]) => c > 0 || ['open', 'all', filter].includes(k));
@@ -3994,13 +4439,15 @@ function productionView() {
               ' · ' +
               o.quantity +
               ' un.</div></td><td>' +
-              esc(o.customer_name || '—') +
+              (o.kind === 'stock'
+                ? '<span class="chip c-stock">Para stock</span>'
+                : esc(o.customer_name || '—') + (o.from_stock ? '<div class="sub">desde stock</div>' : '')) +
               '</td><td class="num">' +
               due(o) +
               '</td><td>' +
               orderChip(o) +
               '</td><td class="r num">' +
-              clp(orderNumbers(o).sales) +
+              (o.kind === 'stock' ? '<span class="muted">—</span>' : clp(orderNumbers(o).sales)) +
               '</td><td class="r num">' +
               orderProfitCell(o) +
               '</td></tr>'
@@ -4017,11 +4464,11 @@ function productionView() {
               '</b><span>PED-' +
               o.order_no +
               ' · ' +
-              esc(o.customer_name || 'Sin cliente') +
+              esc(orderCustomer(o)) +
               ' · ' +
               due(o) +
               '</span></span><span class="lr-end"><b class="num">' +
-              clp(orderNumbers(o).sales) +
+              (o.kind === 'stock' ? o.quantity + ' un.' : clp(orderNumbers(o).sales)) +
               '</b>' +
               orderChip(o) +
               '</span></button>'
