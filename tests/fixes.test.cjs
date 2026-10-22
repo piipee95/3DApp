@@ -62,6 +62,48 @@ async function test(){
  assert.equal(add.value.workspace_id,'workspace');assert.equal(add.value.kind,'printer');
  dom.window.close();
  console.log('PASS fixes: printer edits send only updatable columns;');
+ // Password policy: length and letters+digits, HIBP k-anonymity check (only the 5-char prefix is sent), fail-open.
+ dom=boot();run=s=>dom.window.run(s);
+ if(!dom.window.crypto.subtle)Object.defineProperty(dom.window.crypto,'subtle',{value:require('node:crypto').webcrypto.subtle});
+ dom.window.TextEncoder=TextEncoder;
+ assert.match(run('passwordProblem("abc12")'),/al menos 10/);
+ assert.match(run('passwordProblem("solamenteletras")'),/letras y números/);
+ assert.equal(run('passwordProblem("kultiverso2026")'),'');
+ // SHA-1("password") = 5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8, the documented HIBP example.
+ run(`window.urls=[];window.fetch=async url=>{urls.push(url);return{ok:true,text:async()=>'0018A45C4D1DEF81644B54AB7F969B88D65:1\\r\\n1E4C9B93F3F0682250B6CF8331B7EE68FD8:9659365\\r\\n'}}`);
+ assert.equal(await run('pwnedCount("password")'),9659365);
+ assert.deepEqual(JSON.parse(run('JSON.stringify(urls)')),['https://api.pwnedpasswords.com/range/5BAA6']);
+ const leaked=require('node:crypto').createHash('sha1').update('kultiverso2026').digest('hex').toUpperCase();
+ run(`window.fetch=async url=>({ok:true,text:async()=>url.endsWith('${leaked.slice(0,5)}')?'${leaked.slice(5)}:42':''})`);
+ assert.match(await run('checkNewPassword("kultiverso2026")'),/filtraciones/);
+ assert.equal(await run('checkNewPassword("kultiverso2027")'),'');
+ run(`window.fetch=async()=>{throw new Error('offline')}`);
+ assert.equal(await run('checkNewPassword("kultiverso2026")'),'');
+ // Sign-up is blocked before reaching Supabase when the password is weak or leaked.
+ run(`window.signups=[];supabase.auth={signUp:async a=>{signups.push(a);return{error:null}},signInWithPassword:async()=>({error:null})};S.session=null;render();q('[data-mode=signup]').click()`);
+ assert.equal(run('q("#password").minLength'),10);assert.equal(run('q("#passwordHint").hidden'),false);
+ run(`q('#email').value='a@b.cl';q('#password').value='corta1';q('#authForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
+ await flush();
+ assert.equal(run('signups.length'),0);assert.match(run('S.err'),/al menos 10/);
+ run(`window.fetch=async()=>({ok:true,text:async()=>'1E4C9B93F3F0682250B6CF8331B7EE68FD8:3'})`);
+ // Make the leaked hash match whatever password is typed by stubbing the count.
+ run(`pwnedCount=async()=>3;S.err='';render();q('[data-mode=signup]').click();q('#email').value='a@b.cl';q('#password').value='kultiverso2026';q('#authForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
+ await flush();await flush();
+ assert.equal(run('signups.length'),0);assert.match(run('S.err'),/filtraciones/);
+ run(`pwnedCount=async()=>0;S.err='';render();q('[data-mode=signup]').click();q('#email').value='a@b.cl';q('#password').value='kultiverso2026';q('#authForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
+ await flush();await flush();
+ assert.equal(run('signups.length'),1);
+ // Changing the password from the header validates first and then calls updateUser.
+ run(`window.updates=[];supabase.auth.updateUser=async a=>{updates.push(a);return{error:null}};S.session={user:{id:'owner'}};S.workspace={id:'workspace',role:'editor'};S.mode='dashboard';S.products=[];render();q('#changePassword').click();
+  q('#newPassword').value='kultiverso2026';q('#repeatPassword').value='otra';q('#passwordForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
+ await flush();
+ assert.match(run('q("#passwordFeedback").textContent'),/no coinciden/);assert.equal(run('updates.length'),0);
+ run(`q('#repeatPassword').value='kultiverso2026';q('#passwordForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
+ await flush();await flush();
+ assert.equal(run('JSON.stringify(updates)'),JSON.stringify([{password:'kultiverso2026'}]));
+ assert.equal(run('S.msg'),'Contraseña actualizada.');
+ dom.window.close();
+ console.log('PASS fixes: password rules, HIBP k-anonymity check (fail-open), sign-up guard and change-password dialog;');
  console.log('PASS fixes: escaped dialog labels, settings saved only when edited, legacy drafts keep cloud settings, invites with active session and invite errors.');
 }
 if(require.main===module)test().catch(error=>{console.error(error);process.exitCode=1});
