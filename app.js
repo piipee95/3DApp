@@ -116,7 +116,13 @@ async function loadWorkspace() {
   await loadSettings();
   await loadResources();
   await loadProducts();
-  S.mode = 'dashboard';
+  // Orders feed Inicio; the app still opens if they fail to load.
+  try {
+    await loadOrders();
+  } catch (e) {
+    console.warn('No se pudieron cargar los pedidos', e);
+  }
+  S.mode = 'home';
   restoreActiveDraft();
   if (inviteError) S.err = inviteError;
   render();
@@ -221,55 +227,93 @@ function authView() {
     }
   };
 }
+function relativeDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso),
+    today = new Date(),
+    day = 864e5,
+    start = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(),
+    diff = Math.round((start(today) - start(d)) / day);
+  if (diff === 0) return 'hoy, ' + d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+  if (diff === 1) return 'ayer';
+  return shortDate(
+    d.getFullYear() +
+      '-' +
+      String(d.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(d.getDate()).padStart(2, '0')
+  );
+}
+function marginChip(p) {
+  const { unit, margin } = productNumbers(p);
+  if (margin == null) return '<span class="chip">' + (unit === 0 ? 'Sin costo' : 'Sin venta') + '</span>';
+  return '<span class="chip ' + (margin < 0 ? 'c-late' : 'c-ready') + '">' + pct(margin) + '</span>';
+}
+function productThumb(p) {
+  const src = photoSrc(p);
+  return src
+    ? '<img class="product-thumb" src="' + esc(src) + '" alt="" loading="lazy">'
+    : '<span class="thumb-empty">' + icon('package') + '</span>';
+}
+function productMenu(p) {
+  if (!canEdit()) return '';
+  return (
+    '<details class="row-menu"><summary class="btn icon-btn" aria-label="Acciones de ' +
+    esc(p.name) +
+    '">' +
+    icon('ellipsis-vertical') +
+    '</summary><div class="menu-pop">' +
+    (p.status === 'archived'
+      ? '<button type="button" class="btn" data-rest="' +
+        p.id +
+        '">' +
+        icon('archive-restore') +
+        'Restaurar</button>'
+      : '<button type="button" class="btn" data-dup="' +
+        p.id +
+        '">' +
+        icon('copy') +
+        'Duplicar</button><button type="button" class="btn" data-arc="' +
+        p.id +
+        '">' +
+        icon('archive') +
+        'Archivar</button>') +
+    '</div></details>'
+  );
+}
 function dashboard() {
   const active = S.products.filter(p => p.status !== 'archived'),
     arch = S.products.filter(p => p.status === 'archived'),
     list = S.showArchived ? arch : active,
-    avg = active.length ? active.reduce((s, p) => s + n(p.target_margin), 0) / active.length : 0,
-    total = active.reduce((s, p) => s + n(S.summaries.get(p.id)?.total_cost), 0);
-  const filtered = list.filter(p =>
-    (p.name + ' ' + (p.description || '')).toLocaleLowerCase('es').includes(S.search.toLocaleLowerCase('es'))
-  );
-  const cards = filtered
+    term = S.search.toLocaleLowerCase('es');
+  const rows = list
+    .filter(p => (p.name + ' ' + (p.description || '')).toLocaleLowerCase('es').includes(term))
     .filter(p => matchesProfit(p))
-    .sort(compareProducts)
-    .map(p => {
-      const { unit, price, margin } = productNumbers(p);
-      return (
-        '<div class="product-card ' +
-        (p.status === 'archived' ? 'archived' : '') +
-        '">' +
-        productPhoto(p, 'product-thumb') +
-        '<div class="row" style="justify-content:space-between"><div><div class="status">' +
-        (p.status === 'archived' ? 'Archivado' : 'Activo') +
-        '</div><h3>' +
-        esc(p.name) +
-        '</h3></div><span class="badge' +
-        (margin < 0 ? ' badge-loss' : '') +
-        '">' +
-        (margin == null ? (unit === 0 ? 'Sin costo' : 'Sin venta') : pct(margin)) +
-        '</span></div><p class="muted">' +
-        esc(p.description || 'Sin descripción') +
-        '</p><div class="product-stats"><div><span>Costo unitario</span><b>' +
-        clp(unit) +
-        '</b></div><div><span>Precio final</span><b>' +
-        clp(price) +
-        '</b></div></div><div class="row">' +
-        ('<button class="btn btn-primary" data-open="' + p.id + '">Abrir</button>') +
-        (canEdit() && p.status !== 'archived'
-          ? '<button class="btn btn-secondary" data-dup="' +
-            p.id +
-            '">Duplicar</button><button class="btn btn-ghost" data-arc="' +
-            p.id +
-            '">Archivar</button>'
-          : '') +
-        (canEdit() && p.status === 'archived'
-          ? '<button class="btn btn-secondary" data-rest="' + p.id + '">Restaurar</button>'
-          : '') +
-        '</div></div>'
-      );
-    })
-    .join('');
+    .sort(compareProducts);
+  const cost = p => {
+    const { unit } = productNumbers(p);
+    return unit > 0 ? clp(unit) : '<span class="muted">—</span>';
+  };
+  const price = p => {
+    const { unit, price: v } = productNumbers(p);
+    return unit > 0 || p.sale_price != null ? '<b>' + clp(v) + '</b>' : '<span class="muted">—</span>';
+  };
+  const empty =
+    '<div class="panel-empty">' +
+    icon(S.search ? 'search' : 'package') +
+    '<b>' +
+    (S.search
+      ? 'Sin resultados para «' + esc(S.search) + '»'
+      : S.showArchived
+        ? 'No hay productos archivados'
+        : 'Aún no hay productos') +
+    '</b><span>' +
+    (S.search
+      ? 'Prueba con otro nombre.'
+      : S.showArchived
+        ? ''
+        : 'Crea el primero para comenzar a costear.') +
+    '</span></div>';
   root.innerHTML =
     header(
       'Productos',
@@ -279,31 +323,89 @@ function dashboard() {
     ) +
     '<main class="shell">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
-    '<div class="view-tabs"><button class="btn ' +
-    (!S.showArchived ? 'btn-primary' : 'btn-secondary') +
-    '" id="showActive">Activos (' +
+    '<div class="toolbar"><label class="search-box">' +
+    icon('search') +
+    '<input id="searchProducts" type="search" placeholder="Buscar en ' +
     active.length +
-    ')</button><button class="btn ' +
-    (S.showArchived ? 'btn-primary' : 'btn-secondary') +
-    '" id="showArchived">Archivados (' +
-    arch.length +
-    ')</button></div><div class="field search-field"><label for="searchProducts">Buscar productos</label><input id="searchProducts" type="search" placeholder="Nombre o descripción…" value="' +
+    (active.length === 1 ? ' producto' : ' productos') +
+    '" aria-label="Buscar productos" value="' +
     esc(S.search) +
-    '"></div><div class="product-list">' +
-    (cards ||
-      '<div class="card empty-state"><b>' +
-        (S.search
-          ? 'Sin resultados para tu búsqueda.'
-          : S.showArchived
-            ? 'No hay productos archivados.'
-            : 'Aún no hay productos.') +
-        '</b><p class="muted">' +
-        (S.showArchived
-          ? 'Los productos archivados aparecerán aquí.'
-          : 'Crea el primero para comenzar el costeo.') +
-        '</p></div>') +
-    '</div></main>';
+    '"></label><div class="view-tabs" role="tablist"><button class="btn ' +
+    (!S.showArchived ? 'btn-primary' : 'btn-secondary') +
+    '" id="showActive" role="tab">Activos <span class="seg-count">' +
+    active.length +
+    '</span></button><button class="btn ' +
+    (S.showArchived ? 'btn-primary' : 'btn-secondary') +
+    '" id="showArchived" role="tab">Archivados <span class="seg-count">' +
+    arch.length +
+    '</span></button></div><select id="profitFilter" class="select-compact" aria-label="Rentabilidad"><option value="all">Margen: todos</option><option value="positive">Sin pérdida</option><option value="loss">Con pérdida</option><option value="uncosted">Sin costos registrados</option></select><select id="productSort" class="select-compact" aria-label="Ordenar"><option value="recent">Más recientes</option><option value="name">Nombre A–Z</option><option value="price">Precio mayor a menor</option><option value="cost">Costo mayor a menor</option><option value="margin">Margen mayor a menor</option></select></div><section class="panel product-panel">' +
+    (rows.length
+      ? '<table class="data-table products-table"><thead><tr><th>Producto</th><th class="r">Costo unit.</th><th class="r">Precio final</th><th>Margen</th><th>Actualizado</th><th></th></tr></thead><tbody>' +
+        rows
+          .map(
+            p =>
+              '<tr data-open="' +
+              p.id +
+              '" class="' +
+              (p.status === 'archived' ? 'archived' : '') +
+              '"><td><div class="prod-cell">' +
+              productThumb(p) +
+              '<div><b>' +
+              esc(p.name) +
+              '</b><span>' +
+              esc(p.description || 'Sin descripción') +
+              '</span></div></div></td><td class="r num">' +
+              cost(p) +
+              '</td><td class="r num">' +
+              price(p) +
+              '</td><td>' +
+              marginChip(p) +
+              '</td><td class="sub">' +
+              relativeDate(p.updated_at) +
+              '</td><td class="r">' +
+              productMenu(p) +
+              '</td></tr>'
+          )
+          .join('') +
+        '</tbody></table><div class="list-rows">' +
+        rows
+          .map(
+            p =>
+              '<div class="list-row product-row' +
+              (p.status === 'archived' ? ' archived' : '') +
+              '" data-open="' +
+              p.id +
+              '" role="button" tabindex="0">' +
+              productThumb(p) +
+              '<span class="lr-main"><b>' +
+              esc(p.name) +
+              '</b><span>' +
+              (productNumbers(p).unit > 0
+                ? 'Costo ' + clp(productNumbers(p).unit)
+                : 'Sin costos registrados') +
+              '</span></span><span class="lr-end"><b class="num">' +
+              (productNumbers(p).unit > 0 || p.sale_price != null ? clp(productNumbers(p).price) : '') +
+              '</b>' +
+              marginChip(p) +
+              '</span>' +
+              productMenu(p) +
+              '</div>'
+          )
+          .join('') +
+        '</div>'
+      : empty) +
+    '</section></main>';
   common();
+  q('#productSort').value = S.sort;
+  q('#profitFilter').value = S.profitFilter;
+  q('#productSort').onchange = e => {
+    S.sort = e.target.value;
+    dashboard();
+  };
+  q('#profitFilter').onchange = e => {
+    S.profitFilter = e.target.value;
+    dashboard();
+  };
   q('#searchProducts').oninput = e => {
     const pos = e.target.selectionStart;
     S.search = e.target.value;
@@ -320,7 +422,16 @@ function dashboard() {
     S.showArchived = true;
     dashboard();
   };
-  qa('[data-open]').forEach(b => (b.onclick = () => openProduct(b.dataset.open)));
+  // Rows open the product; the ⋯ menu and its actions don't.
+  qa('[data-open]').forEach(row => {
+    row.onclick = e => {
+      if (e.target.closest('.row-menu')) return;
+      openProduct(row.dataset.open);
+    };
+    row.onkeydown = e => {
+      if (e.key === 'Enter' && e.target === row) openProduct(row.dataset.open);
+    };
+  });
   qa('[data-dup]').forEach(b => (b.onclick = () => duplicateProduct(b.dataset.dup)));
   qa('[data-arc]').forEach(b => (b.onclick = () => archiveProduct(b.dataset.arc)));
   qa('[data-rest]').forEach(b => (b.onclick = () => restoreProduct(b.dataset.rest)));
@@ -478,7 +589,9 @@ function pRows(list) {
         (x, i) =>
           '<div class="print-card"><div class="section-title"><h3>Impresión ' +
           (i + 1) +
-          '</h3><div class="row"><button type="button" class="btn btn-secondary dupP">Duplicar</button><button class="btn btn-danger rmP">Quitar</button></div></div><div class="grid grid-4"><div class="field"><label>Etiqueta</label><input class="pl" value="' +
+          '</h3><div class="row"><button type="button" class="btn btn-secondary dupP">Duplicar</button><button class="btn icon-btn danger-icon rmP" type="button" aria-label="Quitar impresión" title="Quitar impresión">' +
+          icon('trash-2') +
+          '</button></div></div><div class="grid grid-4"><div class="field"><label>Etiqueta</label><input class="pl" value="' +
           esc(x.label || 'Impresión ' + (i + 1)) +
           '"></div><div class="field"><label>Gramos</label><input class="pg live" type="number" value="' +
           n(x.grams) +
@@ -496,7 +609,9 @@ function pRows(list) {
           esc(x.notes || '') +
           '"></div></div>' +
           filamentPanel(x) +
-          '<div class="row" style="margin-top:12px"><button type="button" class="btn btn-secondary calcP">Calcular filamento + electricidad</button><span class="small muted">Usa la tarifa general y la potencia registrada de la impresora.</span></div></div>'
+          '<div class="row" style="margin-top:12px"><button type="button" class="btn btn-secondary calcP">' +
+          icon('calculator') +
+          'Calcular filamento y electricidad</button></div></div>'
       )
       .join('') || '<p class="muted">Aún no agregas impresiones.</p>'
   );
@@ -512,7 +627,9 @@ function cRows(list, cat) {
           esc(x.name || '') +
           '"></div><div class="field"><label>Monto</label><input class="ca live" type="number" value="' +
           n(x.amount) +
-          '"></div><button class="btn btn-danger rmC">Quitar</button></div></div>'
+          '"></div><button class="btn icon-btn danger-icon rmC" type="button" aria-label="Quitar costo" title="Quitar costo">' +
+          icon('trash-2') +
+          '</button></div></div>'
       )
       .join('') || '<p class="muted">Sin costos agregados.</p>'
   );
@@ -568,11 +685,17 @@ function product() {
     Math.round(p.iva_rate * 100) +
     '"></div></div><div class="field" style="margin-top:12px"><label>Descripción</label><textarea id="desc">' +
     esc(p.description || '') +
-    '</textarea></div></section><section class="card" style="margin-top:16px"><div class="section-title"><h2>Impresiones 3D</h2><button class="btn btn-primary" id="addP">+ Agregar impresión</button></div><div id="prints" class="grid">' +
+    '</textarea></div></section><section class="card" style="margin-top:16px"><div class="section-title"><h2>Impresiones 3D</h2><button class="btn btn-primary" id="addP">' +
+    icon('plus') +
+    'Agregar impresión</button></div><div id="prints" class="grid">' +
     pRows(p.prints) +
-    '</div></section><section class="grid grid-2" style="margin-top:16px"><div class="card"><div class="section-title"><h2>Costos directos</h2><button class="btn btn-secondary" id="addD">+ Agregar</button></div><div class="grid">' +
+    '</div></section><section class="grid grid-2" style="margin-top:16px"><div class="card"><div class="section-title"><h2>Costos directos</h2><button class="btn btn-secondary" id="addD">' +
+    icon('plus') +
+    'Agregar</button></div><div class="grid">' +
     cRows(p.directCosts, 'direct') +
-    '</div></div><div class="card"><div class="section-title"><h2>Costos adicionales</h2><button class="btn btn-secondary" id="addA">+ Agregar</button></div><div class="grid">' +
+    '</div></div><div class="card"><div class="section-title"><h2>Costos adicionales</h2><button class="btn btn-secondary" id="addA">' +
+    icon('plus') +
+    'Agregar</button></div><div class="grid">' +
     cRows(p.additionalCosts, 'additional') +
     '</div></div></section><section class="card" style="margin-top:16px"><h2>Resumen financiero</h2><div class="grid grid-4"><div class="metric"><div class="label">Impresiones 3D</div><div class="value" id="m1">' +
     clp(t.pc) +
@@ -866,10 +989,7 @@ function common() {
   mountInventoryAlert();
   enhanceFields();
   flashMessages();
-  if (S.mode === 'dashboard') {
-    showDraftResume();
-    mountProductFilters();
-  }
+  if (S.mode === 'dashboard' || S.mode === 'home') showDraftResume();
   q('#logout')?.addEventListener('click', () => supabase.auth.signOut());
   q('#invite')?.addEventListener('click', invite);
   q('#changePassword')?.addEventListener('click', showPasswordDialog);
@@ -916,6 +1036,7 @@ function render() {
   if (S.mode === 'resources') return resourcesView();
   if (S.mode === 'production') return productionView();
   if (S.mode === 'product') return product();
+  if (S.mode === 'home') return homeView();
   dashboard();
 }
 function enhanceFields() {
@@ -1279,7 +1400,9 @@ function filamentPanel(x) {
     items.length +
     '/7</span></h4><button type="button" class="btn btn-secondary addF" ' +
     (items.length >= 7 ? 'disabled' : '') +
-    '>+ Color</button></div><p class="small muted">Ingresa el consumo total de cada color indicado por el slicer.</p>' +
+    '>' +
+    icon('plus') +
+    'Color</button></div><p class="small muted">Consumo total por color según el slicer.</p>' +
     items
       .map(
         f =>
@@ -1295,7 +1418,9 @@ function filamentPanel(x) {
           n(f.price_per_kg) +
           '"></div><div class="filament-subtotal small">' +
           clp(filamentTotals([f]).cost) +
-          '</div><button class="btn btn-ghost rmF" type="button" aria-label="Quitar color">×</button></div>'
+          '</div><button class="btn icon-btn rmF" type="button" aria-label="Quitar color" title="Quitar color">' +
+          icon('trash-2') +
+          '</button></div>'
       )
       .join('') +
     (items.length
@@ -1310,10 +1435,14 @@ function setupV12() {
   const photo = document.createElement('div');
   photo.className = 'photo-editor';
   photo.innerHTML =
-    productPhoto(S.product) +
-    '<div class="field"><label for="photoFile">Foto del producto</label><input id="photoFile" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"><span class="small muted">Se optimiza y se sincroniza al guardar.</span></div><button class="btn btn-ghost" type="button" id="removePhoto" ' +
-    (!photoSrc(S.product) && !S.product.photo_path ? 'disabled' : '') +
-    '>Quitar foto</button>';
+    '<div class="photo-box">' +
+    (productPhoto(S.product) || '<span class="photo-empty">' + icon('image') + '</span>') +
+    '</div><div class="photo-actions"><b>Foto del producto</b><span class="small muted">Se muestra en la lista y en la cotización.</span><div class="row"><label class="btn btn-secondary" for="photoFile">' +
+    icon('image') +
+    (photoSrc(S.product) || S.product.photo_path ? 'Cambiar foto' : 'Subir foto') +
+    '</label><input id="photoFile" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"><button class="btn btn-ghost" type="button" id="removePhoto" ' +
+    (!photoSrc(S.product) && !S.product.photo_path ? 'hidden' : '') +
+    '>Quitar</button></div></div>';
   detail.prepend(photo);
   const more = document.createElement('details');
   more.className = 'editor-more';
@@ -1329,13 +1458,10 @@ function setupV12() {
   const quote = document.createElement('div');
   quote.className = 'quote-actions row';
   quote.innerHTML =
-    '<button type="button" class="btn btn-primary" id="quote">Compartir cotización</button><span class="small muted">Vista para el cliente, sin costos internos.</span>';
+    '<button type="button" class="btn btn-primary" id="quote">' +
+    icon('file-text') +
+    'Compartir cotización</button>';
   q('[data-panel="summary"]').prepend(quote);
-  const explanation = document.createElement('p');
-  explanation.className = 'small muted';
-  explanation.textContent =
-    'Neto final, IVA y utilidad corresponden al precio sugerido después del redondeo.';
-  q('[data-panel="summary"] h2').after(explanation);
   qa('.print-card').forEach(el => {
     const has = el.querySelectorAll('.filament-row').length > 0;
     el.querySelector('.pg').readOnly = has;
@@ -1357,17 +1483,16 @@ function updateSyncStatus() {
   const el = q('#draftStatus');
   if (!el) return;
   if (S.saving) {
-    el.textContent = 'Guardando en la nube…';
+    el.textContent = 'Guardando…';
     return;
   }
   if (!S.dirty && S.product?.id) {
-    el.textContent = '✓ Guardado en la nube · disponible para tu equipo';
+    el.textContent = '✓ Guardado en la nube';
     el.className = 'small sync-cloud';
     return;
   }
   el.className = 'small sync-local';
-  if (!el.textContent.startsWith('No se pudo'))
-    el.textContent = '● Borrador en este dispositivo · pendiente de guardar en la nube';
+  if (!el.textContent.startsWith('No se pudo')) el.textContent = '● Borrador sin guardar en la nube';
 }
 // V1.3: shared resources, selling prices and production snapshots.
 async function loadResources() {
@@ -1400,6 +1525,7 @@ async function goMode(mode) {
     }
     if (mode === 'resources' || mode === 'inventory' || mode === 'product') await loadResources();
     if (mode === 'dashboard') await loadProducts();
+    if (mode === 'home') await Promise.all([loadProducts(), loadOrders(), loadResources()]);
     render();
   } catch (e) {
     fail(e.message);
@@ -1439,23 +1565,6 @@ function compareProducts(a, b) {
         : S.sort === 'margin'
           ? (y.margin ?? -Infinity) - (x.margin ?? -Infinity) || 0
           : String(b.updated_at || '').localeCompare(String(a.updated_at || ''));
-}
-function mountProductFilters() {
-  const box = document.createElement('div');
-  box.className = 'product-filters row';
-  box.innerHTML =
-    '<div class="field"><label for="productSort">Ordenar</label><select id="productSort"><option value="recent">Última modificación</option><option value="name">Nombre A–Z</option><option value="price">Precio mayor a menor</option><option value="cost">Costo mayor a menor</option><option value="margin">Margen mayor a menor</option></select></div><div class="field"><label for="profitFilter">Rentabilidad</label><select id="profitFilter"><option value="all">Todos</option><option value="positive">Sin pérdida</option><option value="loss">Con pérdida</option><option value="uncosted">Sin costos registrados</option></select></div>';
-  q('.search-field')?.after(box);
-  q('#productSort').value = S.sort;
-  q('#profitFilter').value = S.profitFilter;
-  q('#productSort').onchange = e => {
-    S.sort = e.target.value;
-    dashboard();
-  };
-  q('#profitFilter').onchange = e => {
-    S.profitFilter = e.target.value;
-    dashboard();
-  };
 }
 function activeResources(kind) {
   return S.resources.filter(r => r.kind === kind && r.active);
@@ -1519,7 +1628,7 @@ function setupV13() {
   const order = document.createElement('button');
   order.id = 'createOrder';
   order.className = 'btn btn-secondary';
-  order.textContent = 'Crear pedido de producción';
+  order.innerHTML = icon('clipboard-list') + 'Crear pedido';
   order.disabled = !canEdit();
   q('.quote-actions').append(order);
   updatePriceStatus();
@@ -1640,7 +1749,11 @@ function resourcesView() {
           (kind === 'filament' ? 'Filamentos' : 'Impresoras') +
           '</h2>' +
           (canEdit()
-            ? '<button class="btn btn-primary" data-add-resource="' + kind + '">+ Agregar</button>'
+            ? '<button class="btn btn-primary" data-add-resource="' +
+              kind +
+              '">' +
+              icon('plus') +
+              'Agregar</button>'
             : '') +
           '</div><div class="resource-list">' +
           (S.resources
@@ -2049,7 +2162,7 @@ function showOrder(order) {
       await loadOrders();
       await loadResources();
       dialog.close();
-      productionView();
+      render();
     } catch (error) {
       q('#actualFeedback').textContent = error.message;
     } finally {
@@ -2404,7 +2517,7 @@ function inventoryLow() {
 }
 function mountInventoryAlert() {
   q('#inventoryAlert')?.remove();
-  if (!['dashboard', 'production'].includes(S.mode)) return;
+  if (S.mode !== 'production') return;
   const low = inventoryLow(),
     uncounted = inventoryItems().filter(r => r.active && !r.counted);
   if (!low.length && !uncounted.length) return;
@@ -2829,9 +2942,11 @@ function setupInventoryProduct() {
   box.id = 'materialRecipe';
   box.className = 'card recipe-card';
   box.innerHTML =
-    '<div class="section-title"><h2>Materiales del lote</h2><button type="button" id="addRecipe" class="btn btn-secondary">+ Material</button></div><p class="small muted">Cantidades para las ' +
-    Math.max(1, n(S.product.quantity)) +
-    ' unidades del producto. Se suman a costos directos: reemplaza el costo manual equivalente para evitar duplicarlo. Los filamentos se vinculan desde Impresiones.</p><div class="grid">' +
+    '<div class="section-title"><h2>Materiales del lote</h2><button type="button" id="addRecipe" class="btn btn-secondary">' +
+    icon('plus') +
+    'Material</button></div><p class="small muted">Cantidades para ' +
+    (Math.max(1, n(S.product.quantity)) === 1 ? '1 unidad' : 'las ' + n(S.product.quantity) + ' unidades') +
+    ' del lote. Se suman a los costos directos; los filamentos se vinculan en Impresiones.</p><div class="grid">' +
     (S.product.materials || [])
       .map(
         (m, i) =>
@@ -2855,12 +2970,14 @@ function setupInventoryProduct() {
           n(m.quantity) +
           '"></div><b class="recipeSubtotal">' +
           clp(n(m.quantity) * n(m.unit_cost)) +
-          '</b><button class="btn btn-ghost" data-remove-material="' +
+          '</b><button class="btn icon-btn" data-remove-material="' +
           i +
-          '" type="button" aria-label="Quitar material">×</button></div>'
+          '" type="button" aria-label="Quitar material" title="Quitar material">' +
+          icon('trash-2') +
+          '</button></div>'
       )
       .join('') +
-    '</div><button id="refreshMaterialPrices" type="button" class="btn btn-secondary">Actualizar precios desde inventario</button><details><summary>Disponibilidad para este lote</summary><div id="recipeStock"></div></details><p class="small muted">Guardar un producto no descuenta stock. Los pedidos reservan; confirmar el consumo o marcar Listo descuenta una sola vez.</p>';
+    '</div><button id="refreshMaterialPrices" type="button" class="btn btn-secondary">Actualizar precios desde inventario</button><details><summary>Disponibilidad para este lote</summary><div id="recipeStock"></div></details>';
   q('[data-panel="costs"]').prepend(box);
   updateMaterialStatus();
   qa('.filament-row').forEach(row => {
@@ -3051,7 +3168,7 @@ function showOrderConsumption(order, lines) {
       await loadResources();
       dialog.close();
       q('#orderDialog')?.close();
-      productionView();
+      render();
       showOrder(S.orders.find(o => o.id === order.id));
     } catch (error) {
       q('#consumeFeedback').textContent = error.message;
@@ -3477,12 +3594,14 @@ function icon(name, cls = '') {
 }
 // Sections shown in the sidebar; the first four are also the phone tab bar.
 const NAV_ITEMS = [
+  { mode: 'home', label: 'Inicio', icon: 'house' },
   { mode: 'dashboard', label: 'Productos', icon: 'package' },
   { mode: 'production', label: 'Pedidos', icon: 'clipboard-list' },
   { mode: 'inventory', label: 'Inventario', icon: 'boxes' },
   { mode: 'resources', label: 'Impresoras', icon: 'printer' }
 ];
 const PAGE_TITLES = {
+  home: 'Inicio',
   dashboard: 'Productos',
   production: 'Pedidos',
   inventory: 'Inventario',
@@ -3578,18 +3697,20 @@ function mountShell() {
   tabs.className = 'tabbar';
   tabs.setAttribute('aria-label', 'Navegación');
   tabs.innerHTML =
-    NAV_ITEMS.map(
-      item =>
-        '<button type="button" class="tab-item' +
-        (navActive(item.mode) ? ' active' : '') +
-        '" data-tab-mode="' +
-        item.mode +
-        '">' +
-        icon(item.icon) +
-        '<span>' +
-        item.label +
-        '</span></button>'
-    ).join('') +
+    NAV_ITEMS.filter(item => item.mode !== 'resources')
+      .map(
+        item =>
+          '<button type="button" class="tab-item' +
+          (navActive(item.mode) ? ' active' : '') +
+          '" data-tab-mode="' +
+          item.mode +
+          '">' +
+          icon(item.icon) +
+          '<span>' +
+          item.label +
+          '</span></button>'
+      )
+      .join('') +
     '<button type="button" class="tab-item" id="moreTab">' +
     icon('menu') +
     '<span>Más</span></button>';
@@ -3606,8 +3727,11 @@ function mountShell() {
   };
   q('#moreTab').onclick = showMoreSheet;
 }
-// Close the account menu when clicking anywhere else.
+// Close the account menu and any open ⋯ menu when clicking anywhere else.
 document.addEventListener('click', e => {
+  qa('details.row-menu[open],details.editor-more[open]').forEach(d => {
+    if (!d.contains(e.target)) d.open = false;
+  });
   const menu = q('#accountMenu');
   if (menu && !menu.hidden && !e.target.closest('.side-user')) {
     menu.hidden = true;
@@ -3625,7 +3749,9 @@ function showMoreSheet() {
       roleName() +
       ' · ' +
       esc(S.workspace?.name || 'Kultiverso Pop') +
-      '</span></div></div><div class="menu-list">' +
+      '</span></div></div><div class="menu-list"><button type="button" class="menu-item" data-more="resources">' +
+      icon('printer') +
+      'Impresoras</button>' +
       (isOwner()
         ? '<button type="button" class="menu-item" data-more="invite">' +
           icon('user-plus') +
@@ -3641,7 +3767,8 @@ function showMoreSheet() {
   const actions = {
     invite: () => invite(),
     password: () => showPasswordDialog(),
-    logout: () => supabase.auth.signOut()
+    logout: () => supabase.auth.signOut(),
+    resources: () => goMode('resources')
   };
   dialog.querySelectorAll('[data-more]').forEach(
     b =>
@@ -3677,7 +3804,12 @@ function flashMessages() {
 // In-app replacement for window.confirm. Resolves true when confirmed.
 function confirmDialog({ title, body = '', confirmLabel = 'Confirmar', danger = false }) {
   return new Promise(resolve => {
-    let answer = false;
+    let done = false;
+    const finish = value => {
+      if (done) return;
+      done = true;
+      resolve(value);
+    };
     const dialog = showDialog(
       'confirmDialog',
       '<div class="section-title"><h2>' +
@@ -3691,13 +3823,292 @@ function confirmDialog({ title, body = '', confirmLabel = 'Confirmar', danger = 
         '</button></div>'
     );
     dialog.classList.add('confirm');
-    dialog.addEventListener('close', () => resolve(answer));
-    dialog.querySelector('[data-cancel]').onclick = () => dialog.close();
+    // Escape or tapping outside counts as cancel.
+    dialog.addEventListener('close', () => finish(false));
+    dialog.querySelector('[data-cancel]').onclick = () => {
+      finish(false);
+      dialog.close();
+    };
     dialog.querySelector('[data-confirm]').onclick = () => {
-      answer = true;
+      finish(true);
       dialog.close();
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Inicio: month indicators, upcoming deliveries and low stock.
+// ---------------------------------------------------------------------------
+const MONTHS = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre'
+];
+const ORDER_CHIP = {
+  pending: 'c-pend',
+  printing: 'c-print',
+  assembly: 'c-asm',
+  ready: 'c-ready',
+  delivered: 'c-done',
+  canceled: 'c-cancel'
+};
+function orderIsOpen(o) {
+  return !['delivered', 'canceled'].includes(o.status);
+}
+function orderIsLate(o) {
+  return orderIsOpen(o) && o.due_date && o.due_date < localToday();
+}
+function orderChip(o) {
+  const late = orderIsLate(o);
+  return (
+    '<span class="chip ' +
+    (late ? 'c-late' : ORDER_CHIP[o.status] || '') +
+    '"><i></i>' +
+    (late ? 'Atrasado' : ORDER_STATUSES[o.status] || o.status) +
+    '</span>'
+  );
+}
+function shortDate(iso) {
+  if (!iso) return 'Sin fecha';
+  const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number);
+  return d + ' ' + MONTHS[m - 1].slice(0, 3) + (y !== new Date().getFullYear() ? ' ' + y : '');
+}
+// Compact CLP for small tiles on phones: $1,28 M, $468 mil.
+function clpShort(v) {
+  const x = Math.round(n(v));
+  if (Math.abs(x) >= 1e6) return '$' + (x / 1e6).toLocaleString('es-CL', { maximumFractionDigits: 2 }) + ' M';
+  if (Math.abs(x) >= 1e4) return '$' + Math.round(x / 1e3).toLocaleString('es-CL') + ' mil';
+  return clp(x);
+}
+// Sales and estimated profit for orders created in a given month (canceled excluded).
+function monthTotals(year, month) {
+  const list = S.orders.filter(o => {
+    if (o.status === 'canceled' || !o.created_at) return false;
+    const d = new Date(o.created_at);
+    return d.getFullYear() === year && d.getMonth() === month;
+  });
+  let sales = 0,
+    profit = 0,
+    net = 0;
+  for (const o of list) {
+    const t = orderNumbers(o);
+    sales += t.sales;
+    net += t.net;
+    profit += t.actualProfit ?? t.estimatedProfit;
+  }
+  return { count: list.length, sales, profit, margin: net > 0 ? profit / net : null };
+}
+function stockLevel(r) {
+  const min = n(r.min_stock),
+    avail = availableStock(r);
+  return { avail, min, ratio: min > 0 ? Math.max(0, Math.min(1, avail / (min * 2))) : 1 };
+}
+function homeView() {
+  const now = new Date(),
+    cur = monthTotals(now.getFullYear(), now.getMonth()),
+    prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1),
+    prev = monthTotals(prevDate.getFullYear(), prevDate.getMonth()),
+    open = S.orders.filter(orderIsOpen),
+    late = open.filter(orderIsLate),
+    low = inventoryLow(),
+    uncounted = inventoryItems().filter(r => r.active && !r.counted),
+    upcoming = [...open]
+      .sort((a, b) => String(a.due_date || '9999').localeCompare(String(b.due_date || '9999')))
+      .slice(0, 6),
+    stockList = inventoryItems()
+      .filter(r => r.active && r.counted && n(r.min_stock) > 0)
+      .sort((a, b) => stockLevel(a).ratio - stockLevel(b).ratio)
+      .slice(0, 5),
+    delta = prev.sales > 0 ? (cur.sales - prev.sales) / prev.sales : null,
+    weekday = now.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+  const kpi = (label, ic, value, foot, extra = '') =>
+    '<div class="kpi' +
+    extra +
+    '"><div class="kpi-h"><span>' +
+    label +
+    '</span>' +
+    icon(ic) +
+    '</div><div class="kpi-v num">' +
+    value +
+    '</div><div class="kpi-f">' +
+    foot +
+    '</div></div>';
+  const deltaFoot =
+    delta == null
+      ? '<span class="muted">' + cur.count + ' pedidos este mes</span>'
+      : '<span class="' +
+        (delta >= 0 ? 'up' : 'down') +
+        '">' +
+        icon(delta >= 0 ? 'trending-up' : 'trending-down') +
+        Math.abs(Math.round(delta * 100)) +
+        '% vs ' +
+        MONTHS[prevDate.getMonth()] +
+        '</span>';
+  const deliveries = upcoming.length
+    ? '<table class="data-table"><thead><tr><th>Pedido</th><th>Cliente</th><th>Entrega</th><th>Estado</th><th class="r">Total</th></tr></thead><tbody>' +
+      upcoming
+        .map(
+          o =>
+            '<tr data-home-order="' +
+            o.id +
+            '"><td><b>' +
+            esc(o.title) +
+            '</b><div class="sub">PED-' +
+            o.order_no +
+            ' · ' +
+            o.quantity +
+            ' un.</div></td><td>' +
+            esc(o.customer_name || '—') +
+            '</td><td class="num">' +
+            shortDate(o.due_date) +
+            '</td><td>' +
+            orderChip(o) +
+            '</td><td class="r num">' +
+            clp(orderNumbers(o).sales) +
+            '</td></tr>'
+        )
+        .join('') +
+      '</tbody></table><div class="list-rows">' +
+      upcoming
+        .map(
+          o =>
+            '<button type="button" class="list-row" data-home-order="' +
+            o.id +
+            '"><span class="lr-main"><b>' +
+            esc(o.title) +
+            '</b><span>' +
+            esc(o.customer_name || 'Sin cliente') +
+            ' · ' +
+            shortDate(o.due_date) +
+            '</span></span><span class="lr-end"><b class="num">' +
+            clp(orderNumbers(o).sales) +
+            '</b>' +
+            orderChip(o) +
+            '</span></button>'
+        )
+        .join('') +
+      '</div>'
+    : '<div class="panel-empty">' +
+      icon('clipboard-list') +
+      '<b>No hay pedidos en curso</b><span>Crea uno desde el resumen de un producto.</span></div>';
+  const stock = stockList.length
+    ? stockList
+        .map(r => {
+          const s = stockLevel(r),
+            tone = s.avail <= s.min * 0.5 ? 'down' : s.avail <= s.min ? 'warn' : 'up';
+          return (
+            '<button type="button" class="stock-row" data-home-stock="' +
+            r.id +
+            '"><span class="stock-top"><span>' +
+            esc(r.name) +
+            '</span><span class="num ' +
+            tone +
+            '">' +
+            stockNumber(s.avail) +
+            ' / ' +
+            stockNumber(s.min) +
+            ' ' +
+            esc(r.unit) +
+            '</span></span><span class="bar"><b class="' +
+            tone +
+            '" style="width:' +
+            Math.max(4, Math.round(s.ratio * 100)) +
+            '%"></b></span></button>'
+          );
+        })
+        .join('')
+    : '<div class="panel-empty">' +
+      icon('boxes') +
+      '<b>Sin alertas de stock</b><span>' +
+      (uncounted.length
+        ? uncounted.length +
+          (uncounted.length === 1 ? ' material pendiente' : ' materiales pendientes') +
+          ' de conteo inicial.'
+        : 'Define un stock mínimo en tus materiales para ver alertas aquí.') +
+      '</span></div>';
+  root.innerHTML =
+    header(
+      'Inicio',
+      canEdit()
+        ? '<button class="btn btn-primary" id="homeNew" type="button">' +
+            icon('plus') +
+            '<span>Nuevo producto</span></button>'
+        : ''
+    ) +
+    '<main class="shell home">' +
+    (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
+    '<p class="home-date">' +
+    weekday.charAt(0).toUpperCase() +
+    weekday.slice(1) +
+    ' · Resumen de ' +
+    MONTHS[now.getMonth()] +
+    '</p><div class="kpis">' +
+    kpi(
+      'Ventas de ' + MONTHS[now.getMonth()],
+      'wallet',
+      '<span class="full">' +
+        clp(cur.sales) +
+        '</span><span class="short">' +
+        clpShort(cur.sales) +
+        '</span>',
+      deltaFoot
+    ) +
+    kpi(
+      'Utilidad estimada',
+      'trending-up',
+      '<span class="full">' +
+        clp(cur.profit) +
+        '</span><span class="short">' +
+        clpShort(cur.profit) +
+        '</span>',
+      '<span class="muted">' +
+        (cur.margin == null ? 'Sin ventas este mes' : 'Margen ' + pct(cur.margin)) +
+        '</span>'
+    ) +
+    kpi(
+      'Pedidos en curso',
+      'clipboard-list',
+      String(open.length),
+      late.length
+        ? '<span class="down">' +
+            icon('triangle-alert') +
+            late.length +
+            (late.length === 1 ? ' atrasado' : ' atrasados') +
+            '</span>'
+        : '<span class="muted">Todos al día</span>'
+    ) +
+    kpi(
+      'Inventario',
+      'boxes',
+      String(low.length),
+      low.length
+        ? '<span class="warn">' +
+            icon('triangle-alert') +
+            (low.length === 1 ? 'material bajo mínimo' : 'materiales bajo mínimo') +
+            '</span>'
+        : '<span class="muted">Stock en orden</span>'
+    ) +
+    '</div><div class="home-cols"><section class="panel"><div class="panel-h"><h2>Próximas entregas</h2><button type="button" class="link-btn" data-go="production">Ver pedidos</button></div>' +
+    deliveries +
+    '</section><section class="panel"><div class="panel-h"><h2>Stock bajo</h2><button type="button" class="link-btn" data-go="inventory">Inventario</button></div>' +
+    stock +
+    '</section></div></main>';
+  common();
+  q('#homeNew')?.addEventListener('click', newProduct);
+  qa('[data-go]').forEach(b => (b.onclick = () => goMode(b.dataset.go)));
+  qa('[data-home-order]').forEach(
+    el => (el.onclick = () => showOrder(S.orders.find(o => o.id === el.dataset.homeOrder)))
+  );
+  qa('[data-home-stock]').forEach(el => (el.onclick = () => goMode('inventory')));
 }
 
 // Start the app once every module-level constant above is initialized.
