@@ -2736,3 +2736,60 @@ main.shell.narrow {
     grid-column: 1 / -1;
   }
 }
+
+/* ---------- Cotizaciones y clientes (V1.8) ---------- */
+.summary-strip.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.summary-strip small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.danger-text {
+  color: var(--red);
+}
+.dialog-actions .danger-text {
+  margin-right: auto;
+  order: -1;
+}
+.history-list {
+  display: grid;
+  gap: 6px;
+}
+.history-list .list-row {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--raised);
+}
+.list-row > .avatar {
+  flex: none;
+}
+#customerDialog > a.btn {
+  margin-bottom: 14px;
+}
+@media (max-width: 899px) {
+  .summary-strip.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .summary-strip.three > div:nth-child(3) {
+    border-left: 1px solid var(--line);
+  }
+  .summary-strip.three > div:nth-child(n + 3) {
+    border-top: 0;
+  }
+}
+@media (max-width: 599px) {
+  .summary-strip.three > div {
+    padding: 12px 10px;
+  }
+  .summary-strip.three b {
+    font-size: 16px;
+  }
+}
