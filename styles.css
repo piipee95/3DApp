@@ -77,3 +77,88 @@
 @media print{@page{size:A4;margin:12mm}html,body{background:#fff!important}body{padding:0!important}body>*:not(#quoteDialog){display:none!important}#quoteDialog{display:block!important;position:static!important;inset:auto!important;overflow:visible!important;width:100%!important;max-width:none!important;max-height:none!important;border:0!important;padding:0!important;margin:0!important}#quoteDialog::backdrop{display:none}.quote-toolbar,.quote-options,#quoteFeedback{display:none!important}.quote-sheet{border:0;border-radius:0;font-size:13px;break-inside:avoid}.quote-sheet,.quote-sheet *{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 .auth-logo{display:block;width:min(260px,80%);height:auto;margin:0 auto 14px}
 img.brand-mark{display:block;width:30px;height:30px;border-radius:9px;background:none}
+/* ===== Kultiverso Pop brand theme (brand kit V1: Minimal Rock / Retro Rock 80s) =====
+   Deep black background, cyan-yellow-magenta accents. To adopt a new kit, change the --kp-* values only. */
+:root{color-scheme:dark;
+ --kp-bg:#070A13;--kp-surface:#0d1220;--kp-surface2:#141a2c;--kp-line:#242c44;--kp-text:#eef1fa;--kp-muted:#9aa3ba;
+ --kp-cyan:#00D7F1;--kp-yellow:#FFD800;--kp-magenta:#FF158F;--kp-green:#36d987;--kp-danger:#ff5c7f;
+ --kp-stripe:linear-gradient(90deg,var(--kp-cyan),var(--kp-yellow) 50%,var(--kp-magenta));
+ --bg:var(--kp-bg);--card:var(--kp-surface);--text:var(--kp-text);--muted:var(--kp-muted);--border:var(--kp-line);
+ --navy:var(--kp-text);--navy2:var(--kp-surface2);--blue:var(--kp-cyan);--sky:var(--kp-surface2);--gold:var(--kp-yellow);
+ --green:var(--kp-green);--danger:var(--kp-danger);--shadow:0 10px 30px #00000066}
+html,body{background:var(--kp-bg);color:var(--kp-text)}
+body{font-family:Montserrat,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+/* Top bar and navigation */
+.topbar{background:var(--kp-bg);border-bottom:0;position:relative}
+.topbar::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--kp-stripe)}
+.topbar .small{color:var(--kp-muted)}
+.version{background:#ffffff14;color:var(--kp-yellow)}
+.role-badge{border-color:#ffffff2e;color:var(--kp-text)}
+.topbar .btn-ghost{border-color:#ffffff38;color:var(--kp-text)}
+.topbar .btn-secondary{background:var(--kp-surface2);color:var(--kp-text);border:1px solid var(--kp-line)}
+.app-nav .btn{background:var(--kp-surface);color:var(--kp-muted);border:1px solid var(--kp-line)}
+.app-nav .active{background:var(--kp-surface2);color:var(--kp-text);border-color:var(--kp-cyan);box-shadow:inset 0 -3px 0 var(--kp-cyan)}
+.eyebrow{color:var(--kp-cyan)}
+.hero-title,.auth h1,h1,h2,h3{color:var(--kp-text)}
+.footer{color:#5d6680}
+/* Buttons */
+.btn-primary{background:var(--kp-yellow);color:#070A13}
+.btn-primary:hover{filter:brightness(1.06)}
+.btn-secondary{background:var(--kp-surface2);color:var(--kp-text);border:1px solid var(--kp-line)}
+.btn-danger{background:#ff158f1f;color:#ff7ab8;border:1px solid #ff158f55}
+.btn-ghost{border-color:var(--kp-line);color:var(--kp-text)}
+.btn:disabled{opacity:.45}
+button:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--kp-cyan);outline-offset:3px}
+/* Surfaces */
+.card,.metric,.scenario,.product-card,.print-card,.cost-row{background:var(--kp-surface);border-color:var(--kp-line);box-shadow:none}
+.print-card{background:var(--kp-surface2)}
+.product-card:hover{border-color:#3a4566;box-shadow:0 8px 24px #00000059}
+.metric .value,.scenario .price,.product-stats b,.quick-summary b{color:var(--kp-text)}
+.metric.primary{background:#00d7f114;border-color:#00d7f155}
+.metric.good{background:#36d98714;border-color:#36d98750}
+.metric.good .value{color:var(--kp-green)}
+.metric.gold{background:#ffd80014;border-color:#ffd80055}
+.metric.gold .value,.quick-summary>div:last-child b{color:var(--kp-yellow)}
+.product-stats div{background:var(--kp-surface2)}
+.badge{background:#ffd8001f;color:var(--kp-yellow)}
+.status{color:var(--kp-green)}
+.divider{background:var(--kp-line)}
+.product-photo,.product-thumb,.photo-editor input[type=file]{background:var(--kp-surface2)}
+.selling-price{background:#ffd80010;border-color:#ffd80040}
+.editor-tabs{background:var(--kp-surface);border:1px solid var(--kp-line)}
+.editor-tabs .active{background:var(--kp-surface2);color:var(--kp-cyan);box-shadow:inset 0 -2px 0 var(--kp-cyan)}
+.editor-more[open]{background:var(--kp-surface2);border-color:var(--kp-line)}
+.sticky-actions{background:#0d1220f2;border-color:var(--kp-line)}
+.config-details summary{color:var(--kp-cyan)}
+.sync-local{color:var(--kp-yellow)}
+.sync-cloud{color:var(--kp-green)}
+.loss-text{color:var(--kp-danger)!important}
+/* Forms */
+.field label{color:#c4cbe0}
+.field input,.field select,.field textarea{background:var(--kp-surface2);color:var(--kp-text);border-color:#2c3550}
+.field input::placeholder,.field textarea::placeholder{color:#6b7591}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--kp-cyan);box-shadow:0 0 0 3px #00d7f126}
+.field input[readonly]{background:#0b0f1b;color:var(--kp-muted)}
+.field input[type=checkbox],input[type=checkbox]{accent-color:var(--kp-magenta)}
+/* Login */
+.auth.card{border-top:0;position:relative;overflow:hidden;box-shadow:0 20px 50px #000000a0}
+.auth.card::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--kp-stripe)}
+.auth .auth-logo{filter:drop-shadow(0 6px 18px #00d7f12e)}
+.login-tabs{background:var(--kp-surface2)}
+.tab{color:var(--kp-muted)}
+.tab.active{background:var(--kp-surface);color:var(--kp-text);box-shadow:inset 0 -2px 0 var(--kp-magenta)}
+/* Messages */
+.notice{background:#00d7f114;color:#bdefff;border:1px solid #00d7f140}
+.error{background:#ff5c7f1a;color:#ffb3c4;border:1px solid #ff5c7f55}
+.success{background:#36d9871a;color:#a8f0c9;border:1px solid #36d98750}
+.inventory-alert{background:#ffd80014;border-color:#ffd80066;color:var(--kp-yellow)}
+/* Dialogs (the quotation sheet itself stays white for printing and sharing) */
+dialog{background:var(--kp-surface);color:var(--kp-text);border:1px solid var(--kp-line)}
+dialog::backdrop{background:#000000b3}
+.quote-dialog{color:var(--kp-text)}
+.quote-options{background:var(--kp-surface2);border-color:var(--kp-line)}
+.quote-options summary{color:var(--kp-cyan)}
+.quote-sheet{color:#070A13}
+.quote-sheet h2{color:var(--q-ink)}
+@media print{:root{color-scheme:light}#quoteDialog{background:#fff!important;color:#070A13!important}}
+.badge-loss{background:#ff5c7f24;color:var(--kp-danger)}

@@ -43,3 +43,7 @@ begin
 end;$$;
 revoke all on function public.save_product_bundle_v5(uuid,uuid,text,text,integer,boolean,numeric,numeric,integer,jsonb,jsonb,text,numeric,jsonb) from public,anon;
 grant execute on function public.save_product_bundle_v5(uuid,uuid,text,text,integer,boolean,numeric,numeric,integer,jsonb,jsonb,text,numeric,jsonb) to authenticated;
+
+-- Migration kultiapp_v15_quote_contact_default: official contact from the business card.
+alter table public.workspace_settings alter column quote_contact set default 'kultiversopop.cl · WhatsApp +56 9 4840 6731 · @kultiversopop';
+update public.workspace_settings set quote_contact='kultiversopop.cl · WhatsApp +56 9 4840 6731 · @kultiversopop' where quote_contact='';
