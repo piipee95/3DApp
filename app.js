@@ -1737,61 +1737,6 @@ function fieldHtml(label, id, value = '', type = 'text', attrs = '') {
     '></div>'
   );
 }
-function resourcesView() {
-  root.innerHTML =
-    header('Impresoras') +
-    '<main class="shell">' +
-    (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
-    ['printer']
-      .map(
-        kind =>
-          '<section class="card resource-section"><div class="section-title"><h2>' +
-          (kind === 'filament' ? 'Filamentos' : 'Impresoras') +
-          '</h2>' +
-          (canEdit()
-            ? '<button class="btn btn-primary" data-add-resource="' +
-              kind +
-              '">' +
-              icon('plus') +
-              'Agregar</button>'
-            : '') +
-          '</div><div class="resource-list">' +
-          (S.resources
-            .filter(r => r.kind === kind)
-            .map(
-              r =>
-                '<div class="resource-row ' +
-                (!r.active ? 'inactive' : '') +
-                '"><div><b>' +
-                esc(r.name) +
-                '</b><div class="small muted">' +
-                (kind === 'filament'
-                  ? esc(r.material) + ' · ' + clp(r.price_per_kg) + '/kg'
-                  : n(r.power_kw) + ' kW') +
-                ' · ' +
-                (r.active ? 'Disponible' : 'Inactivo') +
-                '</div></div>' +
-                (canEdit()
-                  ? '<button class="btn btn-secondary" data-edit-resource="' + r.id + '">Editar</button>'
-                  : '') +
-                '</div>'
-            )
-            .join('') ||
-            '<p class="muted">Aún no hay ' +
-              (kind === 'filament' ? 'filamentos' : 'impresoras') +
-              ' registrados.</p>') +
-          '</div></section>'
-      )
-      .join('') +
-    '<p class="small muted">Los precios y potencias se copian a la impresión al seleccionarlos. Cambiar el catálogo no modifica productos anteriores.</p></main>';
-  common();
-  qa('[data-add-resource]').forEach(
-    b => (b.onclick = () => showResourceForm({ kind: b.dataset.addResource, active: true }))
-  );
-  qa('[data-edit-resource]').forEach(
-    b => (b.onclick = () => showResourceForm(S.resources.find(r => r.id === b.dataset.editResource)))
-  );
-}
 function showResourceForm(resource) {
   if (!canEdit()) return;
   const isFilament = resource.kind === 'filament';
@@ -1892,82 +1837,6 @@ function localToday() {
     String(d.getDate()).padStart(2, '0')
   );
 }
-function productionView() {
-  const open = S.orders.filter(o => !['delivered', 'canceled'].includes(o.status)),
-    late = open.filter(o => o.due_date && o.due_date < localToday()),
-    list = S.orders.filter(
-      o =>
-        S.orderFilter === 'all' ||
-        (S.orderFilter === 'open' && !['delivered', 'canceled'].includes(o.status)) ||
-        o.status === S.orderFilter
-    );
-  root.innerHTML =
-    header(
-      'Pedidos',
-      '<button class="btn icon-btn" id="reloadOrders" type="button" aria-label="Actualizar" title="Actualizar">' +
-        icon('refresh-cw') +
-        '</button>'
-    ) +
-    '<main class="shell">' +
-    (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
-    '<div class="production-kpis grid grid-2"><div class="metric"><div class="label">Pedidos en curso</div><div class="value">' +
-    open.length +
-    '</div></div><div class="metric"><div class="label">Atrasados</div><div class="value ' +
-    (late.length ? 'loss-text' : '') +
-    '">' +
-    late.length +
-    '</div></div></div><div class="field order-filter"><label for="orderFilter">Mostrar pedidos</label><select id="orderFilter"><option value="open">En curso</option><option value="all">Todos</option>' +
-    Object.entries(ORDER_STATUSES)
-      .map(([key, label]) => '<option value="' + key + '">' + label + '</option>')
-      .join('') +
-    '</select></div><div class="product-list">' +
-    (list
-      .map(o => {
-        const t = orderNumbers(o);
-        return (
-          '<article class="product-card"><div class="row" style="justify-content:space-between"><span class="badge">Pedido #' +
-          o.order_no +
-          '</span><span class="status">' +
-          ORDER_STATUSES[o.status] +
-          '</span></div><h3>' +
-          esc(o.title) +
-          '</h3><p class="muted">' +
-          esc(o.customer_name || 'Sin cliente registrado') +
-          ' · ' +
-          o.quantity +
-          ' un.</p><div class="small ' +
-          (o.due_date && o.due_date < localToday() && !['delivered', 'canceled'].includes(o.status)
-            ? 'loss-text'
-            : 'muted') +
-          '">Entrega: ' +
-          (o.due_date ? esc(o.due_date.split('-').reverse().join('/')) : 'Por definir') +
-          '</div><div class="product-stats"><div><span>Venta total</span><b>' +
-          clp(t.sales) +
-          '</b></div><div><span>Costo estimado</span><b>' +
-          clp(o.estimated_cost) +
-          '</b></div></div><div class="small ' +
-          (t.actualProfit != null && t.actualProfit < 0 ? 'loss-text' : 'muted') +
-          '">' +
-          (t.actualProfit == null ? 'Costo real pendiente' : 'Utilidad real: ' + clp(t.actualProfit)) +
-          '</div><button class="btn btn-secondary" data-order="' +
-          o.id +
-          '">Abrir pedido</button></article>'
-        );
-      })
-      .join('') ||
-      '<div class="card empty-state"><b>No hay pedidos en esta vista.</b><p class="muted">Abre un producto → Resumen → Crear pedido de producción.</p></div>') +
-    '</div></main>';
-  common();
-  q('#orderFilter').value = S.orderFilter;
-  q('#orderFilter').onchange = e => {
-    S.orderFilter = e.target.value;
-    productionView();
-  };
-  q('#reloadOrders').onclick = () => goMode('production');
-  qa('[data-order]').forEach(
-    b => (b.onclick = () => showOrder(S.orders.find(o => o.id === b.dataset.order)))
-  );
-}
 function showNewOrder() {
   if (!canEdit() || !S.product?.id) return;
   const p = S.product,
@@ -2045,31 +1914,38 @@ function showOrder(order) {
   const t = orderNumbers(order);
   const dialog = showDialog(
     'orderDialog',
-    '<div class="section-title"><h2>Pedido #' +
+    '<div class="section-title"><h2>Pedido PED-' +
       order.order_no +
-      '</h2><button class="btn btn-ghost" data-close>Volver</button></div><h3>' +
+      '</h2><button class="btn btn-ghost" data-close>Volver</button></div><div class="order-head"><div><b>' +
       esc(order.title) +
-      '</h3><button class="btn btn-secondary" id="orderQuote">Cotización del pedido</button><p class="muted">' +
-      esc(order.customer_name || 'Sin cliente') +
-      ' · ' +
+      '</b>' +
+      orderChip(order) +
+      '</div><button class="btn btn-secondary btn-sm" id="orderQuote" type="button">' +
+      icon('file-text') +
+      'Cotización</button></div><dl class="facts"><div><dt>Cliente</dt><dd>' +
+      esc(order.customer_name || '—') +
+      '</dd></div><div><dt>Cantidad</dt><dd>' +
       order.quantity +
-      ' un. · Venta ' +
+      ' un.</dd></div><div><dt>Entrega</dt><dd class="' +
+      (orderIsLate(order) ? 'down' : '') +
+      '">' +
+      shortDate(order.due_date) +
+      '</dd></div><div><dt>Venta</dt><dd>' +
       clp(t.sales) +
-      '</p><div class="notice small">Costo estimado: ' +
+      '</dd></div><div><dt>Costo estimado</dt><dd>' +
       clp(order.estimated_cost) +
-      ' · ' +
-      n(order.estimated_grams) +
-      ' g · ' +
-      (n(order.estimated_minutes) / 60).toFixed(2) +
-      ' h<br>Utilidad estimada: ' +
+      '</dd></div><div><dt>Utilidad estimada</dt><dd class="' +
+      (t.estimatedProfit < 0 ? 'down' : 'up') +
+      '">' +
       clp(t.estimatedProfit) +
+      '</dd></div></dl>' +
       '</div><form id="orderForm" class="grid"><div class="field"><label for="orderStatus">Estado</label><select id="orderStatus">' +
       Object.entries(ORDER_STATUSES)
         .map(([key, label]) => '<option value="' + key + '">' + label + '</option>')
         .join('') +
       '</select></div>' +
       fieldHtml('Entrega', 'actualDue', order.due_date, 'date') +
-      '<p class="small muted">Registra totales reales del lote. El costo base incluye filamento, energía, mano de obra y otros costos; las fallas se suman aparte. Vacío significa pendiente, 0 es un valor registrado.</p><div class="grid grid-2">' +
+      '<h3 class="form-section">Costos reales del lote</h3><p class="small muted">Déjalos vacíos mientras estén pendientes. Las fallas se suman aparte.</p><div class="grid grid-2">' +
       fieldHtml(
         'Costo real base del lote CLP',
         'actualCost',
@@ -2534,123 +2410,6 @@ function mountInventoryAlert() {
     'Revisar inventario →';
   el.onclick = () => goMode('inventory');
   q('main')?.prepend(el);
-}
-function inventoryView() {
-  const items = inventoryItems(),
-    list = items.filter(
-      r =>
-        (r.name + ' ' + r.material)
-          .toLocaleLowerCase('es')
-          .includes((S.inventorySearch || '').toLocaleLowerCase('es')) &&
-        (!S.inventoryOnlyLow || (r.active && r.counted && availableStock(r) <= n(r.min_stock)))
-    );
-  root.innerHTML =
-    header(
-      'Inventario',
-      canEdit()
-        ? '<button id="addInventory" class="btn btn-primary">' +
-            icon('plus') +
-            '<span>Material</span></button>'
-        : ''
-    ) +
-    '<main class="shell">' +
-    (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
-    '<div class="grid grid-2 inventory-kpis"><div class="metric"><div class="label">Valor del stock físico</div><div class="value">' +
-    clp(items.filter(r => r.counted).reduce((sum, r) => sum + n(r.stock_qty) * n(r.unit_cost), 0)) +
-    '</div></div><div class="metric"><div class="label">Bajo mínimo / sin contar</div><div class="value">' +
-    inventoryLow().length +
-    ' / ' +
-    items.filter(r => !r.counted && r.active).length +
-    '</div></div></div><div class="inventory-controls"><div class="field"><label for="inventorySearch">Buscar material</label><input type="search" id="inventorySearch" placeholder="Filamento, marco, papel…" value="' +
-    esc(S.inventorySearch || '') +
-    '"></div><label class="small"><input id="inventoryOnlyLow" type="checkbox" ' +
-    (S.inventoryOnlyLow ? 'checked' : '') +
-    '> Solo bajo stock</label><button id="reloadInventory" class="btn btn-secondary">Actualizar</button></div><div class="product-list">' +
-    (list
-      .map(
-        r =>
-          '<article class="product-card inventory-card ' +
-          (!r.active ? 'inactive' : '') +
-          '"><div class="row" style="justify-content:space-between"><span class="badge">' +
-          (r.kind === 'filament' ? 'Filamento' : 'Material / insumo') +
-          '</span><span class="status ' +
-          (r.counted && availableStock(r) <= n(r.min_stock) ? 'loss-text' : '') +
-          '">' +
-          (!r.active
-            ? 'Inactivo'
-            : !r.counted
-              ? 'Sin conteo'
-              : availableStock(r) <= n(r.min_stock)
-                ? 'Stock bajo'
-                : 'Disponible') +
-          '</span></div><h3>' +
-          esc(r.name) +
-          '</h3><p class="small muted">' +
-          esc(r.material || '') +
-          ' · ' +
-          preciseCost(r.unit_cost) +
-          ' / ' +
-          esc(r.unit) +
-          '</p><div class="inventory-balances"><div><span>Físico</span><b>' +
-          stockNumber(r.stock_qty) +
-          ' ' +
-          esc(r.unit) +
-          '</b></div><div><span>Reservado</span><b>' +
-          stockNumber(r.reserved_qty) +
-          ' ' +
-          esc(r.unit) +
-          '</b></div><div><span>Disponible</span><b>' +
-          stockNumber(availableStock(r)) +
-          ' ' +
-          esc(r.unit) +
-          '</b></div></div><p class="small muted">Alerta en ' +
-          stockNumber(r.min_stock) +
-          ' ' +
-          esc(r.unit) +
-          '</p><div class="row">' +
-          (canEdit()
-            ? '<button class="btn btn-primary" data-stock="' +
-              r.id +
-              '">' +
-              (r.counted ? 'Movimiento' : 'Contar stock') +
-              '</button><button class="btn btn-secondary" data-inventory-edit="' +
-              r.id +
-              '">Editar</button>'
-            : '') +
-          '<button class="btn btn-ghost" data-ledger="' +
-          r.id +
-          '">Historial</button></div></article>'
-      )
-      .join('') ||
-      '<div class="card empty-state">' +
-        (items.length
-          ? 'Sin materiales para este filtro.'
-          : 'Agrega filamentos, marcos, papel y otros insumos para comenzar.') +
-        '</div>') +
-    '</div><p class="small muted">El disponible descuenta las reservas. Los precios usan costo promedio ponderado; ingresa siempre el mismo criterio de IVA. Filamentos se controlan en gramos, incluso si compras bobinas por kilogramo.</p></main>';
-  common();
-  q('#inventorySearch').oninput = e => {
-    const pos = e.target.selectionStart;
-    S.inventorySearch = e.target.value;
-    inventoryView();
-    q('#inventorySearch').focus();
-    q('#inventorySearch').setSelectionRange(pos, pos);
-  };
-  q('#inventoryOnlyLow').onchange = e => {
-    S.inventoryOnlyLow = e.target.checked;
-    inventoryView();
-  };
-  q('#reloadInventory').onclick = () => goMode('inventory');
-  q('#addInventory')?.addEventListener('click', () => showInventoryForm());
-  qa('[data-stock]').forEach(
-    b => (b.onclick = () => showStockMovement(S.resources.find(r => r.id === b.dataset.stock)))
-  );
-  qa('[data-inventory-edit]').forEach(
-    b => (b.onclick = () => showInventoryForm(S.resources.find(r => r.id === b.dataset.inventoryEdit)))
-  );
-  qa('[data-ledger]').forEach(
-    b => (b.onclick = () => showInventoryLedger(S.resources.find(r => r.id === b.dataset.ledger)))
-  );
 }
 function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
   if (!canEdit()) return;
@@ -4109,6 +3868,400 @@ function homeView() {
     el => (el.onclick = () => showOrder(S.orders.find(o => o.id === el.dataset.homeOrder)))
   );
   qa('[data-home-stock]').forEach(el => (el.onclick = () => goMode('inventory')));
+}
+
+// ---------------------------------------------------------------------------
+// Pedidos, Inventario e Impresoras (V1.6 stage 3).
+// ---------------------------------------------------------------------------
+// Filter chips with counts, shared by Pedidos and Inventario.
+function filterPills(items, active, attr) {
+  return (
+    '<div class="pills" role="tablist">' +
+    items
+      .map(
+        ([key, label, count]) =>
+          '<button type="button" class="pill' +
+          (key === active ? ' on' : '') +
+          '" ' +
+          attr +
+          '="' +
+          key +
+          '" role="tab" aria-selected="' +
+          (key === active) +
+          '">' +
+          label +
+          (count != null ? '<span>' + count + '</span>' : '') +
+          '</button>'
+      )
+      .join('') +
+    '</div>'
+  );
+}
+function searchBox(id, placeholder, value) {
+  return (
+    '<label class="search-box">' +
+    icon('search') +
+    '<input id="' +
+    id +
+    '" type="search" placeholder="' +
+    esc(placeholder) +
+    '" aria-label="' +
+    esc(placeholder) +
+    '" value="' +
+    esc(value || '') +
+    '"></label>'
+  );
+}
+// Re-render on typing without losing the caret.
+function bindSearch(id, apply, view) {
+  q('#' + id).oninput = e => {
+    const pos = e.target.selectionStart;
+    apply(e.target.value);
+    view();
+    q('#' + id).focus();
+    q('#' + id).setSelectionRange(pos, pos);
+  };
+}
+function orderMatches(o, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'open') return orderIsOpen(o);
+  if (filter === 'late') return orderIsLate(o);
+  return o.status === filter;
+}
+function orderProfitCell(o) {
+  const t = orderNumbers(o),
+    real = t.actualProfit != null,
+    v = real ? t.actualProfit : t.estimatedProfit;
+  return (
+    '<span class="' +
+    (v < 0 ? 'down' : '') +
+    '">' +
+    clp(v) +
+    '</span><div class="sub">' +
+    (real ? 'real' : 'estimada') +
+    '</div>'
+  );
+}
+function productionView() {
+  const term = (S.orderSearch || '').toLocaleLowerCase('es'),
+    filter = S.orderFilter || 'open',
+    count = f => S.orders.filter(o => orderMatches(o, f)).length,
+    list = S.orders
+      .filter(o => orderMatches(o, filter))
+      .filter(o =>
+        (o.title + ' ' + (o.customer_name || '') + ' PED-' + o.order_no)
+          .toLocaleLowerCase('es')
+          .includes(term)
+      )
+      .sort((a, b) =>
+        orderIsOpen(a) && orderIsOpen(b)
+          ? String(a.due_date || '9999').localeCompare(String(b.due_date || '9999'))
+          : String(b.created_at || '').localeCompare(String(a.created_at || ''))
+      );
+  const pills = [
+    ['open', 'En curso', count('open')],
+    ['late', 'Atrasados', count('late')],
+    ...Object.entries(ORDER_STATUSES).map(([k, label]) => [k, label, count(k)]),
+    ['all', 'Todos', S.orders.length]
+  ].filter(([k, , c]) => c > 0 || ['open', 'all', filter].includes(k));
+  const due = o =>
+    '<span class="' + (orderIsLate(o) ? 'down' : '') + '">' + shortDate(o.due_date) + '</span>';
+  root.innerHTML =
+    header(
+      'Pedidos',
+      '<button class="btn icon-btn" id="reloadOrders" type="button" aria-label="Actualizar" title="Actualizar">' +
+        icon('refresh-cw') +
+        '</button>'
+    ) +
+    '<main class="shell">' +
+    (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
+    '<div class="toolbar">' +
+    searchBox('orderSearch', 'Buscar pedido, cliente o PED-…', S.orderSearch) +
+    '</div>' +
+    filterPills(pills, filter, 'data-order-filter') +
+    '<section class="panel">' +
+    (list.length
+      ? '<table class="data-table"><thead><tr><th>Pedido</th><th>Cliente</th><th>Entrega</th><th>Estado</th><th class="r">Venta</th><th class="r">Utilidad</th></tr></thead><tbody>' +
+        list
+          .map(
+            o =>
+              '<tr data-order="' +
+              o.id +
+              '"><td><b>' +
+              esc(o.title) +
+              '</b><div class="sub">PED-' +
+              o.order_no +
+              ' · ' +
+              o.quantity +
+              ' un.</div></td><td>' +
+              esc(o.customer_name || '—') +
+              '</td><td class="num">' +
+              due(o) +
+              '</td><td>' +
+              orderChip(o) +
+              '</td><td class="r num">' +
+              clp(orderNumbers(o).sales) +
+              '</td><td class="r num">' +
+              orderProfitCell(o) +
+              '</td></tr>'
+          )
+          .join('') +
+        '</tbody></table><div class="list-rows">' +
+        list
+          .map(
+            o =>
+              '<button type="button" class="list-row" data-order="' +
+              o.id +
+              '"><span class="lr-main"><b>' +
+              esc(o.title) +
+              '</b><span>PED-' +
+              o.order_no +
+              ' · ' +
+              esc(o.customer_name || 'Sin cliente') +
+              ' · ' +
+              due(o) +
+              '</span></span><span class="lr-end"><b class="num">' +
+              clp(orderNumbers(o).sales) +
+              '</b>' +
+              orderChip(o) +
+              '</span></button>'
+          )
+          .join('') +
+        '</div>'
+      : '<div class="panel-empty">' +
+        icon(term ? 'search' : 'clipboard-list') +
+        '<b>' +
+        (term ? 'Sin resultados' : S.orders.length ? 'No hay pedidos en esta vista' : 'Aún no hay pedidos') +
+        '</b><span>' +
+        (S.orders.length ? 'Prueba con otro filtro.' : 'Crea uno desde el resumen de un producto.') +
+        '</span></div>') +
+    '</section></main>';
+  common();
+  bindSearch('orderSearch', v => (S.orderSearch = v), productionView);
+  qa('[data-order-filter]').forEach(
+    b =>
+      (b.onclick = () => {
+        S.orderFilter = b.dataset.orderFilter;
+        productionView();
+      })
+  );
+  q('#reloadOrders').onclick = () => goMode('production');
+  qa('[data-order]').forEach(
+    b => (b.onclick = () => showOrder(S.orders.find(o => o.id === b.dataset.order)))
+  );
+}
+function inventoryState(r) {
+  if (!r.active) return ['Inactivo', 'c-cancel'];
+  if (!r.counted) return ['Sin conteo', 'c-pend'];
+  if (availableStock(r) <= n(r.min_stock)) return ['Stock bajo', 'c-late'];
+  return ['Disponible', 'c-ready'];
+}
+function inventoryMatches(r, filter) {
+  if (filter === 'low') return r.active && r.counted && availableStock(r) <= n(r.min_stock);
+  if (filter === 'uncounted') return r.active && !r.counted;
+  if (filter === 'filament') return r.kind === 'filament';
+  if (filter === 'supply') return r.kind === 'supply';
+  return true;
+}
+function inventoryActions(r) {
+  return (
+    (canEdit()
+      ? '<button class="btn btn-secondary btn-sm" type="button" data-stock="' +
+        r.id +
+        '">' +
+        (r.counted ? 'Movimiento' : 'Contar stock') +
+        '</button>'
+      : '') +
+    '<details class="row-menu"><summary class="btn icon-btn" aria-label="Acciones de ' +
+    esc(r.name) +
+    '">' +
+    icon('ellipsis-vertical') +
+    '</summary><div class="menu-pop">' +
+    (canEdit()
+      ? '<button type="button" class="btn" data-inventory-edit="' +
+        r.id +
+        '">' +
+        icon('pencil') +
+        'Editar</button>'
+      : '') +
+    '<button type="button" class="btn" data-ledger="' +
+    r.id +
+    '">' +
+    icon('history') +
+    'Historial</button></div></details>'
+  );
+}
+function inventoryView() {
+  if (S.inventoryOnlyLow) S.inventoryFilter = 'low';
+  const items = inventoryItems(),
+    filter = S.inventoryFilter || 'all',
+    term = (S.inventorySearch || '').toLocaleLowerCase('es'),
+    list = items
+      .filter(r => inventoryMatches(r, filter))
+      .filter(r => (r.name + ' ' + (r.material || '')).toLocaleLowerCase('es').includes(term))
+      .sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name, 'es')),
+    value = items.filter(r => r.counted).reduce((sum, r) => sum + n(r.stock_qty) * n(r.unit_cost), 0),
+    count = f => items.filter(r => inventoryMatches(r, f)).length;
+  const qty = (v, r) => stockNumber(v) + ' <span class="unit">' + esc(r.unit) + '</span>';
+  root.innerHTML =
+    header(
+      'Inventario',
+      canEdit()
+        ? '<button id="addInventory" class="btn btn-primary">' +
+            icon('plus') +
+            '<span>Material</span></button>'
+        : ''
+    ) +
+    '<main class="shell">' +
+    (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
+    '<div class="summary-strip"><div><span>Valor del stock</span><b class="num">' +
+    clp(value) +
+    '</b></div><div><span>Bajo mínimo</span><b class="num ' +
+    (count('low') ? 'down' : '') +
+    '">' +
+    count('low') +
+    '</b></div><div><span>Sin conteo</span><b class="num ' +
+    (count('uncounted') ? 'warn' : '') +
+    '">' +
+    count('uncounted') +
+    '</b></div><div><span>Materiales</span><b class="num">' +
+    items.length +
+    '</b></div></div><div class="toolbar">' +
+    searchBox('inventorySearch', 'Buscar material', S.inventorySearch) +
+    '<button id="reloadInventory" class="btn icon-btn" type="button" aria-label="Actualizar" title="Actualizar">' +
+    icon('refresh-cw') +
+    '</button></div>' +
+    filterPills(
+      [
+        ['all', 'Todos', items.length],
+        ['low', 'Bajo mínimo', count('low')],
+        ['uncounted', 'Sin conteo', count('uncounted')],
+        ['filament', 'Filamentos', count('filament')],
+        ['supply', 'Insumos', count('supply')]
+      ],
+      filter,
+      'data-inventory-filter'
+    ) +
+    '<section class="panel">' +
+    (list.length
+      ? '<div class="inv-head"><span>Material</span><span>Disponible</span><span>Reservado</span><span>Mínimo</span><span>Costo</span><span>Estado</span><span></span></div>' +
+        list
+          .map(r => {
+            const [label, cls] = inventoryState(r);
+            return (
+              '<div class="inv-row' +
+              (!r.active ? ' archived' : '') +
+              '"><div class="prod-cell inv-name"><span class="swatch" style="background:' +
+              (/^#[0-9a-f]{6}$/i.test(r.color || '') ? r.color : '#303a4d') +
+              '"></span><div><b>' +
+              esc(r.name) +
+              '</b><span>' +
+              (r.kind === 'filament' ? 'Filamento' : 'Insumo') +
+              (r.material ? ' · ' + esc(r.material) : '') +
+              '</span></div></div><div class="inv-num inv-avail" data-label="Disponible"><b>' +
+              qty(availableStock(r), r) +
+              '</b></div><div class="inv-num inv-reserved" data-label="Reservado">' +
+              qty(r.reserved_qty, r) +
+              '</div><div class="inv-num inv-min" data-label="Mínimo">' +
+              qty(r.min_stock, r) +
+              '</div><div class="inv-num inv-cost" data-label="Costo">' +
+              preciseCost(r.unit_cost) +
+              ' <span class="unit">/ ' +
+              esc(r.unit) +
+              '</span></div><div class="inv-state"><span class="chip ' +
+              cls +
+              '">' +
+              label +
+              '</span></div><div class="row-actions">' +
+              inventoryActions(r) +
+              '</div></div>'
+            );
+          })
+          .join('')
+      : '<div class="panel-empty">' +
+        icon('boxes') +
+        '<b>' +
+        (items.length ? 'Sin materiales para este filtro' : 'Aún no hay materiales') +
+        '</b><span>' +
+        (items.length ? 'Prueba con otro filtro.' : 'Agrega filamentos, marcos, papel y otros insumos.') +
+        '</span></div>') +
+    '</section><p class="small muted footnote">Disponible = físico − reservado. Costo promedio ponderado; filamentos en gramos.</p></main>';
+  common();
+  bindSearch('inventorySearch', v => (S.inventorySearch = v), inventoryView);
+  qa('[data-inventory-filter]').forEach(
+    b =>
+      (b.onclick = () => {
+        S.inventoryOnlyLow = false;
+        S.inventoryFilter = b.dataset.inventoryFilter;
+        inventoryView();
+      })
+  );
+  q('#reloadInventory').onclick = () => goMode('inventory');
+  q('#addInventory')?.addEventListener('click', () => showInventoryForm());
+  qa('[data-stock]').forEach(
+    b => (b.onclick = () => showStockMovement(S.resources.find(r => r.id === b.dataset.stock)))
+  );
+  qa('[data-inventory-edit]').forEach(
+    b => (b.onclick = () => showInventoryForm(S.resources.find(r => r.id === b.dataset.inventoryEdit)))
+  );
+  qa('[data-ledger]').forEach(
+    b => (b.onclick = () => showInventoryLedger(S.resources.find(r => r.id === b.dataset.ledger)))
+  );
+}
+function resourcesView() {
+  const printers = S.resources.filter(r => r.kind === 'printer');
+  root.innerHTML =
+    header(
+      'Impresoras',
+      canEdit()
+        ? '<button class="btn btn-primary" data-add-resource="printer">' +
+            icon('plus') +
+            '<span>Impresora</span></button>'
+        : ''
+    ) +
+    '<main class="shell narrow">' +
+    (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
+    '<section class="panel">' +
+    (printers.length
+      ? printers
+          .map(
+            r =>
+              '<div class="list-row static' +
+              (!r.active ? ' archived' : '') +
+              '"><span class="thumb-empty">' +
+              icon('printer') +
+              '</span><span class="lr-main"><b>' +
+              esc(r.name) +
+              '</b><span>' +
+              n(r.power_kw).toLocaleString('es-CL') +
+              ' kW de consumo máximo</span></span><span class="chip ' +
+              (r.active ? 'c-ready' : 'c-cancel') +
+              '">' +
+              (r.active ? 'Disponible' : 'Inactiva') +
+              '</span>' +
+              (canEdit()
+                ? '<button class="btn icon-btn" type="button" data-edit-resource="' +
+                  r.id +
+                  '" aria-label="Editar ' +
+                  esc(r.name) +
+                  '" title="Editar">' +
+                  icon('pencil') +
+                  '</button>'
+                : '') +
+              '</div>'
+          )
+          .join('')
+      : '<div class="panel-empty">' +
+        icon('printer') +
+        '<b>Aún no hay impresoras</b><span>Regístralas con su potencia para calcular la electricidad.</span></div>') +
+    '</section><p class="small muted footnote">La potencia se copia a cada impresión al elegir la impresora; cambiarla aquí no modifica productos anteriores.</p></main>';
+  common();
+  qa('[data-add-resource]').forEach(
+    b => (b.onclick = () => showResourceForm({ kind: b.dataset.addResource, active: true }))
+  );
+  qa('[data-edit-resource]').forEach(
+    b => (b.onclick = () => showResourceForm(S.resources.find(r => r.id === b.dataset.editResource)))
+  );
 }
 
 // Start the app once every module-level constant above is initialized.
