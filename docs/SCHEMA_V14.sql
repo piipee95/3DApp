@@ -106,7 +106,7 @@ begin
     values(o.workspace_id,l.resource_id,p_order,'consumption',-a,l.unit_cost,'Consumo pedido #'||o.order_no,gen_random_uuid());
   end if;
   update public.inventory_order_lines set consumed_qty=a where order_id=p_order and resource_id=l.resource_id;
-  -- Use the reserved snapshot cost for historical order costing.
+  -- Actual use is valued at the current average cost; the estimate it replaces uses the reserved snapshot cost.
   vcost:=vcost+a*(select unit_cost from public.workspace_resources where id=l.resource_id);ecost:=ecost+l.quantity*l.unit_cost;
  end loop;
  update public.production_orders set inventory_state='consumed',actual_cost=coalesce(actual_cost,greatest(0,estimated_cost-ecost)+vcost),updated_at=now() where id=p_order;
