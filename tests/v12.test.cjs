@@ -3,10 +3,12 @@ const {JSDOM}=require('jsdom');
 const fs=require('node:fs');
 const path=require('node:path');
 const assert=require('node:assert/strict');
-const source=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8')
- .replace(/^import[^\n]+\n/,'')
- .replace(/const supabase=createClient\([^\n]+\n/,'const supabase={};\n')
- .replace('dashboard()}init();','dashboard()}');
+// Load app.js as a classic script: drop the CDN import, stub Supabase and skip the automatic start.
+function strip(code,pattern,replacement){const out=code.replace(pattern,replacement);if(out===code)throw new Error('Test loader marker not found: '+pattern);return out}
+let source=fs.readFileSync(path.join(__dirname,'../app.js'),'utf8');
+source=strip(source,/^import[^\n]+\n/,'');
+source=strip(source,/const supabase\s*=\s*createClient\(SUPABASE_URL,\s*SUPABASE_KEY\);/,'const supabase = {};');
+source=strip(source,/\ninit\(\);\s*$/,'\n');
 function boot(saved={}){
  const dom=new JSDOM('<div id="app"></div>',{url:'https://costos3d.vercel.app',runScripts:'outside-only'});
  dom.window.confirm=()=>true;
