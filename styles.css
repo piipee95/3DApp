@@ -867,6 +867,65 @@ div.shell { min-height: 100dvh; display: grid; place-items: center; padding: 24p
   .home-date { margin-bottom: 12px; }
 }
 
+/* ---------- Pedidos, Inventario e Impresoras (V1.6 stage 3) ---------- */
+.pills { display: flex; gap: 8px; margin: -2px 0 14px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.pills::-webkit-scrollbar { display: none; }
+.pill { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--line2); border-radius: 999px; background: transparent; color: var(--muted); font: 600 12.5px var(--font); white-space: nowrap; cursor: pointer; }
+.pill span { font-size: 11.5px; color: var(--faint); }
+.pill:hover { color: var(--text); }
+.pill.on { background: var(--text); border-color: var(--text); color: var(--bg); }
+.pill.on span { color: #070c1599; }
+.summary-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.summary-strip > div { padding: 14px 16px; border-left: 1px solid var(--line); min-width: 0; }
+.summary-strip > div:first-child { border-left: 0; }
+.summary-strip span { display: block; font-size: 12px; color: var(--muted); }
+.summary-strip b { display: block; margin-top: 4px; font-size: 19px; font-weight: 700; }
+.unit { color: var(--faint); font-size: 11.5px; font-weight: 500; }
+.swatch { width: 14px; height: 14px; border-radius: 50%; flex: none; border: 1px solid #ffffff26; }
+.btn-sm { height: 32px; padding: 0 11px; font-size: 12.5px; }
+.row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.footnote { margin-top: 12px; }
+main.shell.narrow { max-width: 760px; }
+.list-row.static { cursor: default; }
+.list-row.static:active { background: none; }
+.panel > .list-row.static { display: flex; }
+.inv-head, .inv-row { display: grid; grid-template-columns: minmax(200px, 2.2fr) repeat(3, minmax(80px, 1fr)) minmax(110px, 1.1fr) 120px 150px; align-items: center; gap: 12px; padding: 0 16px; }
+.inv-head { height: 40px; border-bottom: 1px solid var(--line); font-size: 11.5px; font-weight: 600; color: var(--faint); }
+.inv-head span:nth-child(n + 2):nth-child(-n + 5) { text-align: right; }
+.inv-row { min-height: 60px; padding-top: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.inv-row:last-child { border-bottom: 0; }
+.inv-row.archived { opacity: 0.6; }
+.inv-num { text-align: right; font-variant-numeric: tabular-nums; }
+.inv-avail b { font-weight: 600; }
+@media (max-width: 899px) {
+  .summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .summary-strip > div:nth-child(3) { border-left: 0; }
+  .summary-strip > div:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .inv-head { display: none; }
+  .inv-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name state' 'avail actions'; row-gap: 6px; padding: 12px 14px; }
+  .inv-name { grid-area: name; }
+  .inv-state { grid-area: state; justify-self: end; }
+  .inv-avail { grid-area: avail; text-align: left; font-size: 12.5px; color: var(--muted); }
+  .inv-avail::before { content: attr(data-label) ' '; }
+  .inv-avail b { color: var(--text); }
+  .inv-reserved, .inv-min, .inv-cost { display: none; }
+  .inv-row .row-actions { grid-area: actions; }
+}
+
+.order-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.order-head > div { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.order-head b { font-size: 15px; font-weight: 600; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin: 0 0 18px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.facts > div { background: var(--raised); padding: 10px 12px; min-width: 0; }
+.facts dt { font-size: 11.5px; color: var(--muted); }
+.facts dd { margin: 2px 0 0; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.form-section { margin-top: 6px; font-size: 14px; }
+#orderForm > .notice { margin-bottom: 0; }
+@media (max-width: 599px) {
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .toolbar:has(> .icon-btn) .search-box { flex-basis: 0; }
+}
+
 /* ---------- Quotation document (dialog, print/PDF). The PNG in app.js mirrors it. ---------- */
 .quote-sheet{--q-ink:#070A13;--q-cyan:#00D7F1;--q-yellow:#FFD800;--q-magenta:#FF158F;--q-accent:#c2126b;--q-soft:#f4f5f8;--q-line:#e2e5ea;--q-muted:#697183;background:#fff;color:var(--q-ink);border:1px solid var(--q-line);border-radius:14px;overflow:hidden;font-size:14px;line-height:1.45}
 .q-head{background:#fff;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 26px}
