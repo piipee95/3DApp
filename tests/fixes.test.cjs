@@ -48,6 +48,20 @@ async function test(){
  assert.match(run('S.err'),/Invitación vencida/);
  assert.equal(run('localStorage.getItem("kultiapp_invite")'),null);
  dom.window.close();
+ // Editing a printer only sends columns granted for update (workspace_id and kind are insert-only).
+ dom=boot();run=s=>dom.window.run(s);
+ run(`window.calls=[];supabase.from=table=>{const call={table};window.calls.push(call);const query={update(v){call.op='update';call.value=v;return query},insert(v){call.op='insert';call.value=v;return query},eq(){return query},select(){return query},order(){return query},single:async()=>({data:{id:'r9'},error:null}),then(ok){return Promise.resolve({data:[],error:null}).then(ok)}};return query};
+  S.resources=[{id:'p1',kind:'printer',name:'Anycubic Cobra X',power_kw:1.75,active:true}];showResourceForm(S.resources[0]);q('#resourcePower').value='1.3';q('#resourceForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
+ await flush();await flush();
+ const edit=JSON.parse(run('JSON.stringify(calls.find(c=>c.op==="update"))'));
+ assert.deepEqual(Object.keys(edit.value).sort(),['active','name','power_kw']);
+ assert.equal(edit.value.power_kw,1.3);
+ run(`calls.length=0;showResourceForm({kind:'printer',active:true});q('#resourceName').value='Bambu A1';q('#resourcePower').value='0.35';q('#resourceForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
+ await flush();await flush();
+ const add=JSON.parse(run('JSON.stringify(calls.find(c=>c.op==="insert"))'));
+ assert.equal(add.value.workspace_id,'workspace');assert.equal(add.value.kind,'printer');
+ dom.window.close();
+ console.log('PASS fixes: printer edits send only updatable columns;');
  console.log('PASS fixes: escaped dialog labels, settings saved only when edited, legacy drafts keep cloud settings, invites with active session and invite errors.');
 }
 if(require.main===module)test().catch(error=>{console.error(error);process.exitCode=1});
