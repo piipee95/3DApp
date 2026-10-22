@@ -289,7 +289,11 @@ function productMenu(p) {
         '">' +
         icon('archive') +
         'Archivar</button>') +
-    '</div></details>'
+    '<button type="button" class="btn btn-danger" data-del="' +
+    p.id +
+    '">' +
+    icon('trash-2') +
+    'Eliminar</button></div></details>'
   );
 }
 function dashboard() {
@@ -452,6 +456,9 @@ function dashboard() {
     b => (b.onclick = () => showQuickEdit(S.products.find(p => p.id === b.dataset.quick)))
   );
   qa('[data-rest]').forEach(b => (b.onclick = () => restoreProduct(b.dataset.rest)));
+  qa('[data-del]').forEach(
+    b => (b.onclick = () => deleteProduct(S.products.find(p => p.id === b.dataset.del)))
+  );
 }
 function newProduct() {
   if (restoreDraft('new')) return render();
@@ -823,7 +830,7 @@ function bindProduct() {
       })
   );
   q('#save').onclick = saveProduct;
-  q('#del').onclick = deleteProduct;
+  q('#del').onclick = () => deleteProduct();
 }
 function calcPrintCosts(el) {
   collect();
@@ -959,21 +966,33 @@ async function saveProduct() {
     updateSyncStatus();
   }
 }
-async function deleteProduct() {
-  if (!S.product.id) return;
+// Works from the editor (open product) and from the product list (any product).
+async function deleteProduct(p = S.product) {
+  if (!p?.id || !canEdit()) return;
+  if (n(p.stock_reserved) > 0)
+    return toast(
+      'Tiene ' + n(p.stock_reserved) + ' un. reservadas para pedidos. Entrégalos o cancélalos primero.',
+      'error'
+    );
   const ok = await confirmDialog({
     title: 'Eliminar producto',
-    body: '«' + S.product.name + '» se eliminará para todo el equipo. Esta acción no se puede deshacer.',
+    body:
+      '«' +
+      p.name +
+      '» se eliminará para todo el equipo' +
+      (n(p.stock_qty) > 0 ? ', junto con su stock de ' + n(p.stock_qty) + ' un.' : '') +
+      '. Los pedidos existentes se conservan. Esta acción no se puede deshacer.',
     confirmLabel: 'Eliminar',
     danger: true
   });
   if (!ok) return;
-  let { error } = await supabase.from('products').delete().eq('id', S.product.id);
+  let { error } = await supabase.from('products').delete().eq('id', p.id);
   if (error) return fail(error.message);
-  removeDraft(S.product.id);
-  cleanupPhoto(S.product.saved_photo_path);
+  removeDraft(p.id);
+  cleanupPhoto(p.saved_photo_path ?? p.photo_path);
   await loadProducts();
   S.mode = 'dashboard';
+  S.msg = 'Producto eliminado.';
   render();
 }
 async function duplicateProduct(id) {

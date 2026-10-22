@@ -59,8 +59,16 @@ async function test(){
  assert.equal(run('window.deleted'),0);
  run(`deleteProduct()`);await flush();run(`q('#confirmDialog [data-confirm]').click()`);await flush();await flush();
  assert.equal(run('window.deleted'),1);
+ // The list ⋯ menu deletes any product too; reserved stock blocks it.
+ run(`S.products=[{id:'z',name:'Lista',quantity:1,status:'active',stock_qty:2,stock_reserved:0},{id:'y',name:'Reservado',quantity:1,status:'active',stock_qty:2,stock_reserved:1}];S.mode='dashboard';render();q('.products-table [data-del=z]').click()`);await flush();
+ assert.match(run('q("#confirmDialog").textContent'),/«Lista».*stock de 2 un\..*pedidos existentes se conservan/);
+ run(`q('#confirmDialog [data-confirm]').click()`);await flush();await flush();
+ assert.equal(run('window.deleted'),2);
+ run(`q('.products-table [data-del=y]').click()`);await flush();
+ assert.equal(run('!!q("#confirmDialog")'),false);
+ assert.equal(run('window.deleted'),2);
  // Success messages show once as a toast.
- run(`S.msg='Guardado.';S.mode='dashboard';render();render()`);
+ run(`qa('.toast').forEach(t=>t.remove());S.msg='Guardado.';S.mode='dashboard';render();render()`);
  assert.equal(run('qa(".toast").length'),1);
  dom.window.close();
  console.log('PASS V1.6: Inicio month totals and panels, product list table/rows and ⋯ actions, Más sheet, in-app delete confirmation and toasts.');
