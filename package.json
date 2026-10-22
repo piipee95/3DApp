@@ -1,0 +1,10 @@
+{
+  "name": "kultiapp",
+  "private": true,
+  "scripts": {
+    "test": "node tests/v12.test.cjs && node tests/v13.test.cjs && node tests/v14.test.cjs && node tests/fixes.test.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}

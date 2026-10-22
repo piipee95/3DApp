@@ -1,4 +1,4 @@
-// Run with jsdom@26.1.0 on NODE_PATH; no requests reach Supabase.
+// Run with `npm test` (jsdom is a devDependency); no requests reach Supabase.
 const {JSDOM}=require('jsdom');
 const fs=require('node:fs');
 const path=require('node:path');
