@@ -221,15 +221,6 @@ function authView() {
     }
   };
 }
-function header() {
-  return (
-    '<div class="topbar"><div><div class="brand"><img class="brand-mark" src="favicon.svg" alt=""> KultiApp <span class="version">1.5</span></div><div class="small">Costos y producción 3D · Kultiverso Pop</div></div><div class="row"><span class="role-badge">' +
-    roleName() +
-    '</span>' +
-    (isOwner() ? '<button class="btn btn-secondary" id="invite">Invitar socio</button>' : '') +
-    '<button class="btn btn-ghost" id="changePassword" title="Cambiar contraseña" aria-label="Cambiar contraseña">Clave</button><button class="btn btn-ghost" id="logout">Salir</button></div></div>'
-  );
-}
 function dashboard() {
   const active = S.products.filter(p => p.status !== 'archived'),
     arch = S.products.filter(p => p.status === 'archived'),
@@ -280,29 +271,15 @@ function dashboard() {
     })
     .join('');
   root.innerHTML =
-    header() +
-    '<main class="shell"><div class="dashboard-head"><div><div class="eyebrow">' +
-    esc(S.workspace?.name || 'Kultiverso Pop') +
-    '</div><h1 class="hero-title">Productos 3D</h1><p class="muted">Costeo técnico y precio comercial en un solo flujo.</p></div>' +
-    (canEdit() ? '<button class="btn btn-primary" id="new">+ Nuevo producto</button>' : '') +
-    '</div>' +
+    header(
+      'Productos',
+      canEdit()
+        ? '<button class="btn btn-primary" id="new">' + icon('plus') + '<span>Nuevo producto</span></button>'
+        : ''
+    ) +
+    '<main class="shell">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
-    (S.msg ? '<div class="success">' + esc(S.msg) + '</div>' : '') +
-    '<div class="kpi-grid"><div class="metric"><div class="label">Productos activos</div><div class="value">' +
-    active.length +
-    '</div><div class="small muted">' +
-    arch.length +
-    ' archivados</div></div><div class="metric"><div class="label">Margen objetivo promedio</div><div class="value">' +
-    pct(avg) +
-    '</div></div><div class="metric"><div class="label">Costos registrados</div><div class="value">' +
-    clp(total) +
-    '</div></div><div class="metric primary"><div class="label">Base de cálculo</div><div class="value">' +
-    clp(S.settings.filament_price_per_kg) +
-    '/kg</div><div class="small muted">' +
-    clp(S.settings.electricity_rate_clp_kwh) +
-    '/kWh · ' +
-    n(S.settings.printer_power_kw).toFixed(2) +
-    ' kW máx.</div></div></div><div class="view-tabs"><button class="btn ' +
+    '<div class="view-tabs"><button class="btn ' +
     (!S.showArchived ? 'btn-primary' : 'btn-secondary') +
     '" id="showActive">Activos (' +
     active.length +
@@ -325,7 +302,7 @@ function dashboard() {
           ? 'Los productos archivados aparecerán aquí.'
           : 'Crea el primero para comenzar el costeo.') +
         '</p></div>') +
-    '</div></main><div class="footer">Kultiverso Pop · Powered by <b>ELARA</b></div>';
+    '</div></main>';
   common();
   q('#searchProducts').oninput = e => {
     const pos = e.target.selectionStart;
@@ -570,10 +547,8 @@ function product() {
   const p = S.product,
     t = totals(p);
   root.innerHTML =
-    header() +
-    '<main class="shell"><div class="section-title"><button class="btn btn-ghost" id="back">← Volver</button><h1>' +
-    esc(p.name) +
-    '</h1></div><section class="card"><div class="section-title"><div><h2>Parámetros generales</h2><div class="small muted">Se comparten con tu socio y se usan para calcular automáticamente cada impresión.</div></div></div><div class="grid grid-4"><div class="field"><label>Filamento $/kg</label><input id="cfgFilament" class="live" type="number" value="' +
+    header(p.name || 'Producto', '', { back: true }) +
+    '<main class="shell"><section class="card"><div class="section-title"><div><h2>Parámetros generales</h2><div class="small muted">Se comparten con tu socio y se usan para calcular automáticamente cada impresión.</div></div></div><div class="grid grid-4"><div class="field"><label>Filamento $/kg</label><input id="cfgFilament" class="live" type="number" value="' +
     n(S.settings.filament_price_per_kg) +
     '"></div><div class="field"><label>Electricidad $/kWh</label><input id="cfgElec" class="live" type="number" step="0.01" value="' +
     n(S.settings.electricity_rate_clp_kwh) +
@@ -845,7 +820,14 @@ async function saveProduct() {
   }
 }
 async function deleteProduct() {
-  if (!S.product.id || !confirm('¿Eliminar este producto?')) return;
+  if (!S.product.id) return;
+  const ok = await confirmDialog({
+    title: 'Eliminar producto',
+    body: '«' + S.product.name + '» se eliminará para todo el equipo. Esta acción no se puede deshacer.',
+    confirmLabel: 'Eliminar',
+    danger: true
+  });
+  if (!ok) return;
   let { error } = await supabase.from('products').delete().eq('id', S.product.id);
   if (error) return fail(error.message);
   removeDraft(S.product.id);
@@ -880,12 +862,12 @@ async function restoreProduct(id) {
   render();
 }
 function common() {
-  mountAppNav();
+  mountShell();
   mountInventoryAlert();
   enhanceFields();
+  flashMessages();
   if (S.mode === 'dashboard') {
     showDraftResume();
-    compactDashboard();
     mountProductFilters();
   }
   q('#logout')?.addEventListener('click', () => supabase.auth.signOut());
@@ -893,23 +875,40 @@ function common() {
   q('#changePassword')?.addEventListener('click', showPasswordDialog);
 }
 async function invite() {
-  if (!isOwner()) return alert('Solo el propietario puede invitar.');
-  let role = prompt('Rol: editor o viewer', 'editor');
-  if (!role) return;
-  if (!['editor', 'viewer'].includes(role)) role = 'editor';
-  let { data, error } = await supabase.rpc('create_workspace_invite', {
-    wid: S.workspace.id,
-    invite_role: role,
-    valid_hours: 168
-  });
-  if (error) return alert(error.message);
-  const url = location.origin + location.pathname + '?invite=' + encodeURIComponent(data);
-  try {
-    await navigator.clipboard.writeText(url);
-    alert('Enlace copiado. Dura 7 días.');
-  } catch {
-    prompt('Copia este enlace:', url);
-  }
+  if (!isOwner()) return toast('Solo el propietario puede invitar.', 'error');
+  const dialog = showDialog(
+    'inviteDialog',
+    '<div class="section-title"><h2>Invitar socio</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><form id="inviteForm" class="grid"><div class="field"><label for="inviteRole">Permisos</label><select id="inviteRole"><option value="editor">Editor · crea y modifica productos, pedidos e inventario</option><option value="viewer">Solo lectura · consulta sin modificar</option></select></div><div id="inviteResult" role="status"></div><div class="dialog-actions"><button class="btn btn-primary" type="submit">Crear enlace</button></div></form>'
+  );
+  q('#inviteForm').onsubmit = async e => {
+    e.preventDefault();
+    const b = e.submitter || e.target.querySelector('button[type=submit]');
+    b.disabled = true;
+    const { data, error } = await supabase.rpc('create_workspace_invite', {
+      wid: S.workspace.id,
+      invite_role: q('#inviteRole').value,
+      valid_hours: 168
+    });
+    b.disabled = false;
+    if (error) return (q('#inviteResult').innerHTML = '<div class="error">' + esc(error.message) + '</div>');
+    const url = location.origin + location.pathname + '?invite=' + encodeURIComponent(data);
+    q('#inviteResult').innerHTML =
+      '<div class="field"><label for="inviteLink">Enlace de invitación · válido por 7 días</label><div class="input-action"><input id="inviteLink" readonly value="' +
+      esc(url) +
+      '"><button type="button" class="btn btn-secondary" id="copyInvite">' +
+      icon('copy') +
+      '<span>Copiar</span></button></div></div>';
+    b.textContent = 'Crear otro enlace';
+    q('#copyInvite').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast('Enlace copiado.');
+      } catch {
+        q('#inviteLink').select();
+      }
+    };
+  };
+  return dialog;
 }
 function render() {
   if (!S.session || S.mode === 'auth') return authView();
@@ -965,9 +964,7 @@ function setupEditor() {
   details.before(nav);
   const feedback = document.createElement('div');
   feedback.setAttribute('aria-live', 'polite');
-  feedback.innerHTML =
-    (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
-    (S.msg ? '<div class="success">' + esc(S.msg) + '</div>' : '');
+  feedback.innerHTML = (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') + '';
   nav.before(feedback);
   const t = totals();
   const quick = document.createElement('div');
@@ -1007,8 +1004,14 @@ function setupEditor() {
     discard.type = 'button';
     discard.className = 'btn btn-ghost';
     discard.textContent = 'Descartar borrador';
-    discard.onclick = () => {
-      if (!confirm('¿Descartar los cambios no guardados de este producto?')) return;
+    discard.onclick = async () => {
+      const ok = await confirmDialog({
+        title: 'Descartar borrador',
+        body: 'Se perderán los cambios que no guardaste en este producto.',
+        confirmLabel: 'Descartar',
+        danger: true
+      });
+      if (!ok) return;
       removeDraft(S.product.id || 'new');
       S.product = null;
       S.mode = 'dashboard';
@@ -1132,7 +1135,7 @@ function showDraftResume() {
     if (restoreDraft(id)) render();
   };
   box.append(text, resume);
-  q('.dashboard-head')?.after(box);
+  q('main')?.prepend(box);
 }
 window.addEventListener('pagehide', () => persistDraft());
 document.addEventListener('visibilitychange', () => {
@@ -1314,12 +1317,15 @@ function setupV12() {
   detail.prepend(photo);
   const more = document.createElement('details');
   more.className = 'editor-more';
-  more.innerHTML = '<summary class="btn btn-ghost">Más opciones</summary>';
-  const del = q('#del');
-  more.append(del);
+  more.innerHTML =
+    '<summary class="btn icon-btn" aria-label="Más opciones" title="Más opciones">' +
+    icon('ellipsis-vertical') +
+    '</summary><div class="menu-pop"></div>';
+  const pop = more.querySelector('.menu-pop');
   const discard = qa('main button').find(b => b.textContent === 'Descartar borrador');
-  if (discard) more.append(discard);
-  q('.editor>.section-title').append(more);
+  if (discard) pop.append(discard);
+  pop.append(q('#del'));
+  q('.page-actions').append(more);
   const quote = document.createElement('div');
   quote.className = 'quote-actions row';
   quote.innerHTML =
@@ -1363,17 +1369,6 @@ function updateSyncStatus() {
   if (!el.textContent.startsWith('No se pudo'))
     el.textContent = '● Borrador en este dispositivo · pendiente de guardar en la nube';
 }
-function compactDashboard() {
-  const grid = q('.kpi-grid');
-  if (!grid) return;
-  const cards = [...grid.children];
-  const extra = document.createElement('details');
-  extra.className = 'dashboard-extra';
-  extra.innerHTML = '<summary>Más indicadores y parámetros</summary><div class="grid grid-2"></div>';
-  extra.querySelector('.grid').append(cards[1], cards[3]);
-  grid.after(extra);
-}
-
 // V1.3: shared resources, selling prices and production snapshots.
 async function loadResources() {
   const { data, error } = await supabase
@@ -1409,33 +1404,6 @@ async function goMode(mode) {
   } catch (e) {
     fail(e.message);
   }
-}
-function mountAppNav() {
-  q('.app-nav')?.remove();
-  const bar = q('.topbar');
-  if (!bar) return;
-  const nav = document.createElement('nav');
-  nav.className = 'app-nav';
-  nav.setAttribute('aria-label', 'Navegación principal');
-  nav.innerHTML = [
-    ['dashboard', 'Productos'],
-    ['production', 'Producción'],
-    ['inventory', 'Inventario'],
-    ['resources', 'Impresoras']
-  ]
-    .map(
-      ([mode, label]) =>
-        '<button class="btn ' +
-        (S.mode === mode || (mode === 'dashboard' && S.mode === 'product') ? 'active' : '') +
-        '" data-app-mode="' +
-        mode +
-        '">' +
-        label +
-        '</button>'
-    )
-    .join('');
-  bar.after(nav);
-  nav.querySelectorAll('button').forEach(b => (b.onclick = () => goMode(b.dataset.appMode)));
 }
 function productNumbers(p) {
   const unit = n(S.summaries.get(p.id)?.total_cost) / Math.max(1, n(p.quantity)),
@@ -1611,15 +1579,35 @@ function bindV13() {
       })
   );
 }
+// Focus the dialog itself so no control shows a focus ring and phones don't open the keyboard.
+function focusDialog(dialog) {
+  dialog.tabIndex = -1;
+  dialog.focus({ preventScroll: true });
+}
+function closeOnBackdrop(dialog) {
+  dialog.addEventListener('mousedown', e => {
+    if (e.target !== dialog) return;
+    const r = dialog.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)
+      dialog.close();
+  });
+}
 function showDialog(id, html) {
   q('#' + id)?.remove();
   const dialog = document.createElement('dialog');
   dialog.id = id;
   dialog.className = 'quote-dialog workspace-dialog';
   dialog.innerHTML = html;
+  dialog.querySelectorAll('.section-title [data-close]').forEach(b => {
+    b.className = 'btn icon-btn dialog-close';
+    b.setAttribute('aria-label', 'Cerrar');
+    b.innerHTML = icon('x');
+  });
   document.body.append(dialog);
   dialog.onclose = () => dialog.remove();
+  closeOnBackdrop(dialog);
   dialog.showModal();
+  focusDialog(dialog);
   dialog.querySelector('[data-close]')?.addEventListener('click', () => dialog.close());
   return dialog;
 }
@@ -1642,8 +1630,8 @@ function fieldHtml(label, id, value = '', type = 'text', attrs = '') {
 }
 function resourcesView() {
   root.innerHTML =
-    header() +
-    '<main class="shell"><div class="dashboard-head"><div><div class="eyebrow">Configuración compartida</div><h1 class="hero-title">Recursos</h1><p class="muted">Selecciona tus materiales y máquinas al cotizar.</p></div></div>' +
+    header('Impresoras') +
+    '<main class="shell">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
     ['printer']
       .map(
@@ -1801,8 +1789,13 @@ function productionView() {
         o.status === S.orderFilter
     );
   root.innerHTML =
-    header() +
-    '<main class="shell"><div class="dashboard-head"><div><div class="eyebrow">Pedidos y seguimiento</div><h1 class="hero-title">Producción</h1><p class="muted">Crea pedidos desde el resumen de cada producto.</p></div><button class="btn btn-secondary" id="reloadOrders">Actualizar</button></div>' +
+    header(
+      'Pedidos',
+      '<button class="btn icon-btn" id="reloadOrders" type="button" aria-label="Actualizar" title="Actualizar">' +
+        icon('refresh-cw') +
+        '</button>'
+    ) +
+    '<main class="shell">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
     '<div class="production-kpis grid grid-2"><div class="metric"><div class="label">Pedidos en curso</div><div class="value">' +
     open.length +
@@ -2289,7 +2282,13 @@ function showQuote(override = null) {
   dialog.id = 'quoteDialog';
   dialog.className = 'quote-dialog';
   dialog.innerHTML =
-    '<div class="row quote-toolbar"><button class="btn btn-ghost" id="closeQuote">← Volver</button><button class="btn btn-secondary" id="printQuote">Imprimir / PDF</button><button class="btn btn-primary" id="shareQuote">Compartir imagen</button></div><details class="quote-options"><summary>Datos de la cotización · cliente, plazo y condiciones</summary><div class="grid grid-2">' +
+    '<div class="quote-toolbar"><h2>Cotización</h2><button class="btn btn-secondary" id="printQuote">' +
+    icon('printer') +
+    '<span>Imprimir / PDF</span></button><button class="btn btn-primary" id="shareQuote">' +
+    icon('share-2') +
+    '<span>Compartir</span></button><button class="btn icon-btn dialog-close" id="closeQuote" aria-label="Cerrar">' +
+    icon('x') +
+    '</button></div><details class="quote-options"><summary>Datos de la cotización · cliente, plazo y condiciones</summary><div class="grid grid-2">' +
     fieldHtml('Cliente', 'quoteClient', d.client, 'text', 'maxlength="120" placeholder="Nombre o empresa"') +
     fieldHtml('Válida por (días)', 'quoteValidity', d.validityDays, 'number', 'min="1" max="365" step="1"') +
     fieldHtml(
@@ -2316,7 +2315,9 @@ function showQuote(override = null) {
     quoteMarkup(d) +
     '</article><p id="quoteFeedback" role="status" class="small muted"></p>';
   document.body.append(dialog);
+  closeOnBackdrop(dialog);
   dialog.showModal();
+  focusDialog(dialog);
   enhanceFields();
   const feedback = t => {
     q('#quoteFeedback').textContent = t;
@@ -2431,10 +2432,15 @@ function inventoryView() {
         (!S.inventoryOnlyLow || (r.active && r.counted && availableStock(r) <= n(r.min_stock)))
     );
   root.innerHTML =
-    header() +
-    '<main class="shell"><div class="dashboard-head"><div><div class="eyebrow">Materiales y existencias</div><h1 class="hero-title">Inventario</h1><p class="muted">Cuenta, compra y controla lo que necesitas para producir.</p></div>' +
-    (canEdit() ? '<button id="addInventory" class="btn btn-primary">+ Material</button>' : '') +
-    '</div>' +
+    header(
+      'Inventario',
+      canEdit()
+        ? '<button id="addInventory" class="btn btn-primary">' +
+            icon('plus') +
+            '<span>Material</span></button>'
+        : ''
+    ) +
+    '<main class="shell">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
     '<div class="grid grid-2 inventory-kpis"><div class="metric"><div class="label">Valor del stock físico</div><div class="value">' +
     clp(items.filter(r => r.counted).reduce((sum, r) => sum + n(r.stock_qty) * n(r.unit_cost), 0)) +
@@ -2689,17 +2695,15 @@ function showStockMovement(r) {
       if (kind !== 'opening' && quantity === 0) throw Error('La cantidad no produce un movimiento.');
       const cost =
         ['opening', 'purchase'].includes(kind) && qty > 0 ? n(q('#stockPrice').value) / qty : n(r.unit_cost);
-      const { error } = await supabase
-        .from('inventory_movements')
-        .insert({
-          workspace_id: S.workspace.id,
-          resource_id: r.id,
-          kind,
-          quantity,
-          unit_cost: cost,
-          note: q('#stockNote').value.trim(),
-          request_key: key
-        });
+      const { error } = await supabase.from('inventory_movements').insert({
+        workspace_id: S.workspace.id,
+        resource_id: r.id,
+        kind,
+        quantity,
+        unit_cost: cost,
+        note: q('#stockNote').value.trim(),
+        request_key: key
+      });
       if (error && error.code !== '23505') throw error;
       await loadResources();
       dialog.close();
@@ -3380,6 +3384,320 @@ function showPasswordDialog() {
       b.disabled = false;
     }
   };
+}
+
+// Lucide icons (ISC license), inlined so the app needs no icon CDN.
+const ICONS = {
+  house:
+    '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />',
+  package:
+    '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /><path d="M12 22V12" /><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" /><path d="m7.5 4.27 9 5.15" />',
+  'file-text':
+    '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" />',
+  'clipboard-list':
+    '<rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M12 11h4" /><path d="M12 16h4" /><path d="M8 11h.01" /><path d="M8 16h.01" />',
+  boxes:
+    '<path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z" /><path d="m7 16.5-4.74-2.85" /><path d="m7 16.5 5-3" /><path d="M7 16.5v5.17" /><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z" /><path d="m17 16.5-5-3" /><path d="m17 16.5 4.74-2.85" /><path d="M17 16.5v5.17" /><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z" /><path d="M12 8 7.26 5.15" /><path d="m12 8 4.74-2.85" /><path d="M12 13.5V8" />',
+  printer:
+    '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" /><rect x="6" y="14" width="12" height="8" rx="1" />',
+  settings:
+    '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" />',
+  search: '<circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />',
+  plus: '<path d="M5 12h14" /><path d="M12 5v14" />',
+  'ellipsis-vertical':
+    '<circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" />',
+  ellipsis: '<circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />',
+  bell: '<path d="M10.268 21a2 2 0 0 0 3.464 0" /><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />',
+  'trending-up': '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" />',
+  'trending-down': '<polyline points="22 17 13.5 8.5 8.5 13.5 2 7" /><polyline points="16 17 22 17 22 11" />',
+  'triangle-alert':
+    '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" />',
+  'chevron-right': '<path d="m9 18 6-6-6-6" />',
+  'chevron-down': '<path d="m6 9 6 6 6-6" />',
+  'arrow-left': '<path d="m12 19-7-7 7-7" /><path d="M19 12H5" />',
+  x: '<path d="M18 6 6 18" /><path d="m6 6 12 12" />',
+  'log-out':
+    '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" />',
+  'key-round':
+    '<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" /><circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />',
+  'user-plus':
+    '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" x2="19" y1="8" y2="14" /><line x1="22" x2="16" y1="11" y2="11" />',
+  menu: '<line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" />',
+  'refresh-cw':
+    '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" />',
+  copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />',
+  check: '<path d="M20 6 9 17l-5-5" />',
+  'trash-2':
+    '<path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" />',
+  archive:
+    '<rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" />',
+  'archive-restore':
+    '<rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h2" /><path d="M20 8v11a2 2 0 0 1-2 2h-2" /><path d="m9 15 3-3 3 3" /><path d="M12 12v9" />',
+  'share-2':
+    '<circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />',
+  image:
+    '<rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />',
+  users:
+    '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />',
+  user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />',
+  calendar:
+    '<path d="M8 2v4" /><path d="M16 2v4" /><rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" />',
+  'circle-check': '<circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" />',
+  info: '<circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />',
+  pencil:
+    '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" />',
+  history:
+    '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" />',
+  download:
+    '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" />',
+  wallet:
+    '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" /><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />',
+  layers:
+    '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" /><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" /><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />',
+  'list-filter': '<path d="M3 6h18" /><path d="M7 12h10" /><path d="M10 18h4" />',
+  calculator:
+    '<rect width="16" height="20" x="4" y="2" rx="2" /><line x1="8" x2="16" y1="6" y2="6" /><line x1="16" x2="16" y1="14" y2="18" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" />',
+  clock: '<circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />',
+  'circle-alert':
+    '<circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />'
+};
+
+// ---------------------------------------------------------------------------
+// App shell: icons, navigation (sidebar on desktop, tab bar + "Más" sheet on
+// phones), page header, toasts and in-app dialogs instead of alert/confirm.
+// ---------------------------------------------------------------------------
+function icon(name, cls = '') {
+  return (
+    '<svg class="i' +
+    (cls ? ' ' + cls : '') +
+    '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    (ICONS[name] || '') +
+    '</svg>'
+  );
+}
+// Sections shown in the sidebar; the first four are also the phone tab bar.
+const NAV_ITEMS = [
+  { mode: 'dashboard', label: 'Productos', icon: 'package' },
+  { mode: 'production', label: 'Pedidos', icon: 'clipboard-list' },
+  { mode: 'inventory', label: 'Inventario', icon: 'boxes' },
+  { mode: 'resources', label: 'Impresoras', icon: 'printer' }
+];
+const PAGE_TITLES = {
+  dashboard: 'Productos',
+  production: 'Pedidos',
+  inventory: 'Inventario',
+  resources: 'Impresoras'
+};
+function navActive(mode) {
+  return S.mode === mode || (mode === 'dashboard' && S.mode === 'product');
+}
+function navCount(mode) {
+  if (mode === 'dashboard') return S.products.filter(p => p.status !== 'archived').length;
+  if (mode === 'production')
+    return S.orders.filter(o => !['delivered', 'canceled'].includes(o.status)).length;
+  return 0;
+}
+function userInitials() {
+  const email = S.session?.user?.email || '';
+  const name = email
+    .split('@')[0]
+    .replace(/[^a-zA-ZÀ-ÿ]+/g, ' ')
+    .trim();
+  const parts = name.split(' ').filter(Boolean);
+  return ((parts[0]?.[0] || 'K') + (parts[1]?.[0] || '')).toUpperCase();
+}
+function header(title = PAGE_TITLES[S.mode] || 'KultiApp', actions = '', { back = false } = {}) {
+  return (
+    '<header class="page-top">' +
+    (back
+      ? '<button class="btn icon-btn" id="back" type="button" aria-label="Volver">' +
+        icon('arrow-left') +
+        '</button>'
+      : '<img class="page-mark" src="favicon.svg" alt="">') +
+    '<h1 class="page-title">' +
+    esc(title) +
+    '</h1><div class="page-actions">' +
+    actions +
+    '</div></header>'
+  );
+}
+function accountMenuItems() {
+  return (
+    (isOwner()
+      ? '<button type="button" class="menu-item" id="invite">' + icon('user-plus') + 'Invitar socio</button>'
+      : '') +
+    '<button type="button" class="menu-item" id="changePassword">' +
+    icon('key-round') +
+    'Cambiar contraseña</button><button type="button" class="menu-item danger" id="logout">' +
+    icon('log-out') +
+    'Cerrar sesión</button>'
+  );
+}
+function mountShell() {
+  root.classList.add('has-shell');
+  root.classList.toggle('is-detail', S.mode === 'product');
+  qa('.sidebar,.tabbar').forEach(el => el.remove());
+  const side = document.createElement('aside');
+  side.className = 'sidebar';
+  side.innerHTML =
+    '<img class="side-logo" src="' +
+    LOGO_SRC +
+    '" alt="Kultiverso Pop"><nav class="side-nav app-nav" aria-label="Navegación principal">' +
+    NAV_ITEMS.map(item => {
+      const on = navActive(item.mode),
+        count = navCount(item.mode);
+      return (
+        '<button type="button" class="nav-item' +
+        (on ? ' active' : '') +
+        '" data-app-mode="' +
+        item.mode +
+        '"' +
+        (on ? ' aria-current="page"' : '') +
+        '>' +
+        icon(item.icon) +
+        '<span>' +
+        item.label +
+        '</span>' +
+        (count ? '<span class="nav-count">' + count + '</span>' : '') +
+        '</button>'
+      );
+    }).join('') +
+    '</nav><div class="side-user"><div class="account-menu" id="accountMenu" hidden>' +
+    accountMenuItems() +
+    '</div><button type="button" class="user-chip" id="accountButton" aria-haspopup="menu" aria-expanded="false"><span class="avatar">' +
+    esc(userInitials()) +
+    '</span><span class="user-text"><b>' +
+    esc(S.session?.user?.email || '') +
+    '</b><span>' +
+    roleName() +
+    '</span></span>' +
+    icon('ellipsis-vertical') +
+    '</button><p class="powered">Powered by <b>ELARA</b></p></div>';
+  root.prepend(side);
+  const tabs = document.createElement('nav');
+  tabs.className = 'tabbar';
+  tabs.setAttribute('aria-label', 'Navegación');
+  tabs.innerHTML =
+    NAV_ITEMS.map(
+      item =>
+        '<button type="button" class="tab-item' +
+        (navActive(item.mode) ? ' active' : '') +
+        '" data-tab-mode="' +
+        item.mode +
+        '">' +
+        icon(item.icon) +
+        '<span>' +
+        item.label +
+        '</span></button>'
+    ).join('') +
+    '<button type="button" class="tab-item" id="moreTab">' +
+    icon('menu') +
+    '<span>Más</span></button>';
+  root.append(tabs);
+  qa('[data-app-mode],[data-tab-mode]').forEach(
+    b => (b.onclick = () => goMode(b.dataset.appMode || b.dataset.tabMode))
+  );
+  const menu = q('#accountMenu'),
+    button = q('#accountButton');
+  button.onclick = e => {
+    e.stopPropagation();
+    menu.hidden = !menu.hidden;
+    button.setAttribute('aria-expanded', String(!menu.hidden));
+  };
+  q('#moreTab').onclick = showMoreSheet;
+}
+// Close the account menu when clicking anywhere else.
+document.addEventListener('click', e => {
+  const menu = q('#accountMenu');
+  if (menu && !menu.hidden && !e.target.closest('.side-user')) {
+    menu.hidden = true;
+    q('#accountButton')?.setAttribute('aria-expanded', 'false');
+  }
+});
+function showMoreSheet() {
+  const dialog = showDialog(
+    'moreSheet',
+    '<div class="section-title"><h2>Más</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><div class="sheet-user"><span class="avatar">' +
+      esc(userInitials()) +
+      '</span><div><b>' +
+      esc(S.session?.user?.email || '') +
+      '</b><span>' +
+      roleName() +
+      ' · ' +
+      esc(S.workspace?.name || 'Kultiverso Pop') +
+      '</span></div></div><div class="menu-list">' +
+      (isOwner()
+        ? '<button type="button" class="menu-item" data-more="invite">' +
+          icon('user-plus') +
+          'Invitar socio</button>'
+        : '') +
+      '<button type="button" class="menu-item" data-more="password">' +
+      icon('key-round') +
+      'Cambiar contraseña</button><button type="button" class="menu-item danger" data-more="logout">' +
+      icon('log-out') +
+      'Cerrar sesión</button></div><p class="powered">Kultiverso Pop · Powered by <b>ELARA</b></p>'
+  );
+  dialog.classList.add('sheet');
+  const actions = {
+    invite: () => invite(),
+    password: () => showPasswordDialog(),
+    logout: () => supabase.auth.signOut()
+  };
+  dialog.querySelectorAll('[data-more]').forEach(
+    b =>
+      (b.onclick = () => {
+        dialog.close();
+        actions[b.dataset.more]();
+      })
+  );
+}
+// Success messages become a toast once; errors stay as a banner on the page.
+let lastToast = '';
+function toast(message, kind = 'ok') {
+  let host = q('#toasts');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'toasts';
+    host.setAttribute('role', 'status');
+    host.setAttribute('aria-live', 'polite');
+    document.body.append(host);
+  }
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.innerHTML = icon(kind === 'error' ? 'circle-alert' : 'circle-check') + '<span></span>';
+  el.querySelector('span').textContent = message;
+  host.append(el);
+  setTimeout(() => el.classList.add('leaving'), 3200);
+  setTimeout(() => el.remove(), 3600);
+}
+function flashMessages() {
+  if (S.msg && S.msg !== lastToast) toast(S.msg);
+  lastToast = S.msg || '';
+}
+// In-app replacement for window.confirm. Resolves true when confirmed.
+function confirmDialog({ title, body = '', confirmLabel = 'Confirmar', danger = false }) {
+  return new Promise(resolve => {
+    let answer = false;
+    const dialog = showDialog(
+      'confirmDialog',
+      '<div class="section-title"><h2>' +
+        esc(title) +
+        '</h2><button class="btn btn-ghost" data-close>Cerrar</button></div>' +
+        (body ? '<p class="muted">' + esc(body) + '</p>' : '') +
+        '<div class="dialog-actions"><button type="button" class="btn btn-ghost" data-cancel>Cancelar</button><button type="button" class="btn ' +
+        (danger ? 'btn-danger-solid' : 'btn-primary') +
+        '" data-confirm>' +
+        esc(confirmLabel) +
+        '</button></div>'
+    );
+    dialog.classList.add('confirm');
+    dialog.addEventListener('close', () => resolve(answer));
+    dialog.querySelector('[data-cancel]').onclick = () => dialog.close();
+    dialog.querySelector('[data-confirm]').onclick = () => {
+      answer = true;
+      dialog.close();
+    };
+  });
 }
 
 // Start the app once every module-level constant above is initialized.

@@ -91,8 +91,13 @@ async function test(){
  run('q("#closeQuote").click();S.session.user.id="other"');
  assert.equal(run('restoreActiveDraft()'),false);
  run('S.workspace.role="owner";S.products=[];S.mode="dashboard";dashboard()');
- assert.equal(run('q(".dashboard-extra").querySelectorAll(".metric").length'),2);
- assert.equal(run('q(".kpi-grid").children.length'),2);
+ // V1.6 shell: sidebar + phone tab bar; indicators moved off the product list.
+ assert.equal(run('q(".kpi-grid")'),null);
+ assert.equal(run('qa(".sidebar .nav-item").length'),4);
+ assert.equal(run('q(".sidebar .nav-item.active").dataset.appMode'),'dashboard');
+ assert.equal(run('qa(".tabbar .tab-item").length'),5);
+ assert.equal(run('q(".page-title").textContent'),'Productos');
+ assert(run('q("#accountMenu #changePassword")'));
  console.log('PASS V1.2: multicolor/purge, legacy-compatible totals, duplication, seven-color limit, reload/drafts, cloud success/failure, photo safety, quote privacy, viewer permissions and compact dashboard.');
  dom.window.close();
 }
