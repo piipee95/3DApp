@@ -2793,3 +2793,160 @@ main.shell.narrow {
     font-size: 16px;
   }
 }
+
+/* ---------- Búsqueda global e instalación (V1.9) ---------- */
+.side-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 8px 10px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.side-search:hover {
+  color: var(--text);
+  border-color: var(--cyan);
+}
+.side-search svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.side-search span {
+  flex: 1;
+}
+kbd {
+  font: 600 10.5px/1 inherit;
+  font-family: inherit;
+  color: var(--muted);
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--surface);
+}
+@media (min-width: 960px) {
+  .header-search {
+    display: none;
+  }
+}
+dialog.search-dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: min(560px, 80vh);
+  margin-top: 10vh;
+  padding: 12px;
+}
+.search-big {
+  max-width: none;
+  flex: none;
+  width: 100%;
+}
+.search-big input {
+  font-size: 16px;
+  height: 46px;
+}
+.search-big kbd {
+  margin-right: 4px;
+}
+.search-results {
+  margin-top: 10px;
+  overflow: auto;
+  max-height: calc(min(560px, 80vh) - 90px);
+}
+.search-group > span {
+  display: block;
+  padding: 10px 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint, var(--muted));
+}
+.search-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 10px;
+  min-height: 48px;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.search-item > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--muted);
+}
+.search-item > svg:last-child {
+  width: 15px;
+  height: 15px;
+  opacity: 0;
+}
+.search-item.on {
+  background: var(--raised);
+}
+.search-item.on > svg:first-child {
+  color: var(--cyan);
+}
+.search-item.on > svg:last-child {
+  opacity: 1;
+}
+.si-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.si-text b {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.si-text span {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.install-steps {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  display: grid;
+  gap: 10px;
+  line-height: 1.5;
+}
+.install-steps svg {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+  color: var(--cyan);
+}
+@media (max-width: 599px) {
+  dialog.search-dialog {
+    margin-top: 0;
+    max-height: 92vh;
+  }
+  .search-big kbd {
+    display: none;
+  }
+  .search-results {
+    max-height: calc(92vh - 90px);
+  }
+}
