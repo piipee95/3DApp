@@ -3485,7 +3485,206 @@ dialog[open]::backdrop {
   }
 }
 
-.customer-upload{max-width:600px;margin:35px auto;padding:20px}.customer-upload-logo{display:block;max-width:230px;max-height:100px;object-fit:contain;margin:0 auto 24px}.customer-upload .panel{padding:24px}.customer-upload h1{font-size:27px;margin:0 0 16px}.customer-upload .grid{gap:18px}.customer-upload input[type=file]{width:100%;min-width:0}.customer-file-row{padding:16px 0;border-bottom:1px solid var(--border)}.customer-file-row h3,.customer-file-note{overflow-wrap:anywhere;white-space:pre-wrap}.customer-file-preview{display:block;max-width:100%;max-height:65vh;object-fit:contain}#customerFileLink{font-size:13px}#fileRequestLinkDialog .row{flex-wrap:wrap}
+.customer-upload {
+  max-width: 600px;
+  margin: 35px auto;
+  padding: 20px;
+}
+.customer-upload-logo {
+  display: block;
+  max-width: 230px;
+  max-height: 100px;
+  object-fit: contain;
+  margin: 0 auto 24px;
+}
+.customer-upload .panel {
+  padding: 24px;
+}
+.customer-upload h1 {
+  font-size: 27px;
+  margin: 0 0 16px;
+}
+.customer-upload .grid {
+  gap: 18px;
+}
+.customer-upload input[type='file'] {
+  width: 100%;
+  min-width: 0;
+}
+.customer-file-row {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.customer-file-row h3,
+.customer-file-note {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.customer-file-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+}
+#customerFileLink {
+  font-size: 13px;
+}
+#fileRequestLinkDialog .row {
+  flex-wrap: wrap;
+}
 
-/* Customer request archive filters. */
-.customer-files-tabs{margin-bottom:var(--space-4,16px);flex-wrap:wrap}
+/* ---------- Archivos de clientes (V2.4) ---------- */
+.page-lead {
+  margin: 0 0 14px;
+  font-size: 14px;
+  max-width: 760px;
+}
+.file-list .file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: default;
+}
+.file-row .lr-main {
+  flex: 1;
+  min-width: 0;
+}
+.file-row.is-new {
+  background: linear-gradient(90deg, #e0117a14, transparent 60%);
+}
+.file-ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--raised);
+  color: var(--cyan);
+}
+.file-ic svg {
+  width: 18px;
+  height: 18px;
+}
+.file-row .row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+.order-head-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+@media (max-width: 599px) {
+  .file-list .file-row {
+    flex-wrap: wrap;
+  }
+  .file-row .chip {
+    order: 3;
+  }
+  .file-row .row-actions {
+    order: 4;
+    width: 100%;
+    padding-left: 50px;
+  }
+}
+/* Public upload page. */
+.customer-upload {
+  color: var(--text);
+}
+.customer-upload p {
+  line-height: 1.5;
+}
+.drop-zone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 26px 16px;
+  border: 2px dashed var(--line);
+  border-radius: 14px;
+  background: var(--raised);
+  text-align: center;
+  cursor: pointer;
+}
+.drop-zone:hover,
+.drop-zone:focus-within {
+  border-color: var(--action);
+}
+.drop-zone input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.drop-zone b {
+  font-size: 16px;
+  color: var(--text);
+}
+.drop-zone span {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.picked-files {
+  list-style: none;
+  margin: 8px 0 4px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.picked-files li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--raised);
+}
+.picked-files li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.picked-files .bad {
+  color: var(--red);
+}
+.upload-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--raised);
+  overflow: hidden;
+}
+.upload-progress i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--cyan), var(--action));
+  transition: width 0.3s;
+}
+.upload-done {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 12px;
+  border-radius: 50%;
+  background: #2fd48a22;
+  color: var(--green);
+  font-size: 28px;
+  font-weight: 800;
+}
+.customer-upload .panel > p {
+  margin: 0 0 10px;
+}
+.customer-upload .panel > h1 + p {
+  font-weight: 600;
+  font-size: 16px;
+}
+.customer-upload .panel form {
+  margin-top: 18px;
+}
