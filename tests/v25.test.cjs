@@ -13,7 +13,7 @@ async function test(){
  // "Nuevo" in the sidebar and on Inicio opens the create menu.
  assert.ok(run('!!q(".sidebar [data-open-create]")'));
  run(`q('#homeNew').click()`);
- assert.deepEqual(JSON.parse(run('JSON.stringify(qa("#createMenu [data-create]").map(b=>b.dataset.create))')),['quote','order','product']);
+ assert.deepEqual(JSON.parse(run('JSON.stringify(qa("#createMenu [data-create]").map(b=>b.dataset.create))')),['quote','order','stock','product']);
  // Quick order: agreed price, IVA, 50% deposit, no product.
  run(`q('#createMenu [data-create=order]').click()`);
  assert.equal(run('q("#quickJobDialog h2").textContent'),'Nuevo pedido');
@@ -53,6 +53,15 @@ async function test(){
  run(`S.customers=db.customers;showCustomer(S.customers[0]);q('[data-customer-new=quote]').click()`);
  assert.equal(run('q("#qjClient").value'),'Camila Rojas');
  run(`q('#quickJobDialog').close()`);
+ // Fabricate for stock: pick a catalogue product, then the stock dialog opens on it.
+ run(`S.products=[{id:'p1',name:'Cuadro Iron Man',quantity:1,status:'active',stock_qty:2,stock_reserved:0},{id:'p2',name:'Viejo',quantity:1,status:'archived'}];S.summaries=new Map([['p1',{total_cost:9000}]]);
+  openProduct=async id=>{newProduct();S.product.id=id;S.product.name='Cuadro Iron Man';S.dirty=false;S.mode='product'};showCreateMenu();q('[data-create=stock]').click()`);
+ assert.equal(run('qa("[data-stock-pick]").length'),1);
+ assert.match(run('q("[data-stock-pick]").textContent'),/Cuadro Iron Man.*Costo \$9\.000 · En stock 2/);
+ run(`q('[data-stock-pick=p1]').click()`);await flush();
+ assert.equal(run('S.mode'),'product');assert.equal(run('q("#newOrderDialog h2").textContent'),'Fabricar para stock');
+ assert.ok(run('!!q("#orderAlreadyMade")'));
+ run(`q('#newOrderDialog').close()`);
  // Viewers don't get create actions.
  run(`S.workspace.role='viewer';S.mode='home';render()`);
  assert.equal(run('!!q("[data-open-create]")||!!q("#homeNew")'),false);
