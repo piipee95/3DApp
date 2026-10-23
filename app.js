@@ -186,8 +186,39 @@ async function loadProducts() {
 }
 function fail(m) {
   S.err = m;
+  logError('handled', m);
   render();
 }
+// Error log: what any team member hits is stored (max 20 different errors per session) for review.
+const APP_VERSION = 'v2.7';
+const loggedErrors = new Set();
+function logError(kind, message, stack = '') {
+  try {
+    message = String(message || '')
+      .trim()
+      .slice(0, 1000);
+    if (!message || !S.session || !S.workspace || loggedErrors.size >= 20 || loggedErrors.has(message))
+      return;
+    loggedErrors.add(message);
+    const pending = supabase.from?.('app_errors')?.insert?.({
+      workspace_id: S.workspace.id,
+      kind,
+      message,
+      stack: String(stack || '').slice(0, 4000),
+      screen: String(S.mode || '').slice(0, 40),
+      app_version: APP_VERSION,
+      user_agent: navigator.userAgent.slice(0, 300)
+    });
+    pending?.then?.(
+      () => {},
+      () => {}
+    );
+  } catch {}
+}
+window.addEventListener('error', e => logError('error', e.message, e.error?.stack));
+window.addEventListener('unhandledrejection', e =>
+  logError('rejection', e.reason?.message || String(e.reason), e.reason?.stack)
+);
 function authView() {
   root.innerHTML =
     '<div class="shell"><div class="auth card"><img class="auth-logo" src="' +
@@ -1555,12 +1586,33 @@ async function loadResources() {
   if (error) throw error;
   S.resources = data || [];
 }
+// Startup loads the last 12 months plus anything still open; Reportes fetches older months on demand.
+const HISTORY_MONTHS = 12;
+function historyCutoff(months = HISTORY_MONTHS) {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth() - months + 1, 1).toISOString();
+}
+// Applies the startup window; if the filtered query fails, it falls back to the full list
+// (and logs it) so the app never opens without its orders. Builders without .or return the full list.
+async function recentOnly(build, filter) {
+  const query = build();
+  if (typeof query.or !== 'function') return query;
+  const result = await query.or(filter);
+  if (!result.error) return result;
+  logError('handled', 'Filtro de carga reciente: ' + result.error.message);
+  return build();
+}
 async function loadOrders() {
-  const { data, error } = await supabase
-    .from('production_orders')
-    .select('*')
-    .eq('workspace_id', S.workspace.id)
-    .order('created_at', { ascending: false });
+  S.historyFrom = historyCutoff();
+  const { data, error } = await recentOnly(
+    () =>
+      supabase
+        .from('production_orders')
+        .select('*')
+        .eq('workspace_id', S.workspace.id)
+        .order('created_at', { ascending: false }),
+    'created_at.gte."' + S.historyFrom + '",status.not.in.(delivered,canceled)'
+  );
   if (error) throw error;
   S.orders = data || [];
   // Balances are extra information: orders still show if payments fail to load.
@@ -3860,11 +3912,15 @@ const quoteFolioNo = no => 'COT-' + String(no).padStart(4, '0');
 const QUOTE_STATUS = { open: 'Enviada', expired: 'Vencida', accepted: 'Aceptada', rejected: 'Rechazada' };
 const QUOTE_CHIP = { open: 'c-printing', expired: 'c-late', accepted: 'c-ready', rejected: '' };
 async function loadQuotes() {
-  const { data, error } = await supabase
-    .from('quotes')
-    .select('*')
-    .eq('workspace_id', S.workspace.id)
-    .order('created_at', { ascending: false });
+  const { data, error } = await recentOnly(
+    () =>
+      supabase
+        .from('quotes')
+        .select('*')
+        .eq('workspace_id', S.workspace.id)
+        .order('created_at', { ascending: false }),
+    'created_at.gte."' + historyCutoff() + '",status.eq.sent'
+  );
   if (error) throw error;
   S.quotes = data || [];
 }
@@ -4903,16 +4959,19 @@ function registerServiceWorker() {
 // ---------------------------------------------------------------------------
 const PAY_METHODS = { transfer: 'Transferencia', cash: 'Efectivo', card: 'Tarjeta', other: 'Otro' };
 async function loadPayments() {
-  const { data, error } = await supabase
+  // Two years covers deposits of any order still open from the last 12 months.
+  let query = supabase
     .from('order_payments')
     .select('*')
     .eq('workspace_id', S.workspace.id)
     .order('paid_on', { ascending: true });
+  if (typeof query.gte === 'function') query = query.gte('paid_on', historyCutoff(24).slice(0, 10));
+  const { data, error } = await query;
   if (error) throw error;
   S.payments = data || [];
 }
 function orderPayments(o) {
-  return (S.payments || []).filter(p => p.order_id === o.id);
+  return [...(S.payments || []), ...(S.older?.payments || [])].filter(p => p.order_id === o.id);
 }
 // Stock fabrication and canceled orders owe nothing.
 function orderBalance(o) {
@@ -5394,13 +5453,51 @@ const inMonth = (iso, y, m) => {
   const d = new Date(String(iso).length === 10 ? iso + 'T12:00' : iso);
   return d.getFullYear() === y && d.getMonth() === m;
 };
+const uniqueById = rows => [...new Map(rows.map(x => [x.id, x])).values()];
+// Recent data plus any older months fetched for Reportes.
+function reportRows(kind) {
+  return uniqueById([...(S[kind] || []), ...(S.older?.[kind] || [])]);
+}
+// Fetches the months before the startup window that the report (and its 6-month chart) needs.
+function needsHistory(y, m) {
+  const loadedFrom = S.older?.from || S.historyFrom;
+  return !!loadedFrom && new Date(y, m - 5, 1).toISOString() < loadedFrom;
+}
+async function ensureHistory(y, m) {
+  const start = new Date(y, m - 5, 1).toISOString(),
+    loadedFrom = S.older?.from || S.historyFrom;
+  if (!needsHistory(y, m)) return;
+  const ws = S.workspace.id,
+    range = (table, col) =>
+      supabase
+        .from(table)
+        .select('*')
+        .eq('workspace_id', ws)
+        .gte(col, col === 'paid_on' ? start.slice(0, 10) : start)
+        .lt(col, col === 'paid_on' ? loadedFrom.slice(0, 10) : loadedFrom);
+  const [orders, quotes, payments] = await Promise.all([
+    range('production_orders', 'created_at'),
+    range('quotes', 'created_at'),
+    range('order_payments', 'paid_on')
+  ]);
+  for (const r of [orders, quotes, payments]) if (r.error) throw r.error;
+  S.older = {
+    from: start,
+    orders: uniqueById([...(S.older?.orders || []), ...(orders.data || [])]),
+    quotes: uniqueById([...(S.older?.quotes || []), ...(quotes.data || [])]),
+    payments: uniqueById([...(S.older?.payments || []), ...(payments.data || [])])
+  };
+}
 function monthReport(y, m) {
-  const sales = S.orders.filter(
+  const allOrders = reportRows('orders'),
+    sales = allOrders.filter(
       o => o.kind !== 'stock' && o.status !== 'canceled' && inMonth(o.created_at, y, m)
     ),
-    made = S.orders.filter(o => o.kind === 'stock' && o.status !== 'canceled' && inMonth(o.created_at, y, m)),
-    payments = (S.payments || []).filter(p => inMonth(p.paid_on, y, m)),
-    quotes = S.quotes.filter(qt => inMonth(qt.created_at, y, m));
+    made = allOrders.filter(
+      o => o.kind === 'stock' && o.status !== 'canceled' && inMonth(o.created_at, y, m)
+    ),
+    payments = reportRows('payments').filter(p => inMonth(p.paid_on, y, m)),
+    quotes = reportRows('quotes').filter(qt => inMonth(qt.created_at, y, m));
   let total = 0,
     net = 0,
     profit = 0,
@@ -5637,8 +5734,16 @@ function reportsView() {
       : '<p class="small muted report-empty">Sin fabricación para stock este mes.</p>') +
     '</section></div><p class="footnote small muted">Ventas de pedidos de cliente creados en el mes (sin cancelados). La utilidad usa el costo real cuando está registrado y si no el estimado.</p></main>';
   common();
-  q('#prevMonth').onclick = () => {
+  q('#prevMonth').onclick = async () => {
     S.reportMonth = m === 0 ? [y - 1, 11] : [y, m - 1];
+    if (needsHistory(...S.reportMonth)) {
+      q('#prevMonth').disabled = true;
+      try {
+        await ensureHistory(...S.reportMonth);
+      } catch (error) {
+        toast('No se pudo cargar el historial: ' + error.message, 'error');
+      }
+    }
     reportsView();
   };
   q('#nextMonth').onclick = () => {
@@ -5737,7 +5842,7 @@ function exportReport(y, m) {
       rows: [
         ['Fecha', 'Pedido', 'Cliente', 'Monto', 'Medio', 'Nota'],
         ...r.payments.map(p => {
-          const o = S.orders.find(x => x.id === p.order_id);
+          const o = reportRows('orders').find(x => x.id === p.order_id);
           return [
             date(p.paid_on),
             o ? 'PED-' + o.order_no : '',
