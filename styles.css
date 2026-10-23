@@ -3688,3 +3688,80 @@ dialog[open]::backdrop {
 .customer-upload .panel form {
   margin-top: 18px;
 }
+
+/* ---------- Crear rápido (V2.5) ---------- */
+.side-new {
+  width: 100%;
+  justify-content: center;
+  margin: 0 0 10px;
+}
+.create-options {
+  display: grid;
+  gap: 8px;
+}
+.create-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.create-option:hover {
+  border-color: var(--action);
+}
+.create-option > svg:first-child {
+  width: 22px;
+  height: 22px;
+  color: var(--cyan);
+  flex: none;
+}
+.create-option > svg:last-child {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  flex: none;
+}
+.create-option > span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.create-option > span b {
+  font-size: 15px;
+}
+.create-option > span span {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.input-with-btn {
+  display: flex;
+  gap: 6px;
+}
+.input-with-btn input {
+  flex: 1;
+  min-width: 0;
+}
+.job-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.job-notice > span {
+  flex: 1 1 240px;
+}
+.customer-quick {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 14px;
+  flex-wrap: wrap;
+}

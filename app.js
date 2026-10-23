@@ -2135,6 +2135,15 @@ function showOrder(order) {
           order.quantity +
           ' un. del stock; no consume materiales.</p>'
         : '') +
+      (!order.product_id && order.kind !== 'stock'
+        ? '<div class="notice small job-notice"><span><b>Trabajo a medida.</b> Registra abajo sus costos reales para conocer la utilidad, o créalo como producto para costearlo en detalle y reutilizarlo.</span>' +
+          (canEdit()
+            ? '<button type="button" class="btn btn-secondary btn-sm" id="jobToProduct">' +
+              icon('package') +
+              'Crear producto</button>'
+            : '') +
+          '</div>'
+        : '') +
       '</div><form id="orderForm" class="grid"><div class="field"><label for="orderStatus">Estado</label><select id="orderStatus">' +
       Object.entries(ORDER_STATUSES)
         .map(([key, label]) => '<option value="' + key + '">' + label + '</option>')
@@ -2222,6 +2231,10 @@ function showOrder(order) {
   refreshActual();
   mountOrderInventory(order);
   mountOrderPayments(order, dialog);
+  q('#jobToProduct')?.addEventListener('click', () => {
+    dialog.close();
+    productFromJob(order);
+  });
   if (!canEdit()) {
     dialog.querySelectorAll('form input,form select,form textarea').forEach(el => (el.disabled = true));
     return;
@@ -3998,7 +4011,12 @@ function quotesView() {
       'Cotizaciones',
       '<button class="btn icon-btn" id="reloadQuotes" type="button" aria-label="Actualizar" title="Actualizar">' +
         icon('refresh-cw') +
-        '</button>'
+        '</button>' +
+        (canEdit()
+          ? '<button class="btn btn-primary" id="newJobQuote" type="button">' +
+            icon('plus') +
+            '<span>Nueva cotización</span></button>'
+          : '')
     ) +
     '<main class="shell">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
@@ -4088,6 +4106,7 @@ function quotesView() {
     b => (b.onclick = () => showSavedQuote(S.quotes.find(x => x.id === b.dataset.quote)))
   );
   q('#reloadQuotes').onclick = () => goMode('quotes');
+  q('#newJobQuote')?.addEventListener('click', () => showQuickJob('quote'));
 }
 function showSavedQuote(qt) {
   if (!qt) return;
@@ -4205,14 +4224,18 @@ function showQuoteToOrder(qt) {
       clp(qt.unit_price) +
       '</p>' +
       fieldHtml('Fecha de entrega', 'qoDue', '', 'date') +
-      depositField() +
+      depositField(quoteSums(qt).total) +
       (product && stock.available >= qt.quantity
         ? '<label class="check-row"><input type="checkbox" id="qoFromStock"> <span><b>Entregar desde stock</b><span class="small muted">' +
           stock.available +
           ' unidades disponibles. No reserva materiales.</span></span></label>'
         : product
           ? ''
-          : '<p class="notice small">El producto ya no existe: el pedido se crea sin reservar materiales.</p>') +
+          : '<p class="notice small">' +
+            (qt.product_id
+              ? 'El producto ya no existe: el pedido se crea sin reservar materiales.'
+              : 'Trabajo a medida: no reserva materiales. Registra sus costos reales en el pedido.') +
+            '</p>') +
       '<div class="field"><label for="qoNotes">Notas de producción</label><textarea id="qoNotes"></textarea></div><div id="qoFeedback" class="small" role="status"></div><button class="btn btn-primary" type="submit">Confirmar pedido</button></form>'
   );
   q('#quoteOrderForm').onsubmit = async e => {
@@ -4393,6 +4416,13 @@ function showCustomer(c) {
           icon('share-2') +
           'Escribir por WhatsApp</a>'
         : '') +
+      (edit && c.id
+        ? '<div class="customer-quick"><button type="button" class="btn btn-secondary btn-sm" data-customer-new="quote">' +
+          icon('file-text') +
+          'Cotizar</button><button type="button" class="btn btn-secondary btn-sm" data-customer-new="order">' +
+          icon('clipboard-list') +
+          'Nuevo pedido</button></div>'
+        : '') +
       '<form id="customerForm" class="grid">' +
       fieldHtml(
         'Nombre o empresa',
@@ -4489,6 +4519,13 @@ function showCustomer(c) {
       (b.onclick = () => {
         dialog.close();
         showOrder(S.orders.find(x => x.id === b.dataset.historyOrder));
+      })
+  );
+  dialog.querySelectorAll('[data-customer-new]').forEach(
+    b =>
+      (b.onclick = () => {
+        dialog.close();
+        showQuickJob(b.dataset.customerNew, { client: c.name });
       })
   );
   q('#customerForm').onsubmit = async e => {
@@ -5078,7 +5115,11 @@ function mountOrderPayments(order, dialog) {
     box = document.createElement('section');
     box.id = 'orderPayments';
     box.className = 'pay-card';
-    (dialog.querySelector('.facts') || dialog.querySelector('.order-head')).after(box);
+    (
+      dialog.querySelector('.job-notice') ||
+      dialog.querySelector('.facts') ||
+      dialog.querySelector('.order-head')
+    ).after(box);
   }
   box.innerHTML = paymentsMarkup(order);
   const b = orderBalance(order);
@@ -5136,15 +5177,22 @@ function mountOrderPayments(order, dialog) {
   enhanceFields();
 }
 // Optional deposit field for new customer orders.
-function depositField() {
-  return fieldHtml(
-    'Abono recibido (opcional)',
-    'orderDeposit',
-    '',
-    'number',
-    'min="0" step="1" placeholder="0"'
+function depositField(total = 0) {
+  return (
+    '<div class="field"><label for="orderDeposit">Abono recibido (opcional)</label><div class="input-with-btn"><input id="orderDeposit" type="number" min="0" step="1" placeholder="0">' +
+    (total > 0
+      ? '<button type="button" class="btn btn-secondary btn-sm" data-deposit-half="' +
+        Math.round(total / 2) +
+        '">50%</button>'
+      : '') +
+    '</div></div>'
   );
 }
+// The 50% shortcut next to any deposit field.
+document.addEventListener('click', e => {
+  const b = e.target.closest?.('[data-deposit-half]');
+  if (b) q('#orderDeposit').value = b.dataset.depositHalf;
+});
 async function saveDeposit(order) {
   const amount = Math.round(n(q('#orderDeposit')?.value));
   if (amount > 0) await addPayment(order, amount, 'transfer', null, 'Abono inicial');
@@ -5959,6 +6007,250 @@ function updatePriceHero() {
     (margin == null ? '—' : pct(margin)) +
     '</b></div></div>';
 }
+// ---------------------------------------------------------------------------
+// V2.5: quick quotes and orders for custom jobs that aren't a product yet.
+// The agreed price comes first; costs are broken down later on the order.
+// ---------------------------------------------------------------------------
+function showCreateMenu() {
+  if (!canEdit()) return;
+  const dialog = showDialog(
+    'createMenu',
+    '<div class="section-title"><h2>Crear</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><div class="create-options">' +
+      [
+        [
+          'quote',
+          'file-text',
+          'Cotización',
+          'Precio para un cliente, aunque el trabajo aún no esté en el catálogo.'
+        ],
+        [
+          'order',
+          'clipboard-list',
+          'Pedido',
+          'Trabajo confirmado con su precio y abono. Los costos se desglosan después.'
+        ],
+        [
+          'product',
+          'package',
+          'Producto',
+          'Costeo completo para el catálogo: impresiones, materiales y margen.'
+        ]
+      ]
+        .map(
+          ([k, ic, t, d]) =>
+            '<button type="button" class="create-option" data-create="' +
+            k +
+            '">' +
+            icon(ic) +
+            '<span><b>' +
+            t +
+            '</b><span>' +
+            d +
+            '</span></span>' +
+            icon('chevron-right') +
+            '</button>'
+        )
+        .join('') +
+      '</div>'
+  );
+  dialog.classList.add('sheet');
+  const go = {
+    quote: () => showQuickJob('quote'),
+    order: () => showQuickJob('order'),
+    product: () => newProduct()
+  };
+  dialog.querySelectorAll('[data-create]').forEach(
+    b =>
+      (b.onclick = () => {
+        dialog.close();
+        go[b.dataset.create]();
+      })
+  );
+  return dialog;
+}
+// kind 'quote' or 'order'. Optional prefill from a customer.
+function showQuickJob(kind, prefill = {}) {
+  if (!canEdit()) return;
+  const isOrder = kind === 'order',
+    ivaRate = 0.19;
+  const dialog = showDialog(
+    'quickJobDialog',
+    '<div class="section-title"><h2>' +
+      (isOrder ? 'Nuevo pedido' : 'Nueva cotización') +
+      '</h2><button class="btn btn-ghost" data-close>Volver</button></div><form id="quickJobForm" class="grid">' +
+      fieldHtml(
+        'Cliente',
+        'qjClient',
+        prefill.client || '',
+        'text',
+        'maxlength="120" list="customerList" autocomplete="off" placeholder="Nombre o empresa"' +
+          (isOrder ? ' required' : '')
+      ) +
+      customerOptions() +
+      fieldHtml(
+        'Trabajo',
+        'qjTitle',
+        prefill.title || '',
+        'text',
+        'required maxlength="200" placeholder="Ej. Cuadro 3D personalizado mascota"'
+      ) +
+      '<div class="field"><label for="qjDetail">' +
+      (isOrder ? 'Detalle para producción' : 'Descripción para el cliente') +
+      ' (opcional)</label><textarea id="qjDetail" maxlength="1500" placeholder="Medidas, colores, fotos de referencia…"></textarea></div><div class="grid grid-2">' +
+      fieldHtml('Cantidad', 'qjQty', 1, 'number', 'min="1" max="100000" step="1" required') +
+      fieldHtml(
+        'Precio final por unidad',
+        'qjPrice',
+        '',
+        'number',
+        'min="0" step="1" required placeholder="Lo acordado con el cliente"'
+      ) +
+      '</div><label class="check-row"><input type="checkbox" id="qjIva" checked> <span><b>El precio incluye IVA (19%)</b><span class="small muted">Desmárcalo si cobras sin boleta/factura.</span></span></label>' +
+      (isOrder
+        ? '<div class="grid grid-2">' +
+          fieldHtml('Fecha de entrega', 'qjDue', '', 'date') +
+          '<div class="field"><label for="qjDeposit">Abono recibido</label><div class="input-with-btn"><input id="qjDeposit" type="number" min="0" step="1" placeholder="0"><button type="button" class="btn btn-secondary btn-sm" id="qjHalf">50%</button></div></div></div><div class="field"><label for="qjMethod">Medio del abono</label><select id="qjMethod">' +
+          Object.entries(PAY_METHODS)
+            .map(([k, v]) => '<option value="' + k + '">' + v + '</option>')
+            .join('') +
+          '</select></div>'
+        : fieldHtml(
+            'Plazo de entrega (opcional)',
+            'qjDelivery',
+            S.settings.quote_delivery || '',
+            'text',
+            'maxlength="200" placeholder="Ej. 5 a 7 días hábiles"'
+          )) +
+      '<div id="qjTotal" class="notice small" role="status"></div><p class="small muted">' +
+      (isOrder
+        ? 'Queda como trabajo a medida: no reserva materiales. Después registra sus costos reales en el pedido o crea el producto para el catálogo.'
+        : 'Se guarda con folio y se abre para compartir por WhatsApp o PDF. Si la aceptan, crea el pedido desde Cotizaciones.') +
+      '</p><div id="qjFeedback" class="small" role="status"></div><button class="btn btn-primary" type="submit">' +
+      (isOrder ? 'Crear pedido' : 'Crear y compartir cotización') +
+      '</button></form>'
+  );
+  const read = () => {
+    const qty = Math.max(1, Math.floor(n(q('#qjQty').value))),
+      price = Math.max(0, Math.round(n(q('#qjPrice').value))),
+      iva = q('#qjIva').checked;
+    return { qty, price, iva, total: qty * price };
+  };
+  const preview = () => {
+    const v = read();
+    q('#qjTotal').innerHTML =
+      'Total: <b>' +
+      clp(v.total) +
+      '</b>' +
+      (v.iva && v.total ? ' (neto ' + clp(Math.round(v.total / (1 + ivaRate))) + ' + IVA)' : '') +
+      (isOrder && v.total ? ' · 50% = ' + clp(Math.round(v.total / 2)) : '');
+  };
+  dialog.querySelectorAll('input').forEach(el => el.addEventListener('input', preview));
+  q('#qjIva').onchange = preview;
+  q('#qjHalf')?.addEventListener('click', () => {
+    q('#qjDeposit').value = Math.round(read().total / 2);
+  });
+  preview();
+  q('#quickJobForm').onsubmit = async e => {
+    e.preventDefault();
+    const b = e.submitter || e.target.querySelector('button[type=submit]');
+    if (b.disabled) return;
+    b.disabled = true;
+    const v = read(),
+      client = q('#qjClient').value.trim(),
+      title = q('#qjTitle').value.trim(),
+      detail = q('#qjDetail').value.trim();
+    try {
+      const customer_id = await ensureCustomer(client);
+      if (isOrder) {
+        const deposit = Math.round(n(q('#qjDeposit').value));
+        if (deposit > v.total) throw new Error('El abono no puede superar el total del pedido.');
+        const { data: order, error } = await supabase
+          .from('production_orders')
+          .insert({
+            workspace_id: S.workspace.id,
+            product_id: null,
+            ...(customer_id ? { customer_id } : {}),
+            title,
+            kind: 'customer',
+            from_stock: false,
+            customer_name: client,
+            quantity: v.qty,
+            unit_price: v.price,
+            iva_enabled: v.iva,
+            iva_rate: ivaRate,
+            estimated_cost: 0,
+            estimated_grams: 0,
+            estimated_minutes: 0,
+            due_date: q('#qjDue').value || null,
+            notes: detail
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        if (deposit > 0) await addPayment(order, deposit, q('#qjMethod').value, null, 'Abono inicial');
+        dialog.close();
+        S.orderFilter = 'open';
+        await goMode('production');
+        S.msg =
+          'Pedido PED-' +
+          order.order_no +
+          ' creado' +
+          (deposit > 0 ? ' con abono de ' + clp(deposit) : '') +
+          '.';
+        render();
+        const fresh = S.orders.find(o => o.id === order.id);
+        if (fresh) showOrder(fresh);
+      } else {
+        const defaults = quoteDefaults();
+        const { data: quote, error } = await supabase
+          .from('quotes')
+          .insert({
+            workspace_id: S.workspace.id,
+            customer_id,
+            client_name: client,
+            product_id: null,
+            title,
+            description: detail,
+            quantity: v.qty,
+            unit_price: v.price,
+            iva_enabled: v.iva,
+            iva_rate: ivaRate,
+            unit_cost: 0,
+            validity_days: defaults.validityDays,
+            delivery: q('#qjDelivery').value.trim(),
+            terms: defaults.terms,
+            contact: defaults.contact
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        S.quotes = [quote, ...(S.quotes || []).filter(x => x.id !== quote.id)];
+        dialog.close();
+        S.quoteFilter = 'open';
+        await goMode('quotes');
+        showQuote(savedQuoteData(quote));
+      }
+    } catch (error) {
+      q('#qjFeedback').textContent = error.message;
+    } finally {
+      b.disabled = false;
+    }
+  };
+  return dialog;
+}
+// A custom job (order without product) can become a catalogue product to cost it.
+function productFromJob(order) {
+  newProduct();
+  S.product.name = order.title;
+  S.product.description = order.notes || '';
+  S.product.quantity = 1;
+  S.product.iva_enabled = order.iva_enabled;
+  S.product.sale_price = Math.round(n(order.unit_price));
+  S.editorTab = 'prints';
+  S.msg =
+    'Producto creado desde PED-' + order.order_no + ' con su precio acordado. Agrega impresiones y costos.';
+  render();
+}
 const ICONS = {
   house:
     '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />',
@@ -6146,7 +6438,13 @@ function mountShell() {
   side.innerHTML =
     '<img class="side-logo" src="' +
     LOGO_SRC +
-    '" alt="Kultiverso Pop"><button type="button" class="side-search" data-open-search>' +
+    '" alt="Kultiverso Pop">' +
+    (canEdit()
+      ? '<button type="button" class="btn btn-primary side-new" data-open-create>' +
+        icon('plus') +
+        'Nuevo</button>'
+      : '') +
+    '<button type="button" class="side-search" data-open-search>' +
     icon('search') +
     '<span>Buscar</span><kbd>' +
     (/mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent) ? '⌘K' : 'Ctrl K') +
@@ -6216,6 +6514,7 @@ function mountShell() {
   };
   q('#moreTab').onclick = showMoreSheet;
   qa('[data-open-search]').forEach(b => (b.onclick = showSearch));
+  qa('[data-open-create]').forEach(b => (b.onclick = showCreateMenu));
   q('#installApp')?.addEventListener('click', installApp);
   q('#backupData')?.addEventListener('click', showBackup);
 }
@@ -6556,7 +6855,7 @@ function homeView() {
       canEdit()
         ? '<button class="btn btn-primary" id="homeNew" type="button">' +
             icon('plus') +
-            '<span>Nuevo producto</span></button>'
+            '<span>Nuevo</span></button>'
         : ''
     ) +
     '<main class="shell home">' +
@@ -6629,7 +6928,7 @@ function homeView() {
     stock +
     '</section></div></main>';
   common();
-  q('#homeNew')?.addEventListener('click', newProduct);
+  q('#homeNew')?.addEventListener('click', showCreateMenu);
   q('#homeDue')?.addEventListener('click', () => {
     S.orderFilter = 'unpaid';
     goMode('production');
@@ -6751,7 +7050,12 @@ function productionView() {
       'Pedidos',
       '<button class="btn icon-btn" id="reloadOrders" type="button" aria-label="Actualizar" title="Actualizar">' +
         icon('refresh-cw') +
-        '</button>'
+        '</button>' +
+        (canEdit()
+          ? '<button class="btn btn-primary" id="newJobOrder" type="button">' +
+            icon('plus') +
+            '<span>Nuevo pedido</span></button>'
+          : '')
     ) +
     '<main class="shell">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
@@ -6837,6 +7141,7 @@ function productionView() {
       })
   );
   q('#reloadOrders').onclick = () => goMode('production');
+  q('#newJobOrder')?.addEventListener('click', () => showQuickJob('order'));
   qa('[data-order]').forEach(
     b => (b.onclick = () => showOrder(S.orders.find(o => o.id === b.dataset.order)))
   );
