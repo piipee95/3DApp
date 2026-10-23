@@ -13,7 +13,7 @@ async function test(){
  app.window.close();
  const dom=new JSDOM('<section id="customerUpload"></section>',{url:'https://costos3d.vercel.app/subir.html#'+ 'a'.repeat(64),runScripts:'outside-only'}),calls=[],uploads=[];
  dom.window.mockClient={rpc:async(name,args)=>{calls.push(args);return{data:args.p_action==='info'?{label:'Cuadro <test>',received:false}:args.p_action==='begin'?{id:'f1',path:'private/random.heic'}:{received:true},error:null}},storage:{from:()=>({upload:async(path,file,opts)=>{uploads.push({path,file,opts});return{error:null}}})}};
- const source=fs.readFileSync(path.join(__dirname,'../subir.js'),'utf8').replace(/^import[^\n]+\n/,'').replace(/^const client=createClient[^\n]+\n/m,'const client=window.mockClient;\n');dom.window.eval(source);await flush();
+ const source=fs.readFileSync(path.join(__dirname,'../subir.js'),'utf8').replace(/^import[^\n]+\n/,'').replace(/^const client\s*=\s*createClient\([\s\S]*?\}\s*\}\s*\);?\n/m,'const client=window.mockClient;\n');dom.window.eval(source);await flush();
  const doc=dom.window.document,file=new dom.window.File([new Uint8Array([0,1,2,3,255])],'original.HEIC',{type:'image/heic'});
  assert.match(doc.querySelector('form').textContent,/50 MB/);assert.match(doc.querySelector('form').textContent,/Sin compresión/);
  doc.querySelector('#clientName').value='Felipe';Object.defineProperty(doc.querySelector('#clientPhotos'),'files',{value:[file]});
