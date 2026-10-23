@@ -18,6 +18,26 @@
 </head>
 <body>
   <div id="app"></div>
-  <script type="module" src="app.js"></script>
+  <!-- The SDK module runs first; the app files below share one global scope and run in order. -->
+  <script type="module" src="js/supabase-client.js"></script>
+  <script defer src="js/01-core.js"></script>
+  <script defer src="js/02-products.js"></script>
+  <script defer src="js/03-app-shell-drafts.js"></script>
+  <script defer src="js/04-photos-filaments.js"></script>
+  <script defer src="js/05-orders.js"></script>
+  <script defer src="js/06-quote-document.js"></script>
+  <script defer src="js/07-inventory.js"></script>
+  <script defer src="js/08-product-stock.js"></script>
+  <script defer src="js/09-quotes-customers.js"></script>
+  <script defer src="js/10-search-install.js"></script>
+  <script defer src="js/11-payments-whatsapp.js"></script>
+  <script defer src="js/12-reports-backup.js"></script>
+  <script defer src="js/13-loading-editor.js"></script>
+  <script defer src="js/14-quick-create.js"></script>
+  <script defer src="js/15-shell-navigation.js"></script>
+  <script defer src="js/16-home.js"></script>
+  <script defer src="js/17-lists.js"></script>
+  <script defer src="js/18-customer-files.js"></script>
+  <script defer src="js/19-start.js"></script>
 </body>
 </html>
