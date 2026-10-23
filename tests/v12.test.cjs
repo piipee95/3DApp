@@ -93,7 +93,7 @@ async function test(){
  run('S.workspace.role="owner";S.products=[];S.mode="dashboard";dashboard()');
  // V1.6 shell: sidebar + phone tab bar; indicators moved off the product list.
  assert.equal(run('q(".kpi-grid")'),null);
- assert.equal(run('qa(".sidebar .nav-item").length'),7);
+ assert.equal(run('qa(".sidebar .nav-item").length'),8);
  assert.equal(run('q(".sidebar .nav-item.active").dataset.appMode'),'dashboard');
  assert.equal(run('qa(".tabbar .tab-item").length'),5);
  assert.equal(run('q(".page-title").textContent'),'Productos');
