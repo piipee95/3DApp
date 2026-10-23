@@ -14,7 +14,11 @@ Supabase (Auth, Postgres con RLS y Storage) y se publica como sitio estático.
 - Borradores locales por usuario y espacio de trabajo.
 
 ## Estructura
-- `index.html`, `styles.css`, `app.js`: la aplicación (sin paso de compilación).
+- `index.html`, `styles.css` y `js/`: la aplicación (sin paso de compilación). `index.html` carga
+  `js/supabase-client.js` (módulo del SDK) y luego los archivos `js/01-…` a `js/19-start.js` **en orden**;
+  comparten un mismo ámbito global, así que una función de un archivo puede usar las de otro.
+  Para agregar un archivo nuevo: créalo en `js/`, agrégalo a `index.html` antes de `19-start.js`
+  y a la lista `SHELL` de `sw.js` (las pruebas leen el orden desde `index.html`).
 - `docs/`: notas de cada versión y referencias de las migraciones aplicadas (`SCHEMA_V*.sql`).
 - `tests/`: pruebas con jsdom y un backend simulado (no escriben en Supabase).
 
