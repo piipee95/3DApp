@@ -3484,3 +3484,5 @@ dialog[open]::backdrop {
     font-size: 13.5px;
   }
 }
+
+.customer-upload{max-width:600px;margin:35px auto;padding:20px}.customer-upload-logo{display:block;max-width:230px;max-height:100px;object-fit:contain;margin:0 auto 24px}.customer-upload .panel{padding:24px}.customer-upload h1{font-size:27px;margin:0 0 16px}.customer-upload .grid{gap:18px}.customer-upload input[type=file]{width:100%;min-width:0}.customer-file-row{padding:16px 0;border-bottom:1px solid var(--border)}.customer-file-row h3,.customer-file-note{overflow-wrap:anywhere;white-space:pre-wrap}.customer-file-preview{display:block;max-width:100%;max-height:65vh;object-fit:contain}#customerFileLink{font-size:13px}#fileRequestLinkDialog .row{flex-wrap:wrap}

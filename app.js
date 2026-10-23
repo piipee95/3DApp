@@ -124,7 +124,7 @@ async function loadWorkspace() {
   await loadProducts();
   // Orders, quotes and customers feed Inicio and forms; the app still opens if they fail to load.
   await Promise.all(
-    [loadOrders, loadQuotes, loadCustomers].map(load =>
+    [loadOrders, loadQuotes, loadCustomers, loadCustomerFileRequests].map(load =>
       load().catch(e => console.warn('No se pudieron cargar los datos', e))
     )
   );
@@ -1078,6 +1078,7 @@ async function invite() {
 function render() {
   if (!S.session || S.mode === 'auth') return authView();
   saveView();
+  if (S.mode === 'files') return customerFilesView();
   if (S.mode === 'quotes') return quotesView();
   if (S.mode === 'customers') return customersView();
   if (S.mode === 'reports') return reportsView();
@@ -1576,6 +1577,7 @@ async function goMode(mode) {
   // Show the section's outline right away while its data loads.
   if (S.workspace && mode !== 'product') skeletonView(mode);
   try {
+    if (mode === 'files') await loadCustomerFileRequests();
     if (mode === 'production') {
       await loadOrders();
       await loadResources();
@@ -2168,6 +2170,7 @@ function showOrder(order) {
       (canEdit() ? '<button class="btn btn-primary" type="submit">Guardar avance</button>' : '') +
       '</form>'
   );
+  if(canEdit()){const filesButton=document.createElement('button');filesButton.className='btn btn-secondary';filesButton.textContent='Pedir fotos al cliente';filesButton.onclick=()=>showNewFileRequest(order);dialog.querySelector('.section-title').after(filesButton)}
   if (q('#orderQuote'))
     q('#orderQuote').onclick = () =>
       showQuote({
@@ -4534,7 +4537,8 @@ const VIEW_MODES = [
   'reports',
   'inventory',
   'resources',
-  'product'
+  'product',
+  'files'
 ];
 const viewKey = () => 'kultiapp_view_' + (S.session?.user?.id || '');
 function saveView() {
@@ -4569,6 +4573,7 @@ async function restoreView() {
       if (['details', 'prints', 'costs', 'summary'].includes(v.tab)) S.editorTab = v.tab;
       return true;
     }
+    if (v.mode === 'files') await loadCustomerFileRequests();
     if (v.mode === 'quotes' || v.mode === 'customers') await Promise.all([loadQuotes(), loadCustomers()]);
     S.mode = v.mode;
     return true;
@@ -6041,6 +6046,7 @@ const NAV_ITEMS = [
   { mode: 'quotes', label: 'Cotizaciones', icon: 'file-text' },
   { mode: 'production', label: 'Pedidos', icon: 'clipboard-list' },
   { mode: 'customers', label: 'Clientes', icon: 'users' },
+  { mode: 'files', label: 'Archivos del cliente', icon: 'image' },
   { mode: 'reports', label: 'Reportes', icon: 'chart-column' },
   { mode: 'inventory', label: 'Inventario', icon: 'boxes' },
   { mode: 'resources', label: 'Impresoras', icon: 'printer' }
@@ -6053,12 +6059,14 @@ const PAGE_TITLES = {
   customers: 'Clientes',
   reports: 'Reportes',
   inventory: 'Inventario',
+  files: 'Archivos del cliente',
   resources: 'Impresoras'
 };
 function navActive(mode) {
   return S.mode === mode || (mode === 'dashboard' && S.mode === 'product');
 }
 function navCount(mode) {
+  if(mode==='files')return (S.fileRequests||[]).filter(r=>r.submitted_at&&!r.reviewed_at).length;
   if (mode === 'dashboard') return S.products.filter(p => p.status !== 'archived').length;
   if (mode === 'production')
     return S.orders.filter(o => !['delivered', 'canceled'].includes(o.status)).length;
@@ -6162,7 +6170,7 @@ function mountShell() {
   tabs.className = 'tabbar';
   tabs.setAttribute('aria-label', 'Navegación');
   tabs.innerHTML =
-    NAV_ITEMS.filter(item => !['resources', 'quotes', 'customers', 'reports'].includes(item.mode))
+    NAV_ITEMS.filter(item => !['resources', 'quotes', 'customers', 'reports', 'files'].includes(item.mode))
       .map(
         item =>
           '<button type="button" class="tab-item' +
@@ -6225,7 +6233,7 @@ function showMoreSheet() {
       icon('chart-column') +
       'Reportes</button><button type="button" class="menu-item" data-more="resources">' +
       icon('printer') +
-      'Impresoras</button>' +
+      'Impresoras</button><button type="button" class="menu-item" data-more="files">' + icon('image') + 'Archivos del cliente</button>' +
       (isOwner()
         ? '<button type="button" class="menu-item" data-more="invite">' +
           icon('user-plus') +
@@ -6254,6 +6262,7 @@ function showMoreSheet() {
     install: () => installApp(),
     reports: () => goMode('reports'),
     backup: () => showBackup(),
+    files: () => goMode('files'),
     customers: () => goMode('customers')
   };
   dialog.querySelectorAll('[data-more]').forEach(
@@ -7027,6 +7036,15 @@ function resourcesView() {
     b => (b.onclick = () => showResourceForm(S.resources.find(r => r.id === b.dataset.editResource)))
   );
 }
+
+// V2.3: customer uploads keep the original private file, separate from catalogue photos.
+async function loadCustomerFileRequests(){const{data,error}=await supabase.from('customer_file_requests').select('*').eq('workspace_id',S.workspace.id).order('created_at',{ascending:false}).limit(100);if(error)throw error;S.fileRequests=data||[]}
+function fileRequestState(r){return r.submitted_at?'Recibido':r.revoked?'Desactivado':new Date(r.expires_at)<=new Date()?'Vencido':'Esperando fotos'}
+function customerFileLink(r){return location.origin+'/subir.html#'+r.access_token}
+function customerFilesView(){root.innerHTML=header()+'<main class="shell"><div class="page-h"><div><h1>Archivos del cliente</h1><p class="muted">Recibe referencias y descarga sus originales.</p></div>'+(canEdit()?'<button class="btn btn-primary" id="newFileRequest">Crear enlace de carga</button>':'')+'</div>'+(S.err?'<p class="error">'+esc(S.err)+'</p>':'')+'<div class="product-list">'+((S.fileRequests||[]).map(r=>'<article class="panel"><span class="chip">'+fileRequestState(r)+(r.submitted_at&&!r.reviewed_at?' · Nuevo':'')+'</span><h2>'+esc(r.label)+'</h2><p class="small muted">Vence '+esc(new Date(r.expires_at).toLocaleString('es-CL'))+'</p><div class="row"><button class="btn btn-secondary" data-received-files="'+r.id+'">Ver archivos</button>'+(!r.submitted_at&&!r.revoked&&new Date(r.expires_at)>new Date()?'<button class="btn" data-copy-files="'+r.id+'">Copiar enlace</button>':'')+(!r.revoked&&canEdit()?'<button class="btn btn-ghost" data-revoke-files="'+r.id+'">Desactivar enlace</button>':'')+'</div></article>').join('')||'<section class="panel panel-empty"><h2>Aún no hay solicitudes</h2><p>Crea un enlace y compártelo con el cliente por WhatsApp.</p></section>')+'</div><p class="small muted">Últimas 100 solicitudes. Cada enlace admite hasta 5 fotos de 50 MB, sin compresión. Un envío confirmado cierra el enlace.</p></main>';common();q('#newFileRequest')?.addEventListener('click',()=>showNewFileRequest());qa('[data-received-files]').forEach(b=>b.onclick=()=>showReceivedCustomerFiles(S.fileRequests.find(r=>r.id===b.dataset.receivedFiles)));qa('[data-copy-files]').forEach(b=>b.onclick=()=>showFileRequestLink(S.fileRequests.find(r=>r.id===b.dataset.copyFiles)));qa('[data-revoke-files]').forEach(b=>b.onclick=async()=>{if(!await confirmDialog({title:'¿Desactivar el enlace?',body:'El cliente ya no podrá cargar nuevas fotos. Los archivos recibidos se conservan.',confirmLabel:'Desactivar'}))return;try{const{error}=await supabase.from('customer_file_requests').update({revoked:true}).eq('id',b.dataset.revokeFiles).eq('workspace_id',S.workspace.id);if(error)throw error;await goMode('files')}catch(error){toast(error.message,'error')}})}
+function showNewFileRequest(order=null){if(!canEdit())return;const dialog=showDialog('newFileRequestDialog','<div class="section-title"><h2>Recibir fotos del cliente</h2><button class="btn btn-ghost" data-close>Volver</button></div><form id="fileRequestForm" class="grid">'+fieldHtml('Nombre de la solicitud','fileRequestLabel',order?'Pedido '+order.order_no+' · '+order.title:'Trabajo personalizado','text','required maxlength="160"')+'<p class="notice small">Válido por 48 horas. Se cierra automáticamente al completar el envío.</p>'+'<p class="small muted">El cliente solo verá el formulario de fotos y este nombre. No necesita cuenta ni correo.</p><p id="fileRequestFeedback" role="status" class="small"></p><button type="submit" class="btn btn-primary">Crear enlace</button></form>');q('#fileRequestForm').onsubmit=async e=>{e.preventDefault();const b=e.submitter||e.target.querySelector('button');b.disabled=true;try{const{data,error}=await supabase.from('customer_file_requests').insert({workspace_id:S.workspace.id,order_id:order?.id||null,label:q('#fileRequestLabel').value.trim()}).select().single();if(error)throw error;dialog.close();showFileRequestLink(data)}catch(error){q('#fileRequestFeedback').textContent=error.message}finally{b.disabled=false}}}
+function showFileRequestLink(r){const url=customerFileLink(r),dialog=showDialog('fileRequestLinkDialog','<div class="section-title"><h2>Enlace para el cliente</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><p>'+esc(r.label)+'</p><div class="field"><label for="customerFileLink">Comparte este enlace</label><input id="customerFileLink" readonly value="'+esc(url)+'"></div><div class="row"><button class="btn btn-primary" id="copyCustomerFileLink">Copiar enlace</button><a class="btn btn-secondary" href="https://wa.me/?text='+encodeURIComponent('Hola, sube aquí las fotos originales para tu trabajo con Kultiverso Pop: '+url)+'" target="_blank" rel="noopener noreferrer">Compartir por WhatsApp</a></div><p class="small muted">El enlace vence el '+esc(new Date(r.expires_at).toLocaleDateString('es-CL'))+'.</p>');q('#copyCustomerFileLink').onclick=async()=>{try{await navigator.clipboard.writeText(url);toast('Enlace copiado.')}catch{q('#customerFileLink').select()}};return dialog}
+async function showReceivedCustomerFiles(r){const dialog=showDialog('receivedFilesDialog','<div class="section-title"><h2>'+esc(r.label)+'</h2><button class="btn btn-ghost" data-close>Volver</button></div><div id="receivedFilesBody" role="status">Cargando archivos…</div>');try{const{data,error}=await supabase.from('customer_files').select('*').eq('workspace_id',S.workspace.id).eq('request_id',r.id).order('created_at');if(error)throw error;if(!dialog.isConnected)return;const files=(data||[]).filter(f=>f.received_at);q('#receivedFilesBody').innerHTML=files.length?files.map(f=>'<article class="customer-file-row"><h3>'+esc(f.original_name)+'</h3><p class="small muted">'+esc(f.customer_name)+' · '+(f.byte_size/1048576).toFixed(2)+' MB · '+esc(new Date(f.received_at).toLocaleString('es-CL'))+'</p>'+(f.note?'<p class="customer-file-note">'+esc(f.note)+'</p>':'')+'<div class="row"><button class="btn btn-primary" data-download-original="'+f.id+'">Descargar original</button>'+(['image/jpeg','image/png','image/webp'].includes(f.mime_type)?'<button class="btn btn-secondary" data-preview-original="'+f.id+'">Vista previa</button>':'')+'</div></article>').join(''):'Todavía no hay fotos recibidas.';dialog.querySelectorAll('[data-download-original]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const f=files.find(x=>x.id===b.dataset.downloadOriginal);const{data:blob,error}=await supabase.storage.from('customer-originals').download(f.object_path);if(error)throw error;downloadBlob(blob,f.original_name.replace(/[\\/\x00-\x1f]/g,'_'))}catch(error){toast(error.message,'error')}finally{b.disabled=false}});dialog.querySelectorAll('[data-preview-original]').forEach(b=>b.onclick=async()=>{try{const f=files.find(x=>x.id===b.dataset.previewOriginal),{data,error}=await supabase.storage.from('customer-originals').createSignedUrl(f.object_path,300);if(error)throw error;const preview=showDialog('originalPreviewDialog','<div class="section-title"><h2>'+esc(f.original_name)+'</h2><button class="btn btn-ghost" data-close>Volver</button></div><img class="customer-file-preview" src="'+esc(data.signedUrl)+'" alt="'+esc(f.original_name)+'">');return preview}catch(error){toast(error.message,'error')}});if(r.submitted_at&&canEdit()){const{error}=await supabase.from('customer_file_requests').update({reviewed_at:new Date().toISOString()}).eq('id',r.id).eq('workspace_id',S.workspace.id);if(!error)r.reviewed_at=new Date().toISOString()}}catch(error){if(dialog.isConnected)q('#receivedFilesBody').textContent=error.message}}
 
 // Start the app once every module-level constant above is initialized.
 init();
