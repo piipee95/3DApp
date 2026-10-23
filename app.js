@@ -23,6 +23,7 @@ const S = {
   orders: [],
   quotes: [],
   customers: [],
+  payments: [],
   quoteFilter: 'open',
   sort: 'recent',
   profitFilter: 'all',
@@ -1555,6 +1556,12 @@ async function loadOrders() {
     .order('created_at', { ascending: false });
   if (error) throw error;
   S.orders = data || [];
+  // Balances are extra information: orders still show if payments fail to load.
+  try {
+    await loadPayments();
+  } catch (e) {
+    console.warn('No se pudieron cargar los pagos', e);
+  }
 }
 async function goMode(mode) {
   persistDraft();
@@ -1968,6 +1975,7 @@ function showNewOrder(kind = 'customer') {
             (stock.available === 1 ? ' unidad disponible' : ' unidades disponibles') +
             '. No reserva materiales: descuenta unidades terminadas al entregar.</span></span></label>'
           : '') +
+      (forStock ? '' : depositField()) +
       '<details class="print-advanced"><summary>Revisar estimación del lote</summary><p class="small muted">Se ajusta proporcionalmente al cambiar la cantidad. Verifica tiempos y costos si imprimes varias piezas en una misma cama.</p><div class="grid grid-2">' +
       fieldHtml(
         'Costo estimado del lote',
@@ -2039,6 +2047,7 @@ function showNewOrder(kind = 'customer') {
         .select()
         .single();
       if (error) throw error;
+      if (!forStock) await saveDeposit(data);
       if (made) {
         const { error: readyError } = await supabase
           .from('production_orders')
@@ -2188,6 +2197,7 @@ function showOrder(order) {
   };
   refreshActual();
   mountOrderInventory(order);
+  mountOrderPayments(order, dialog);
   if (!canEdit()) {
     dialog.querySelectorAll('form input,form select,form textarea').forEach(el => (el.disabled = true));
     return;
@@ -2462,7 +2472,9 @@ function showQuote(override = null) {
     icon('printer') +
     '<span>Imprimir / PDF</span></button><button class="btn btn-primary" id="shareQuote">' +
     icon('share-2') +
-    '<span>Compartir</span></button>' +
+    '<span>Compartir</span></button><button class="btn btn-secondary" id="waQuote">' +
+    icon('message-circle') +
+    '<span>WhatsApp</span></button>' +
     (saves
       ? '<button class="btn btn-secondary" id="saveQuote">' +
         icon('check') +
@@ -2556,6 +2568,14 @@ function showQuote(override = null) {
     await persist();
     b.disabled = false;
   });
+  // Opens the customer's chat with a ready-to-send summary (the image goes with «Compartir»).
+  q('#waQuote').onclick = async () => {
+    const win = window.open('', '_blank');
+    update();
+    remember();
+    await persist();
+    openWhatsApp(customerFor(null, d.client)?.phone, quoteMessage(d), win);
+  };
   q('#printQuote').onclick = async () => {
     update();
     remember();
@@ -2573,7 +2593,11 @@ function showQuote(override = null) {
       const blob = await quoteImage(d),
         file = new File([blob], name, { type: 'image/png' });
       if (navigator.canShare?.({ files: [file] }) && navigator.share) {
-        await navigator.share({ files: [file], title: 'Cotización ' + d.folio + ' · ' + d.name });
+        await navigator.share({
+          files: [file],
+          title: 'Cotización ' + d.folio + ' · ' + d.name,
+          text: quoteMessage(d)
+        });
       } else {
         downloadBlob(blob, name);
         feedback('Imagen descargada. Puedes adjuntarla en WhatsApp.');
@@ -4157,6 +4181,7 @@ function showQuoteToOrder(qt) {
       clp(qt.unit_price) +
       '</p>' +
       fieldHtml('Fecha de entrega', 'qoDue', '', 'date') +
+      depositField() +
       (product && stock.available >= qt.quantity
         ? '<label class="check-row"><input type="checkbox" id="qoFromStock"> <span><b>Entregar desde stock</b><span class="small muted">' +
           stock.available +
@@ -4199,6 +4224,7 @@ function showQuoteToOrder(qt) {
         .update({ status: 'accepted', order_id: order.id, customer_id, updated_at: new Date().toISOString() })
         .eq('id', qt.id);
       if (qe) throw qe;
+      await saveDeposit(order);
       Object.assign(qt, { status: 'accepted', order_id: order.id, customer_id });
       dialog.close();
       S.orderFilter = 'open';
@@ -4223,8 +4249,9 @@ function customerHistory(c) {
         (o.customer_id === c.id || (!o.customer_id && sameName(o.customer_name, c.name)))
     ),
     sold = orders.filter(o => o.status !== 'canceled').reduce((s, o) => s + orderNumbers(o).sales, 0),
-    last = [...quotes.map(x => x.created_at), ...orders.map(x => x.created_at)].sort().pop();
-  return { quotes, orders, sold, last };
+    last = [...quotes.map(x => x.created_at), ...orders.map(x => x.created_at)].sort().pop(),
+    due = orders.reduce((s, o) => s + orderBalance(o).due, 0);
+  return { quotes, orders, sold, last, due };
 }
 function customerContact(c) {
   return [c.phone, c.instagram, c.email].filter(Boolean).join(' · ');
@@ -4329,6 +4356,10 @@ function showCustomer(c) {
           h.orders.length +
           '</dd></div><div><dt>Vendido</dt><dd>' +
           clp(h.sold) +
+          '</dd></div><div><dt>Por cobrar</dt><dd class="' +
+          (h.due > 0 ? 'warn' : '') +
+          '">' +
+          clp(h.due) +
           '</dd></div></dl>'
         : '') +
       (wa
@@ -4796,6 +4827,301 @@ function registerServiceWorker() {
   if (!('serviceWorker' in navigator) || !/^https:|^http:\/\/localhost/.test(location.href)) return;
   navigator.serviceWorker.register('sw.js').catch(e => console.warn('Service worker no registrado', e));
 }
+// ---------------------------------------------------------------------------
+// V2.0: deposits and balances per order, and WhatsApp messages.
+// ---------------------------------------------------------------------------
+const PAY_METHODS = { transfer: 'Transferencia', cash: 'Efectivo', card: 'Tarjeta', other: 'Otro' };
+async function loadPayments() {
+  const { data, error } = await supabase
+    .from('order_payments')
+    .select('*')
+    .eq('workspace_id', S.workspace.id)
+    .order('paid_on', { ascending: true });
+  if (error) throw error;
+  S.payments = data || [];
+}
+function orderPayments(o) {
+  return (S.payments || []).filter(p => p.order_id === o.id);
+}
+// Stock fabrication and canceled orders owe nothing.
+function orderBalance(o) {
+  const total = o.kind === 'stock' ? 0 : Math.round(orderNumbers(o).sales),
+    paid = orderPayments(o).reduce((s, p) => s + n(p.amount), 0),
+    due = o.kind === 'stock' || o.status === 'canceled' ? 0 : Math.max(0, total - paid);
+  return {
+    total,
+    paid,
+    due,
+    state: total <= 0 ? 'none' : paid <= 0 ? 'unpaid' : due > 0 ? 'partial' : 'paid'
+  };
+}
+const PAY_CHIP = {
+  unpaid: ['c-late', 'Sin pago'],
+  partial: ['c-printing', 'Abonado'],
+  paid: ['c-ready', 'Pagado']
+};
+function payChip(o) {
+  const b = orderBalance(o);
+  if (b.state === 'none' || o.status === 'canceled') return '';
+  return '<span class="chip ' + PAY_CHIP[b.state][0] + '"><i></i>' + PAY_CHIP[b.state][1] + '</span>';
+}
+function receivables() {
+  return S.orders.filter(o => orderBalance(o).due > 0);
+}
+// Customer's phone for an order or quote: linked customer first, then by name.
+function customerFor(id, name) {
+  return S.customers.find(c => c.id === id) || S.customers.find(c => sameName(c.name, name)) || null;
+}
+const firstName = name =>
+  String(name || '')
+    .trim()
+    .split(/\s+/)[0] || '';
+// win: a tab opened beforehand during the click, so Safari doesn't block it after an await.
+function openWhatsApp(phone, text, win = null) {
+  const link = whatsappLink(phone),
+    url = (link || 'https://wa.me/') + '?text=' + encodeURIComponent(text);
+  if (win) win.location.href = url;
+  else window.open(url, '_blank', 'noopener');
+}
+function quoteMessage(d) {
+  const t = quoteTotals(d),
+    hi = firstName(d.client);
+  return (
+    'Hola' +
+    (hi ? ' ' + hi : '') +
+    ', te envío la cotización ' +
+    d.folio +
+    ' de Kultiverso Pop:\n' +
+    '• ' +
+    d.name +
+    ' × ' +
+    d.quantity +
+    '\nTotal: ' +
+    clp(t.total) +
+    (d.ivaEnabled ? ' (IVA incluido)' : '') +
+    '\nVálida hasta el ' +
+    t.validUntil.toLocaleDateString('es-CL') +
+    '.' +
+    (d.delivery ? '\n' + d.delivery + '.' : '') +
+    '\n¿Te la confirmo?'
+  ).replace(/\.\./g, '.');
+}
+function orderMessage(o, kind) {
+  const b = orderBalance(o),
+    hi = firstName(o.customer_name),
+    who = 'Hola' + (hi ? ' ' + hi : ''),
+    ref = 'PED-' + o.order_no + ' (' + o.title + ')';
+  if (kind === 'ready')
+    return (
+      who +
+      ', tu pedido ' +
+      ref +
+      ' ya está listo.' +
+      (b.due > 0 ? ' Saldo pendiente: ' + clp(b.due) + '.' : '') +
+      ' ¿Coordinamos la entrega?'
+    );
+  if (kind === 'paid') {
+    const last = orderPayments(o).at(-1);
+    return (
+      who +
+      ', recibimos tu pago' +
+      (last ? ' de ' + clp(last.amount) : '') +
+      ' del pedido ' +
+      ref +
+      '. ' +
+      (b.due > 0 ? 'Saldo pendiente: ' + clp(b.due) + '.' : 'Tu pedido quedó pagado.') +
+      ' ¡Gracias!'
+    );
+  }
+  return (
+    who +
+    ', te recuerdo el saldo de tu pedido ' +
+    ref +
+    ': ' +
+    clp(b.due) +
+    ' (total ' +
+    clp(b.total) +
+    ', abonado ' +
+    clp(b.paid) +
+    '). ¡Gracias!'
+  );
+}
+async function addPayment(order, amount, method = 'transfer', paidOn = null, note = '') {
+  const { error } = await supabase.from('order_payments').insert({
+    workspace_id: S.workspace.id,
+    order_id: order.id,
+    amount: Math.round(n(amount)),
+    method,
+    note: note.slice(0, 300),
+    ...(paidOn ? { paid_on: paidOn } : {})
+  });
+  if (error) throw error;
+  await loadPayments();
+}
+function paymentsMarkup(order) {
+  const b = orderBalance(order),
+    list = orderPayments(order),
+    ratio = b.total > 0 ? Math.min(1, b.paid / b.total) : 0;
+  return (
+    '<div class="pay-head"><h3>Pagos</h3>' +
+    payChip(order) +
+    '</div><div class="pay-sum"><div><span>Total</span><b>' +
+    clp(b.total) +
+    '</b></div><div><span>Pagado</span><b class="up">' +
+    clp(b.paid) +
+    '</b></div><div><span>Saldo</span><b class="' +
+    (b.due > 0 ? 'warn' : '') +
+    '">' +
+    clp(b.due) +
+    '</b></div></div><div class="pay-bar"><i style="width:' +
+    Math.round(ratio * 100) +
+    '%"></i></div>' +
+    (list.length
+      ? '<div class="pay-list">' +
+        list
+          .map(
+            p =>
+              '<div class="pay-row"><span><b>' +
+              new Date(p.paid_on + 'T12:00').toLocaleDateString('es-CL') +
+              '</b> · ' +
+              PAY_METHODS[p.method] +
+              (p.note ? ' · ' + esc(p.note) : '') +
+              '</span><b class="num">' +
+              clp(p.amount) +
+              '</b>' +
+              (canEdit()
+                ? '<button type="button" class="btn icon-btn" data-del-payment="' +
+                  p.id +
+                  '" aria-label="Eliminar pago" title="Eliminar pago">' +
+                  icon('trash-2') +
+                  '</button>'
+                : '') +
+              '</div>'
+          )
+          .join('') +
+        '</div>'
+      : '<p class="small muted">Sin pagos registrados.</p>') +
+    (canEdit() && b.due > 0 && order.status !== 'canceled'
+      ? '<details class="pay-add"' +
+        (list.length ? '' : ' open') +
+        '><summary class="btn btn-secondary btn-sm">' +
+        icon('plus') +
+        'Registrar pago</summary><form id="payForm" class="pay-form"><div class="grid grid-2">' +
+        fieldHtml('Monto recibido', 'payAmount', b.due, 'number', 'min="1" step="1" required') +
+        '<div class="field"><label for="payMethod">Medio</label><select id="payMethod">' +
+        Object.entries(PAY_METHODS)
+          .map(([k, v]) => '<option value="' + k + '">' + v + '</option>')
+          .join('') +
+        '</select></div>' +
+        fieldHtml('Fecha', 'payDate', new Date().toLocaleDateString('sv-SE'), 'date', 'required') +
+        fieldHtml('Nota', 'payNote', '', 'text', 'maxlength="300" placeholder="Ej. abono 50%"') +
+        '</div><div class="row pay-quick">' +
+        (b.paid <= 0
+          ? '<button type="button" class="btn btn-ghost btn-sm" data-pay-fill="half">50%</button>'
+          : '') +
+        '<button type="button" class="btn btn-ghost btn-sm" data-pay-fill="due">Saldo completo</button><button class="btn btn-secondary" type="submit">' +
+        icon('wallet') +
+        'Guardar pago</button></div><div id="payFeedback" class="small" role="status"></div></form></details>'
+      : '') +
+    (order.kind !== 'stock'
+      ? '<div class="wa-actions"><span class="small muted">Avisar por WhatsApp:</span>' +
+        (['ready', 'delivered'].includes(order.status) || order.status === 'assembly'
+          ? '<button type="button" class="btn btn-ghost btn-sm" data-wa="ready">' +
+            icon('message-circle') +
+            'Pedido listo</button>'
+          : '') +
+        (b.due > 0
+          ? '<button type="button" class="btn btn-ghost btn-sm" data-wa="due">' +
+            icon('message-circle') +
+            'Recordar saldo</button>'
+          : '') +
+        (b.paid > 0
+          ? '<button type="button" class="btn btn-ghost btn-sm" data-wa="paid">' +
+            icon('message-circle') +
+            'Confirmar pago</button>'
+          : '') +
+        '</div>'
+      : '')
+  );
+}
+function mountOrderPayments(order, dialog) {
+  if (order.kind === 'stock') return;
+  let box = dialog.querySelector('#orderPayments');
+  if (!box) {
+    box = document.createElement('section');
+    box.id = 'orderPayments';
+    box.className = 'pay-card';
+    (dialog.querySelector('.facts') || dialog.querySelector('.order-head')).after(box);
+  }
+  box.innerHTML = paymentsMarkup(order);
+  const b = orderBalance(order);
+  box
+    .querySelectorAll('[data-pay-fill]')
+    .forEach(
+      btn =>
+        (btn.onclick = () =>
+          (q('#payAmount').value = btn.dataset.payFill === 'half' ? Math.round(b.total / 2) : b.due))
+    );
+  box
+    .querySelectorAll('[data-wa]')
+    .forEach(
+      btn =>
+        (btn.onclick = () =>
+          openWhatsApp(
+            customerFor(order.customer_id, order.customer_name)?.phone,
+            orderMessage(order, btn.dataset.wa)
+          ))
+    );
+  box.querySelectorAll('[data-del-payment]').forEach(
+    btn =>
+      (btn.onclick = async () => {
+        btn.disabled = true;
+        const { error } = await supabase.from('order_payments').delete().eq('id', btn.dataset.delPayment);
+        if (error) {
+          btn.disabled = false;
+          return toast(error.message, 'error');
+        }
+        S.payments = S.payments.filter(p => p.id !== btn.dataset.delPayment);
+        mountOrderPayments(order, dialog);
+      })
+  );
+  const form = box.querySelector('#payForm');
+  if (form)
+    form.onsubmit = async e => {
+      e.preventDefault();
+      const btn = e.submitter || form.querySelector('button[type=submit]');
+      btn.disabled = true;
+      try {
+        await addPayment(
+          order,
+          q('#payAmount').value,
+          q('#payMethod').value,
+          q('#payDate').value,
+          q('#payNote').value.trim()
+        );
+        toast('Pago registrado.');
+        mountOrderPayments(order, dialog);
+      } catch (error) {
+        q('#payFeedback').textContent = error.message;
+        btn.disabled = false;
+      }
+    };
+  enhanceFields();
+}
+// Optional deposit field for new customer orders.
+function depositField() {
+  return fieldHtml(
+    'Abono recibido (opcional)',
+    'orderDeposit',
+    '',
+    'number',
+    'min="0" step="1" placeholder="0"'
+  );
+}
+async function saveDeposit(order) {
+  const amount = Math.round(n(q('#orderDeposit')?.value));
+  if (amount > 0) await addPayment(order, amount, 'transfer', null, 'Abono inicial');
+}
 const ICONS = {
   house:
     '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />',
@@ -4867,6 +5193,7 @@ const ICONS = {
   calculator:
     '<rect width="16" height="20" x="4" y="2" rx="2" /><line x1="8" x2="16" y1="6" y2="6" /><line x1="16" x2="16" y1="14" y2="18" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" />',
   clock: '<circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />',
+  'message-circle': '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />',
   'circle-alert':
     '<circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" />'
 };
@@ -5254,7 +5581,9 @@ function homeView() {
       .sort((a, b) => stockLevel(a).ratio - stockLevel(b).ratio)
       .slice(0, 5),
     delta = prev.sales > 0 ? (cur.sales - prev.sales) / prev.sales : null,
-    weekday = now.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+    weekday = now.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' }),
+    dueOrders = receivables(),
+    dueTotal = dueOrders.reduce((s, o) => s + orderBalance(o).due, 0);
   const kpi = (label, ic, value, foot, extra = '') =>
     '<div class="kpi' +
     extra +
@@ -5269,7 +5598,7 @@ function homeView() {
     '</div></div>';
   const deltaFoot =
     delta == null
-      ? '<span class="muted">' + cur.count + ' pedidos este mes</span>'
+      ? '<span class="muted">' + cur.count + (cur.count === 1 ? ' pedido' : ' pedidos') + ' este mes</span>'
       : '<span class="' +
         (delta >= 0 ? 'up' : 'down') +
         '">' +
@@ -5422,6 +5751,17 @@ function homeView() {
             '</span>'
         : '<span class="muted">Stock en orden</span>'
     ) +
+    kpi(
+      'Por cobrar',
+      'wallet',
+      '<span class="full">' + clp(dueTotal) + '</span><span class="short">' + clpShort(dueTotal) + '</span>',
+      dueOrders.length
+        ? '<button type="button" class="link-btn" id="homeDue">' +
+            dueOrders.length +
+            (dueOrders.length === 1 ? ' pedido con saldo' : ' pedidos con saldo') +
+            '</button>'
+        : '<span class="muted">Todo cobrado</span>'
+    ) +
     '</div><div class="home-cols"><section class="panel"><div class="panel-h"><h2>Próximas entregas</h2><button type="button" class="link-btn" data-go="production">Ver pedidos</button></div>' +
     deliveries +
     '</section><section class="panel"><div class="panel-h"><h2>Stock bajo</h2><button type="button" class="link-btn" data-go="inventory">Inventario</button></div>' +
@@ -5429,6 +5769,10 @@ function homeView() {
     '</section></div></main>';
   common();
   q('#homeNew')?.addEventListener('click', newProduct);
+  q('#homeDue')?.addEventListener('click', () => {
+    S.orderFilter = 'unpaid';
+    goMode('production');
+  });
   qa('[data-go]').forEach(b => (b.onclick = () => goMode(b.dataset.go)));
   qa('[data-home-order]').forEach(
     el => (el.onclick = () => showOrder(S.orders.find(o => o.id === el.dataset.homeOrder)))
@@ -5493,6 +5837,7 @@ function orderMatches(o, filter) {
   if (filter === 'open') return orderIsOpen(o);
   if (filter === 'late') return orderIsLate(o);
   if (filter === 'stock') return o.kind === 'stock';
+  if (filter === 'unpaid') return orderBalance(o).due > 0;
   return o.status === filter;
 }
 function orderCustomer(o) {
@@ -5533,6 +5878,7 @@ function productionView() {
   const pills = [
     ['open', 'En curso', count('open')],
     ['late', 'Atrasados', count('late')],
+    ['unpaid', 'Por cobrar', count('unpaid')],
     ['stock', 'Fabricación', count('stock')],
     ...Object.entries(ORDER_STATUSES).map(([k, label]) => [k, label, count(k)]),
     ['all', 'Todos', S.orders.length]
@@ -5575,7 +5921,14 @@ function productionView() {
               '</td><td>' +
               orderChip(o) +
               '</td><td class="r num">' +
-              (o.kind === 'stock' ? '<span class="muted">—</span>' : clp(orderNumbers(o).sales)) +
+              (o.kind === 'stock'
+                ? '<span class="muted">—</span>'
+                : clp(orderNumbers(o).sales) +
+                  (orderBalance(o).due > 0
+                    ? '<div class="sub warn">Saldo ' + clp(orderBalance(o).due) + '</div>'
+                    : orderBalance(o).state === 'paid'
+                      ? '<div class="sub up">Pagado</div>'
+                      : '')) +
               '</td><td class="r num">' +
               orderProfitCell(o) +
               '</td></tr>'
@@ -5598,7 +5951,9 @@ function productionView() {
               '</span></span><span class="lr-end"><b class="num">' +
               (o.kind === 'stock' ? o.quantity + ' un.' : clp(orderNumbers(o).sales)) +
               '</b>' +
-              orderChip(o) +
+              (orderBalance(o).due > 0
+                ? '<span class="sub warn">Saldo ' + clp(orderBalance(o).due) + '</span>'
+                : orderChip(o)) +
               '</span></button>'
           )
           .join('') +
