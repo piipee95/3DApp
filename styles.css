@@ -3786,3 +3786,8 @@ dialog[open]::backdrop {
   color: var(--muted);
   flex: none;
 }
+.job-actions {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
