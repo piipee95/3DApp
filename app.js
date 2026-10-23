@@ -959,6 +959,7 @@ async function saveProduct() {
     S.product = p;
     S.msg = 'Producto guardado y sincronizado correctamente.';
     render();
+    if (S.pendingLink) setTimeout(() => offerPendingLink(id), 0);
   } catch (e) {
     if (uploadedPath) removePhotoObject(uploadedPath);
     S.dirty = true;
@@ -2136,11 +2137,13 @@ function showOrder(order) {
           ' un. del stock; no consume materiales.</p>'
         : '') +
       (!order.product_id && order.kind !== 'stock'
-        ? '<div class="notice small job-notice"><span><b>Trabajo a medida.</b> Registra abajo sus costos reales para conocer la utilidad, o créalo como producto para costearlo en detalle y reutilizarlo.</span>' +
+        ? '<div class="notice small job-notice"><span><b>Trabajo a medida, sin producto.</b> Vincúlalo a un producto costeado para reservar y descontar su filamento e insumos, o registra abajo sus costos reales.</span>' +
           (canEdit()
-            ? '<button type="button" class="btn btn-secondary btn-sm" id="jobToProduct">' +
-              icon('package') +
-              'Crear producto</button>'
+            ? '<span class="job-actions"><button type="button" class="btn btn-secondary btn-sm" id="jobLink">' +
+              icon('layers') +
+              'Vincular producto</button><button type="button" class="btn btn-ghost btn-sm" id="jobToProduct">' +
+              icon('plus') +
+              'Crear producto</button></span>'
             : '') +
           '</div>'
         : '') +
@@ -2234,6 +2237,10 @@ function showOrder(order) {
   q('#jobToProduct')?.addEventListener('click', () => {
     dialog.close();
     productFromJob(order);
+  });
+  q('#jobLink')?.addEventListener('click', () => {
+    dialog.close();
+    showLinkProduct(order);
   });
   if (!canEdit()) {
     dialog.querySelectorAll('form input,form select,form textarea').forEach(el => (el.disabled = true));
@@ -6301,9 +6308,131 @@ function showStockProductPicker() {
   draw();
   return dialog;
 }
+// Links a costed product to a custom-job order: reserves its materials (or consumes them if finished).
+async function linkOrderProduct(order, product) {
+  const { data, error } = await supabase.rpc('link_order_product', {
+    p_order: order.id,
+    p_product: product.id
+  });
+  if (error) throw error;
+  await Promise.all([loadOrders(), loadResources()]);
+  const r = data || {};
+  return (
+    'PED-' +
+    order.order_no +
+    ' vinculado a ' +
+    product.name +
+    '. ' +
+    (!r.lines
+      ? 'El producto no tiene materiales del inventario vinculados.'
+      : r.consumed
+        ? 'Como ya estaba listo, se descontaron sus materiales.'
+        : 'Materiales reservados; se descuentan al marcarlo «Listo».')
+  );
+}
+function showLinkProduct(order) {
+  if (!canEdit()) return;
+  const list = S.products
+    .filter(p => p.status !== 'archived')
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  const dialog = showDialog(
+    'linkProductDialog',
+    '<div class="section-title"><h2>Vincular producto</h2><button class="btn btn-ghost" data-close>Volver</button></div><p class="small muted">PED-' +
+      order.order_no +
+      ' · ' +
+      esc(order.title) +
+      ' · ' +
+      order.quantity +
+      ' un. El precio acordado no cambia; se usa el costo del producto y se reservan sus materiales.</p>' +
+      searchBox('linkSearch', 'Buscar producto', '') +
+      '<div class="stock-pick-list" id="linkList"></div><div id="linkFeedback" class="small" role="status"></div><button type="button" class="btn btn-ghost" id="linkNew">' +
+      icon('plus') +
+      'Crear el producto desde este trabajo</button>'
+  );
+  const draw = () => {
+    const term = q('#linkSearch').value;
+    q('#linkList').innerHTML =
+      list
+        .filter(p => searchMatches(p.name, term))
+        .map(
+          p =>
+            '<button type="button" class="list-row" data-link-product="' +
+            p.id +
+            '">' +
+            productThumb(p) +
+            '<span class="lr-main"><b>' +
+            esc(p.name) +
+            '</b><span>Costo ' +
+            clp(productNumbers(p).unit) +
+            ' / un. · ' +
+            clp(productNumbers(p).unit * order.quantity) +
+            ' el pedido</span></span>' +
+            icon('chevron-right') +
+            '</button>'
+        )
+        .join('') || '<p class="small muted">Sin productos. Crea uno desde este trabajo.</p>';
+    qa('[data-link-product]').forEach(
+      b =>
+        (b.onclick = async () => {
+          const product = list.find(p => p.id === b.dataset.linkProduct);
+          qa('[data-link-product]').forEach(x => (x.disabled = true));
+          try {
+            const msg = await linkOrderProduct(order, product);
+            dialog.close();
+            S.msg = msg;
+            render();
+            const fresh = S.orders.find(o => o.id === order.id);
+            if (fresh) showOrder(fresh);
+          } catch (error) {
+            q('#linkFeedback').textContent = error.message;
+            qa('[data-link-product]').forEach(x => (x.disabled = false));
+          }
+        })
+    );
+  };
+  q('#linkSearch').oninput = draw;
+  q('#linkNew').onclick = () => {
+    dialog.close();
+    productFromJob(order);
+  };
+  draw();
+  return dialog;
+}
+// After saving a product created from a custom job, offer to link it to that order.
+async function offerPendingLink(productId) {
+  const orderId = S.pendingLink;
+  S.pendingLink = null;
+  let order = S.orders.find(o => o.id === orderId);
+  if (!order) {
+    try {
+      await loadOrders();
+    } catch {}
+    order = S.orders.find(o => o.id === orderId);
+  }
+  if (!order || order.product_id || !S.product || S.product.id !== productId) return;
+  const ok = await confirmDialog({
+    title: 'Vincular al pedido PED-' + order.order_no,
+    body:
+      '¿Usar «' +
+      S.product.name +
+      '» en el pedido de ' +
+      (order.customer_name || 'cliente') +
+      '? Se reservan sus materiales (o se descuentan si ya está listo).',
+    confirmLabel: 'Vincular'
+  });
+  if (!ok) return;
+  try {
+    await loadProducts();
+    const product = S.products.find(p => p.id === productId) || S.product;
+    toast(await linkOrderProduct(order, product));
+  } catch (error) {
+    toast(error.message, 'error');
+  }
+}
 // A custom job (order without product) can become a catalogue product to cost it.
 function productFromJob(order) {
   newProduct();
+  S.pendingLink = order.id;
   S.product.name = order.title;
   S.product.description = order.notes || '';
   S.product.quantity = 1;
