@@ -3765,3 +3765,24 @@ dialog[open]::backdrop {
   margin: 0 0 14px;
   flex-wrap: wrap;
 }
+.stock-pick-list {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0;
+  max-height: 50vh;
+  overflow: auto;
+}
+.stock-pick-list .list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.stock-pick-list .list-row > svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  flex: none;
+}

@@ -6026,8 +6026,14 @@ function showCreateMenu() {
         [
           'order',
           'clipboard-list',
-          'Pedido',
-          'Trabajo confirmado con su precio y abono. Los costos se desglosan después.'
+          'Pedido de cliente',
+          'Trabajo personalizado con precio cerrado y abono. Los costos se desglosan después.'
+        ],
+        [
+          'stock',
+          'boxes',
+          'Fabricar para stock',
+          'Piezas de un producto del catálogo para tener listas. Descuenta el filamento.'
         ],
         [
           'product',
@@ -6057,6 +6063,7 @@ function showCreateMenu() {
   const go = {
     quote: () => showQuickJob('quote'),
     order: () => showQuickJob('order'),
+    stock: () => showStockProductPicker(),
     product: () => newProduct()
   };
   dialog.querySelectorAll('[data-create]').forEach(
@@ -6236,6 +6243,62 @@ function showQuickJob(kind, prefill = {}) {
       b.disabled = false;
     }
   };
+  return dialog;
+}
+// Stock fabrication needs a costed product: pick it, open it and start the fabrication dialog.
+function showStockProductPicker() {
+  const list = S.products
+    .filter(p => p.status !== 'archived')
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  if (!list.length) return toast('Primero crea y costea el producto que vas a fabricar.', 'error');
+  const dialog = showDialog(
+    'stockPicker',
+    '<div class="section-title"><h2>Fabricar para stock</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><p class="small muted">Elige el producto. Si ya está hecho, marca «Ya está fabricado» y se descuenta el filamento al instante.</p>' +
+      searchBox('stockPickSearch', 'Buscar producto', '') +
+      '<div class="stock-pick-list" id="stockPickList"></div><button type="button" class="btn btn-ghost" id="stockPickNew">' +
+      icon('plus') +
+      'Es un producto nuevo: costearlo primero</button>'
+  );
+  const draw = () => {
+    const term = q('#stockPickSearch').value;
+    q('#stockPickList').innerHTML =
+      list
+        .filter(p => searchMatches(p.name, term))
+        .map(
+          p =>
+            '<button type="button" class="list-row" data-stock-pick="' +
+            p.id +
+            '">' +
+            productThumb(p) +
+            '<span class="lr-main"><b>' +
+            esc(p.name) +
+            '</b><span>Costo ' +
+            clp(productNumbers(p).unit) +
+            ' · En stock ' +
+            productStock(p).available +
+            '</span></span>' +
+            icon('chevron-right') +
+            '</button>'
+        )
+        .join('') || '<p class="small muted">Sin coincidencias.</p>';
+    qa('[data-stock-pick]').forEach(
+      b =>
+        (b.onclick = async () => {
+          dialog.close();
+          await openProduct(b.dataset.stockPick);
+          if (S.mode !== 'product' || S.product?.id !== b.dataset.stockPick) return;
+          S.editorTab = 'summary';
+          render();
+          showNewOrder('stock');
+        })
+    );
+  };
+  q('#stockPickSearch').oninput = draw;
+  q('#stockPickNew').onclick = () => {
+    dialog.close();
+    newProduct();
+  };
+  draw();
   return dialog;
 }
 // A custom job (order without product) can become a catalogue product to cost it.
