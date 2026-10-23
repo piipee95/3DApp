@@ -6066,7 +6066,7 @@ function navActive(mode) {
   return S.mode === mode || (mode === 'dashboard' && S.mode === 'product');
 }
 function navCount(mode) {
-  if(mode==='files')return (S.fileRequests||[]).filter(r=>r.submitted_at&&!r.reviewed_at).length;
+  if(mode==='files')return (S.fileRequests||[]).filter(r=>r.submitted_at&&!r.reviewed_at&&!r.archived_at&&!r.deleting_at).length;
   if (mode === 'dashboard') return S.products.filter(p => p.status !== 'archived').length;
   if (mode === 'production')
     return S.orders.filter(o => !['delivered', 'canceled'].includes(o.status)).length;
@@ -7039,9 +7039,94 @@ function resourcesView() {
 
 // V2.3: customer uploads keep the original private file, separate from catalogue photos.
 async function loadCustomerFileRequests(){const{data,error}=await supabase.from('customer_file_requests').select('*').eq('workspace_id',S.workspace.id).order('created_at',{ascending:false}).limit(100);if(error)throw error;S.fileRequests=data||[]}
-function fileRequestState(r){return r.submitted_at?'Recibido':r.revoked?'Desactivado':new Date(r.expires_at)<=new Date()?'Vencido':'Esperando fotos'}
+function fileRequestState(r) {
+  return r.deleting_at ? 'Eliminación pendiente' : r.archived_at ? 'Archivado' : r.submitted_at ? 'Recibido' : r.revoked ? 'Desactivado' : new Date(r.expires_at) <= new Date() ? 'Vencido' : 'Esperando fotos';
+}
 function customerFileLink(r){return location.origin+'/subir.html#'+r.access_token}
-function customerFilesView(){root.innerHTML=header()+'<main class="shell"><div class="page-h"><div><h1>Archivos del cliente</h1><p class="muted">Recibe referencias y descarga sus originales.</p></div>'+(canEdit()?'<button class="btn btn-primary" id="newFileRequest">Crear enlace de carga</button>':'')+'</div>'+(S.err?'<p class="error">'+esc(S.err)+'</p>':'')+'<div class="product-list">'+((S.fileRequests||[]).map(r=>'<article class="panel"><span class="chip">'+fileRequestState(r)+(r.submitted_at&&!r.reviewed_at?' · Nuevo':'')+'</span><h2>'+esc(r.label)+'</h2><p class="small muted">Vence '+esc(new Date(r.expires_at).toLocaleString('es-CL'))+'</p><div class="row"><button class="btn btn-secondary" data-received-files="'+r.id+'">Ver archivos</button>'+(!r.submitted_at&&!r.revoked&&new Date(r.expires_at)>new Date()?'<button class="btn" data-copy-files="'+r.id+'">Copiar enlace</button>':'')+(!r.revoked&&canEdit()?'<button class="btn btn-ghost" data-revoke-files="'+r.id+'">Desactivar enlace</button>':'')+'</div></article>').join('')||'<section class="panel panel-empty"><h2>Aún no hay solicitudes</h2><p>Crea un enlace y compártelo con el cliente por WhatsApp.</p></section>')+'</div><p class="small muted">Últimas 100 solicitudes. Cada enlace admite hasta 5 fotos de 50 MB, sin compresión. Un envío confirmado cierra el enlace.</p></main>';common();q('#newFileRequest')?.addEventListener('click',()=>showNewFileRequest());qa('[data-received-files]').forEach(b=>b.onclick=()=>showReceivedCustomerFiles(S.fileRequests.find(r=>r.id===b.dataset.receivedFiles)));qa('[data-copy-files]').forEach(b=>b.onclick=()=>showFileRequestLink(S.fileRequests.find(r=>r.id===b.dataset.copyFiles)));qa('[data-revoke-files]').forEach(b=>b.onclick=async()=>{if(!await confirmDialog({title:'¿Desactivar el enlace?',body:'El cliente ya no podrá cargar nuevas fotos. Los archivos recibidos se conservan.',confirmLabel:'Desactivar'}))return;try{const{error}=await supabase.from('customer_file_requests').update({revoked:true}).eq('id',b.dataset.revokeFiles).eq('workspace_id',S.workspace.id);if(error)throw error;await goMode('files')}catch(error){toast(error.message,'error')}})}
+function customerFilesView() {
+  const archived = S.fileRequestsTab === 'archived';
+  const requests = S.fileRequests || [];
+  const visible = requests.filter(r => !!r.archived_at === archived);
+  const count = value => requests.filter(r => !!r.archived_at === value).length;
+  root.innerHTML = header() + '<main class="shell"><div class="page-h"><div><h1>Archivos del cliente</h1><p class="muted">Recibe referencias y descarga sus originales.</p></div>' +
+    (canEdit() ? '<button class="btn btn-primary" id="newFileRequest">Crear enlace de carga</button>' : '') + '</div>' +
+    (S.err ? '<p class="error">' + esc(S.err) + '</p>' : '') +
+    '<div class="row customer-files-tabs" role="group" aria-label="Mostrar solicitudes">' +
+    '<button class="btn ' + (!archived ? 'btn-primary' : 'btn-secondary') + '" data-files-tab="active" aria-pressed="' + !archived + '">Activos (' + count(false) + ')</button>' +
+    '<button class="btn ' + (archived ? 'btn-primary' : 'btn-secondary') + '" data-files-tab="archived" aria-pressed="' + archived + '">Archivados (' + count(true) + ')</button></div>' +
+    '<div class="product-list">' + (visible.map(r => {
+      const open = !r.archived_at && !r.deleting_at && !r.submitted_at && !r.revoked && new Date(r.expires_at) > new Date();
+      return '<article class="panel"><span class="chip">' + fileRequestState(r) + (r.submitted_at && !r.reviewed_at && !r.archived_at && !r.deleting_at ? ' · Nuevo' : '') + '</span><h2>' + esc(r.label) + '</h2>' +
+        '<p class="small muted">Vence ' + esc(new Date(r.expires_at).toLocaleString('es-CL')) + '</p>' +
+        (r.deleting_at ? '<p class="notice small">El borrado no terminó. Reinténtalo para eliminar los archivos restantes.</p>' : '') +
+        '<div class="row">' + (!r.deleting_at ? '<button class="btn btn-secondary" data-received-files="' + r.id + '">Ver archivos</button>' : '') +
+        (open ? '<button class="btn" data-copy-files="' + r.id + '">Copiar enlace</button>' : '') +
+        (canEdit() ? (!r.deleting_at ?
+          (open ? '<button class="btn btn-ghost" data-revoke-files="' + r.id + '">Desactivar enlace</button>' : '') +
+          '<button class="btn btn-secondary" data-manage-files="' + r.id + '" data-files-action="' + (r.archived_at ? 'restore' : 'archive') + '">' + (r.archived_at ? 'Restaurar' : 'Archivar') + '</button>' : '') +
+          '<button class="btn btn-danger" data-manage-files="' + r.id + '" data-files-action="delete">' + (r.deleting_at ? 'Reintentar eliminación' : 'Eliminar') + '</button>' : '') + '</div></article>';
+    }).join('') || '<section class="panel panel-empty"><h2>' + (archived ? 'No hay solicitudes archivadas' : 'No hay solicitudes activas') + '</h2><p>' + (archived ? 'Las solicitudes archivadas conservan sus fotos y pueden restaurarse.' : 'Crea un enlace y compártelo con el cliente por WhatsApp.') + '</p></section>') +
+    '</div><p class="small muted">Últimas 100 solicitudes. Cada enlace admite hasta 5 fotos de 50 MB, sin compresión. Un envío confirmado cierra el enlace.</p></main>';
+  common();
+  q('#newFileRequest')?.addEventListener('click', () => showNewFileRequest());
+  qa('[data-files-tab]').forEach(b => b.onclick = () => { S.fileRequestsTab = b.dataset.filesTab; customerFilesView(); });
+  qa('[data-received-files]').forEach(b => b.onclick = () => showReceivedCustomerFiles(requests.find(r => r.id === b.dataset.receivedFiles)));
+  qa('[data-copy-files]').forEach(b => b.onclick = () => showFileRequestLink(requests.find(r => r.id === b.dataset.copyFiles)));
+  qa('[data-manage-files]').forEach(b => b.onclick = () => manageCustomerFileRequest(requests.find(r => r.id === b.dataset.manageFiles), b.dataset.filesAction, b));
+  qa('[data-revoke-files]').forEach(b => b.onclick = async () => {
+    if (!await confirmDialog({title:'¿Desactivar el enlace?',body:'El cliente ya no podrá cargar nuevas fotos. Los archivos recibidos se conservan.',confirmLabel:'Desactivar'})) return;
+    b.disabled = true;
+    try {
+      const {error} = await supabase.from('customer_file_requests').update({revoked:true}).eq('id',b.dataset.revokeFiles).eq('workspace_id',S.workspace.id);
+      if (error) throw error;
+      await goMode('files');
+    } catch (error) { toast(error.message,'error'); } finally { b.disabled = false; }
+  });
+}
+async function manageCustomerFileRequest(r, action, button) {
+  if (!canEdit() || !r || !['archive','restore','delete'].includes(action) || S.fileRequestBusy) return;
+  const workspaceId = S.workspace.id;
+  if (action !== 'restore') {
+    const accepted = await confirmDialog(action === 'archive' ? {
+      title:'¿Archivar la solicitud?',body:'Las fotos se conservan y podrás restaurar la solicitud. El enlace quedará desactivado.',confirmLabel:'Archivar'
+    } : {
+      title:'¿Eliminar la solicitud y sus fotos?',body:'Se borrarán permanentemente todos los originales de «' + r.label + '» y su enlace. Esta acción no se puede deshacer.',confirmLabel:'Eliminar definitivamente',danger:true
+    });
+    if (!accepted) return;
+  }
+  if (S.fileRequestBusy || S.workspace?.id !== workspaceId || !canEdit()) return;
+  S.fileRequestBusy = true;
+  if (button) button.disabled = true;
+  const call = async p_action => {
+    const {data,error} = await supabase.rpc('manage_customer_file_request',{p_id:r.id,p_action});
+    if (error) throw error;
+    return data;
+  };
+  try {
+    if (action === 'delete') {
+      const result = await call('delete_start');
+      r.deleting_at = r.deleting_at || new Date().toISOString();
+      r.revoked = true;
+      if (result.paths.length) {
+        const {error} = await supabase.storage.from('customer-originals').remove(result.paths);
+        if (error) throw error;
+      }
+      await call('delete_finish');
+      S.fileRequests = (S.fileRequests || []).filter(item => item.id !== r.id);
+    } else {
+      await call(action);
+      r.archived_at = action === 'archive' ? new Date().toISOString() : null;
+      if (action === 'archive') r.revoked = true;
+    }
+    toast(action === 'delete' ? 'Solicitud y originales eliminados.' : action === 'archive' ? 'Solicitud archivada. Fotos conservadas.' : 'Solicitud restaurada. El enlace sigue desactivado.');
+  } catch (error) {
+    toast((r.deleting_at ? 'No se completó la eliminación. Puedes reintentar. ' : '') + error.message,'error');
+  } finally {
+    S.fileRequestBusy = false;
+    if (button) button.disabled = false;
+    if (S.mode === 'files' && S.workspace?.id === workspaceId) customerFilesView();
+  }
+}
 function showNewFileRequest(order=null){if(!canEdit())return;const dialog=showDialog('newFileRequestDialog','<div class="section-title"><h2>Recibir fotos del cliente</h2><button class="btn btn-ghost" data-close>Volver</button></div><form id="fileRequestForm" class="grid">'+fieldHtml('Nombre de la solicitud','fileRequestLabel',order?'Pedido '+order.order_no+' · '+order.title:'Trabajo personalizado','text','required maxlength="160"')+'<p class="notice small">Válido por 48 horas. Se cierra automáticamente al completar el envío.</p>'+'<p class="small muted">El cliente solo verá el formulario de fotos y este nombre. No necesita cuenta ni correo.</p><p id="fileRequestFeedback" role="status" class="small"></p><button type="submit" class="btn btn-primary">Crear enlace</button></form>');q('#fileRequestForm').onsubmit=async e=>{e.preventDefault();const b=e.submitter||e.target.querySelector('button');b.disabled=true;try{const{data,error}=await supabase.from('customer_file_requests').insert({workspace_id:S.workspace.id,order_id:order?.id||null,label:q('#fileRequestLabel').value.trim()}).select().single();if(error)throw error;dialog.close();showFileRequestLink(data)}catch(error){q('#fileRequestFeedback').textContent=error.message}finally{b.disabled=false}}}
 function showFileRequestLink(r){const url=customerFileLink(r),dialog=showDialog('fileRequestLinkDialog','<div class="section-title"><h2>Enlace para el cliente</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><p>'+esc(r.label)+'</p><div class="field"><label for="customerFileLink">Comparte este enlace</label><input id="customerFileLink" readonly value="'+esc(url)+'"></div><div class="row"><button class="btn btn-primary" id="copyCustomerFileLink">Copiar enlace</button><a class="btn btn-secondary" href="https://wa.me/?text='+encodeURIComponent('Hola, sube aquí las fotos originales para tu trabajo con Kultiverso Pop: '+url)+'" target="_blank" rel="noopener noreferrer">Compartir por WhatsApp</a></div><p class="small muted">El enlace vence el '+esc(new Date(r.expires_at).toLocaleDateString('es-CL'))+'.</p>');q('#copyCustomerFileLink').onclick=async()=>{try{await navigator.clipboard.writeText(url);toast('Enlace copiado.')}catch{q('#customerFileLink').select()}};return dialog}
 async function showReceivedCustomerFiles(r){const dialog=showDialog('receivedFilesDialog','<div class="section-title"><h2>'+esc(r.label)+'</h2><button class="btn btn-ghost" data-close>Volver</button></div><div id="receivedFilesBody" role="status">Cargando archivos…</div>');try{const{data,error}=await supabase.from('customer_files').select('*').eq('workspace_id',S.workspace.id).eq('request_id',r.id).order('created_at');if(error)throw error;if(!dialog.isConnected)return;const files=(data||[]).filter(f=>f.received_at);q('#receivedFilesBody').innerHTML=files.length?files.map(f=>'<article class="customer-file-row"><h3>'+esc(f.original_name)+'</h3><p class="small muted">'+esc(f.customer_name)+' · '+(f.byte_size/1048576).toFixed(2)+' MB · '+esc(new Date(f.received_at).toLocaleString('es-CL'))+'</p>'+(f.note?'<p class="customer-file-note">'+esc(f.note)+'</p>':'')+'<div class="row"><button class="btn btn-primary" data-download-original="'+f.id+'">Descargar original</button>'+(['image/jpeg','image/png','image/webp'].includes(f.mime_type)?'<button class="btn btn-secondary" data-preview-original="'+f.id+'">Vista previa</button>':'')+'</div></article>').join(''):'Todavía no hay fotos recibidas.';dialog.querySelectorAll('[data-download-original]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const f=files.find(x=>x.id===b.dataset.downloadOriginal);const{data:blob,error}=await supabase.storage.from('customer-originals').download(f.object_path);if(error)throw error;downloadBlob(blob,f.original_name.replace(/[\\/\x00-\x1f]/g,'_'))}catch(error){toast(error.message,'error')}finally{b.disabled=false}});dialog.querySelectorAll('[data-preview-original]').forEach(b=>b.onclick=async()=>{try{const f=files.find(x=>x.id===b.dataset.previewOriginal),{data,error}=await supabase.storage.from('customer-originals').createSignedUrl(f.object_path,300);if(error)throw error;const preview=showDialog('originalPreviewDialog','<div class="section-title"><h2>'+esc(f.original_name)+'</h2><button class="btn btn-ghost" data-close>Volver</button></div><img class="customer-file-preview" src="'+esc(data.signedUrl)+'" alt="'+esc(f.original_name)+'">');return preview}catch(error){toast(error.message,'error')}});if(r.submitted_at&&canEdit()){const{error}=await supabase.from('customer_file_requests').update({reviewed_at:new Date().toISOString()}).eq('id',r.id).eq('workspace_id',S.workspace.id);if(!error)r.reviewed_at=new Date().toISOString()}}catch(error){if(dialog.isConnected)q('#receivedFilesBody').textContent=error.message}}
