@@ -70,7 +70,9 @@ function header(title = PAGE_TITLES[S.mode] || 'KultiApp', actions = '', { back 
       : '<img class="page-mark" src="favicon.svg" alt="">') +
     '<h1 class="page-title">' +
     esc(title) +
-    '</h1><span class="app-version" aria-label="Versión de la aplicación">' + APP_VERSION + '</span><div class="page-actions">' +
+    '</h1><span class="app-version" aria-label="Versión de la aplicación">' +
+    APP_VERSION +
+    '</span><div class="page-actions">' +
     (back
       ? ''
       : '<button class="btn icon-btn header-search" type="button" data-open-search aria-label="Buscar" title="Buscar">' +
@@ -241,7 +243,9 @@ function showMoreSheet() {
       icon('key-round') +
       'Cambiar contraseña</button><button type="button" class="menu-item danger" data-more="logout">' +
       icon('log-out') +
-      'Cerrar sesión</button></div><p class="powered">Kultiverso Pop · Powered by <b>ELARA</b></p>'
+      'Cerrar sesión</button></div><p class="powered">Kultiverso Pop · Powered by <b>ELARA</b> · ' +
+      APP_VERSION +
+      '</p>'
   );
   dialog.classList.add('sheet');
   const actions = {

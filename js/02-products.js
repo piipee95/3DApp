@@ -106,7 +106,9 @@ function dashboard() {
       'Productos',
       '<button class="btn btn-secondary" id="priceListsBtn" type="button">' +
         icon('calculator') +
-        '<span>Precios rápidos</span></button>' +
+        '<span>Precios rápidos</span></button><button class="btn btn-secondary" id="catalogBtn" type="button">' +
+        icon('store') +
+        '<span>Catálogo</span></button>' +
         (canEdit()
           ? '<button class="btn btn-primary" id="new">' +
             icon('plus') +
@@ -210,6 +212,7 @@ function dashboard() {
   };
   q('#new') && (q('#new').onclick = newProduct);
   q('#priceListsBtn').onclick = showPriceLists;
+  q('#catalogBtn').onclick = showCatalog;
   q('#showActive').onclick = () => {
     S.showArchived = false;
     dashboard();

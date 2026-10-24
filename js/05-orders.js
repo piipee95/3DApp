@@ -686,7 +686,17 @@ function showOrder(order) {
       actions = document.createElement('div');
     actions.className = 'order-head-actions';
     quote.replaceWith(actions);
-    actions.append(filesButton, quote);
+    const trackButton = document.createElement('button');
+    trackButton.type = 'button';
+    trackButton.id = 'orderTracking';
+    trackButton.className = 'btn btn-secondary btn-sm';
+    trackButton.innerHTML = icon('link') + 'Seguimiento';
+    trackButton.title = 'Enlace para que el cliente vea el avance';
+    trackButton.onclick = () => {
+      dialog.close();
+      showTracking(order);
+    };
+    actions.append(filesButton, trackButton, quote);
   }
   if (q('#orderQuote'))
     q('#orderQuote').onclick = () =>
