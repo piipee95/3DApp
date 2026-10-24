@@ -216,7 +216,9 @@ function homeView() {
     weekday.slice(1) +
     ' · Resumen de ' +
     MONTHS[now.getMonth()] +
-    '</p><div class="kpis">' +
+    '</p>' +
+    remindersPanel() +
+    '<div class="kpis">' +
     kpi(
       'Ventas de ' + MONTHS[now.getMonth()],
       'wallet',
@@ -289,4 +291,5 @@ function homeView() {
     el => (el.onclick = () => showOrder(S.orders.find(o => o.id === el.dataset.homeOrder)))
   );
   qa('[data-home-stock]').forEach(el => (el.onclick = () => goMode('inventory')));
+  bindReminders();
 }
