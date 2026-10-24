@@ -4010,3 +4010,10 @@ dialog[open]::backdrop {
     padding: 0;
   }
 }
+
+/* Original photo selection: native controls, no paid UI dependencies. */
+.customer-upload .drop-zone.drag-over,.customer-upload .drop-zone:focus-within{border-color:var(--primary,#d94f87);outline:2px solid currentColor;outline-offset:3px}
+.picked-files li>span{min-width:0;overflow-wrap:anywhere}
+.picked-files li small{display:block;margin-top:4px}
+.picked-files li button{flex-shrink:0}
+@media(max-width:480px){.picked-files li{align-items:flex-start;gap:8px}}

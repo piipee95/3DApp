@@ -16,7 +16,12 @@ async function test(){
  const source=fs.readFileSync(path.join(__dirname,'../subir.js'),'utf8').replace(/^import[^\n]+\n/,'').replace(/^const client\s*=\s*createClient\([\s\S]*?\}\s*\}\s*\);?\n/m,'const client=window.mockClient;\n');dom.window.eval(source);await flush();
  const doc=dom.window.document,file=new dom.window.File([new Uint8Array([0,1,2,3,255])],'original.HEIC',{type:'image/heic'});
  assert.match(doc.querySelector('form').textContent,/50 MB/);assert.match(doc.querySelector('form').textContent,/Sin compresión/);
- doc.querySelector('#clientName').value='Felipe';Object.defineProperty(doc.querySelector('#clientPhotos'),'files',{value:[file]});
+ doc.querySelector('#clientName').value='Felipe';Object.defineProperty(doc.querySelector('#clientPhotos'),'files',{value:[file,new dom.window.File(['other'],'quitar.png',{type:'image/png'})]});
+ doc.querySelector('#clientPhotos').dispatchEvent(new dom.window.Event('change'));
+ assert.equal(doc.querySelectorAll('[data-remove-photo]').length,2);
+ doc.querySelector('[data-remove-photo="1"]').click();
+ assert.equal(doc.querySelectorAll('[data-remove-photo]').length,1);
+ assert.match(doc.querySelector('#pickedFiles').textContent,/original.HEIC/);
  doc.querySelector('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await flush();
  assert.equal(uploads.length,1);assert.strictEqual(uploads[0].file,file);assert.equal(uploads[0].opts.upsert,false);assert.equal(uploads[0].opts.contentType,'image/heic');
  assert.deepEqual(calls.map(c=>c.p_action),['info','begin','finalize','complete']);assert.match(doc.body.textContent,/Fotos recibidas/);assert.equal(doc.querySelector('form'),null);dom.window.close();

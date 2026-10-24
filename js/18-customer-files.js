@@ -145,15 +145,15 @@ function customerFilesView() {
     (fresh
       ? ' <b class="warn">' + fresh + (fresh === 1 ? ' envío nuevo' : ' envíos nuevos') + ' por revisar.</b>'
       : '') +
-    '</p><div class="toolbar"><div class="view-tabs" role="tablist"><button class="btn ' +
+    '</p><div class="toolbar"><div class="view-tabs" role="group" aria-label="Estado de solicitudes"><button class="btn ' +
     (!archived ? 'btn-primary' : 'btn-secondary') +
-    '" data-files-tab="active" role="tab" aria-pressed="' +
+    '" data-files-tab="active" aria-pressed="' +
     !archived +
     '">Activos <span class="seg-count">' +
     (requests.length - archivedCount) +
     '</span></button><button class="btn ' +
     (archived ? 'btn-primary' : 'btn-secondary') +
-    '" data-files-tab="archived" role="tab" aria-pressed="' +
+    '" data-files-tab="archived" aria-pressed="' +
     archived +
     '">Archivados <span class="seg-count">' +
     archivedCount +

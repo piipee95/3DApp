@@ -63,36 +63,49 @@ async function start() {
     box.innerHTML =
       '<h1>Envía tus fotos</h1><p>' +
       esc(info.label) +
-      '</p><p class="small muted">Un solo envío. El enlace vence a las 48 horas de su creación y se cierra al enviar.</p><p class="muted">Adjunta las fotos que quieres que trabajemos. Solo el equipo de Kultiverso Pop podrá verlas.</p><form id="uploadForm" class="grid"><div class="field"><label for="clientName">Tu nombre</label><input id="clientName" autocomplete="name" required maxlength="120"></div><div class="field"><label>Tus fotos</label><label class="drop-zone" for="clientPhotos"><input id="clientPhotos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/tiff,image/bmp,image/gif,.heic,.heif,.tif,.tiff,.bmp,.avif,.gif" multiple required><b>Elegir fotos</b><span>Toca para seleccionar desde tu galería o archivos</span></label><ul id="pickedFiles" class="picked-files"></ul><span class="small muted">JPG/JPEG, PNG, HEIC/HEIF (iPhone), WebP, AVIF, TIFF, BMP y GIF. Hasta 5 fotos, máximo 50 MB cada una. Sin compresión ni reducción de resolución. Envía el original desde Fotos o Archivos; evita imágenes reenviadas o capturas si tienes el original.</span></div><div class="field"><label for="clientNote">Indicaciones (opcional)</label><textarea id="clientNote" maxlength="1500" placeholder="Ej. Quiero usar la foto horizontal."></textarea></div><div class="upload-progress" hidden><i id="uploadBar"></i></div><div id="uploadFeedback" class="small" role="status"></div><button class="btn btn-primary" type="submit">Enviar fotos</button></form>';
+      '</p><p class="small muted">Un solo envío. El enlace vence a las 48 horas de su creación y se cierra al enviar.</p><p class="muted">Adjunta las fotos que quieres que trabajemos. Solo el equipo de Kultiverso Pop podrá verlas.</p><form id="uploadForm" class="grid"><div class="field"><label for="clientName">Tu nombre</label><input id="clientName" autocomplete="name" required maxlength="120"></div><div class="field"><label for="clientPhotos">Tus fotos</label><label class="drop-zone" for="clientPhotos"><input id="clientPhotos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,image/tiff,image/bmp,image/gif,.heic,.heif,.tif,.tiff,.bmp,.avif,.gif" multiple required><b>Elegir fotos</b><span>Toca para seleccionar desde tu galería o archivos</span></label><ul id="pickedFiles" class="picked-files" aria-label="Fotos seleccionadas" aria-live="polite"></ul><span class="small muted">JPG/JPEG, PNG, HEIC/HEIF (iPhone), WebP, AVIF, TIFF, BMP y GIF. Hasta 5 fotos, máximo 50 MB cada una. Sin compresión ni reducción de resolución. Envía el original desde Fotos o Archivos; evita imágenes reenviadas o capturas si tienes el original.</span></div><div class="field"><label for="clientNote">Indicaciones (opcional)</label><textarea id="clientNote" maxlength="1500" placeholder="Ej. Quiero usar la foto horizontal."></textarea></div><div class="upload-progress" hidden><i id="uploadBar"></i></div><div id="uploadFeedback" class="small" role="status"></div><button class="btn btn-primary" type="submit">Enviar fotos</button></form>';
     let jobs = [];
     const picker = document.querySelector('#clientPhotos'),
       mb = n => (n / 1048576).toFixed(n < 1048576 ? 2 : 1) + ' MB';
+    let selected = null;
+    const dropzone = document.querySelector('.drop-zone');
+    const feedback = document.querySelector('#uploadFeedback');
+    const locked = () => jobs.some(job => job.slot);
+    function paintFiles() {
+      const files = selected || [...picker.files];
+      document.querySelector('#pickedFiles').innerHTML = files.map((f, i) => {
+        const invalid = !mimeOf(f) ? 'Formato no admitido' : f.size < 1 ? 'Archivo vacío' : f.size > 52428800 ? 'Supera 50 MB' : '';
+        return '<li><span><b>' + esc(f.name) + '</b><small class="' + (invalid ? 'bad' : 'muted') + '">' + mb(f.size) + ' · ' + (invalid || 'Original, sin compresión') + '</small></span><button type="button" class="btn btn-ghost" data-remove-photo="' + i + '" aria-label="Quitar ' + esc(f.name) + '"' + (locked() ? ' disabled' : '') + '>Quitar</button></li>';
+      }).join('') + (files.length > 5 ? '<li class="bad">Máximo 5 fotos por envío.</li>' : '');
+      document.querySelectorAll('[data-remove-photo]').forEach(b => b.onclick = () => {
+        if (locked()) return;
+        selected = files.filter((_, i) => i !== Number(b.dataset.removePhoto));
+        picker.required = selected.length === 0;
+        paintFiles();
+      });
+      dropzone.querySelector('b').textContent = files.length ? files.length + (files.length === 1 ? ' foto elegida' : ' fotos elegidas') : 'Elegir fotos';
+    }
     picker.addEventListener('change', () => {
-      const files = [...picker.files];
-      document.querySelector('#pickedFiles').innerHTML =
-        files
-          .map(
-            f =>
-              '<li><span>' +
-              esc(f.name) +
-              '</span><b class="' +
-              (f.size > 52428800 || !mimeOf(f) ? 'bad' : '') +
-              '">' +
-              mb(f.size) +
-              '</b></li>'
-          )
-          .join('') + (files.length > 5 ? '<li class="bad">Máximo 5 fotos por envío.</li>' : '');
-      document.querySelector('.drop-zone b').textContent = files.length
-        ? files.length + (files.length === 1 ? ' foto elegida' : ' fotos elegidas')
-        : 'Elegir fotos';
+      if (locked()) return;
+      selected = [...picker.files];
+      paintFiles();
+    });
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); if (!locked()) dropzone.classList.add('drag-over'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault(); dropzone.classList.remove('drag-over');
+      if (locked() || !e.dataTransfer?.files.length) return;
+      selected = [...e.dataTransfer.files];
+      picker.required = false;
+      paintFiles();
     });
     document.querySelector('#uploadForm').onsubmit = async e => {
       e.preventDefault();
-      const button = e.target.querySelector('button'),
+      const button = e.target.querySelector('button[type=submit]'),
         feedback = document.querySelector('#uploadFeedback');
       button.disabled = true;
       try {
-        const files = [...document.querySelector('#clientPhotos').files];
+        const files = selected || [...document.querySelector('#clientPhotos').files];
         if (!files.length || files.length > 5) throw Error('Selecciona entre 1 y 5 fotos.');
         if (files.some(f => !mimeOf(f) || f.size < 1 || f.size > 52428800))
           throw Error(
@@ -100,9 +113,14 @@ async function start() {
           );
         if (files.some((f, i) => jobs[i]?.file !== f) || files.length !== jobs.length)
           jobs = files.map(file => ({ file, slot: null, received: false }));
+        picker.disabled = true;
+        document.querySelector('#clientName').readOnly = true;
+        document.querySelector('#clientNote').readOnly = true;
+        document.querySelectorAll('[data-remove-photo]').forEach(b => b.disabled = true);
         for (let i = 0; i < jobs.length; i++) {
           const job = jobs[i];
           if (job.received) continue;
+          button.textContent = 'Enviando…';
           feedback.textContent =
             'Enviando foto ' + (i + 1) + ' de ' + jobs.length + '… Mantén esta ventana abierta.';
           const bar = document.querySelector('#uploadBar');
@@ -133,6 +151,7 @@ async function start() {
           await rpc('finalize', { id: job.slot.id });
           job.received = true;
         }
+        feedback.textContent = 'Confirmando recepción…';
         await rpc('complete');
         received();
       } catch (error) {
@@ -140,6 +159,10 @@ async function start() {
           error.message || 'No se pudo enviar. Revisa tu conexión y vuelve a intentarlo.';
         button.disabled = false;
         button.textContent = 'Reintentar envío';
+        picker.disabled = locked();
+        document.querySelector('#clientName').readOnly = locked();
+        document.querySelector('#clientNote').readOnly = locked();
+        if (!locked()) document.querySelectorAll('[data-remove-photo]').forEach(b => b.disabled = false);
       }
     };
   } catch (error) {
