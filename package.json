@@ -2,7 +2,7 @@
   "name": "kultiapp",
   "private": true,
   "scripts": {
-    "test": "node tests/v12.test.cjs && node tests/v13.test.cjs && node tests/v14.test.cjs && node tests/fixes.test.cjs && node tests/v15.test.cjs && node tests/v16.test.cjs && node tests/v17.test.cjs && node tests/v18.test.cjs && node tests/v19.test.cjs && node tests/v20.test.cjs && node tests/v21.test.cjs && node tests/v22.test.cjs && node tests/v23.test.cjs && node tests/v24.test.cjs && node tests/customer-files-manage.test.cjs && node tests/v25.test.cjs && node tests/v26.test.cjs && node tests/v27.test.cjs && node tests/v29.test.cjs"
+    "test": "node tests/v12.test.cjs && node tests/v13.test.cjs && node tests/v14.test.cjs && node tests/fixes.test.cjs && node tests/v15.test.cjs && node tests/v16.test.cjs && node tests/v17.test.cjs && node tests/v18.test.cjs && node tests/v19.test.cjs && node tests/v20.test.cjs && node tests/v21.test.cjs && node tests/v22.test.cjs && node tests/v23.test.cjs && node tests/v24.test.cjs && node tests/customer-files-manage.test.cjs && node tests/v25.test.cjs && node tests/v26.test.cjs && node tests/v27.test.cjs && node tests/v29.test.cjs && node tests/v30.test.cjs"
   },
   "devDependencies": {
     "jsdom": "26.1.0"

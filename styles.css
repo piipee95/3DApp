@@ -3860,3 +3860,75 @@ dialog[open]::backdrop {
 .partner-table td:first-child {
   white-space: nowrap;
 }
+
+/* ---------- Precios rápidos (V3.0) ---------- */
+.price-pick {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+}
+.pick-group {
+  display: grid;
+  gap: 6px;
+}
+.pick-group .pills {
+  margin: 0;
+  flex-wrap: wrap;
+}
+.pick-pill {
+  cursor: pointer;
+}
+.pick-pill input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.pick-pill:has(input:checked) {
+  background: var(--action);
+  border-color: var(--action);
+  color: #fff;
+}
+.pick-pill:has(input:checked) .seg-count {
+  color: #fff;
+}
+.pick-pill:has(input:focus-visible) {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+.price-setup {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.price-setup svg {
+  width: 16px;
+  height: 16px;
+}
+.partner-row input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line2);
+  border-radius: var(--r);
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.partner-row input:focus {
+  border-color: var(--cyan);
+}
+@media (max-width: 599px) {
+  #priceListsBtn span {
+    display: none;
+  }
+}
+.partner-row:has(.rPrice) {
+  grid-template-columns: minmax(0, 1fr) 108px auto auto;
+}
