@@ -59,6 +59,7 @@ async function goMode(mode) {
       await loadResources();
     }
     if (mode === 'resources' || mode === 'inventory' || mode === 'product') await loadResources();
+    if (['resources', 'reports', 'finance'].includes(mode)) await loadFailures();
     if (mode === 'dashboard') await loadProducts();
     if (mode === 'quotes') await Promise.all([loadQuotes(), loadCustomers(), loadOrders()]);
     if (mode === 'customers') await Promise.all([loadCustomers(), loadQuotes(), loadOrders()]);
@@ -340,6 +341,13 @@ function showResourceForm(resource) {
             resource.power_kw ?? S.settings.printer_power_kw,
             'number',
             'min="0" max="100" step="0.01" required'
+          ) +
+          fieldHtml(
+            'Mantención cada (horas de impresión)',
+            'resourceMaint',
+            resource.maintenance_every_hours || '',
+            'number',
+            'min="0" max="100000" step="1" placeholder="Ej. 200 · vacío: sin aviso"'
           )) +
       '<label class="small"><input type="checkbox" id="resourceActive" ' +
       (resource.active ? 'checked' : '') +
@@ -360,7 +368,10 @@ function showResourceForm(resource) {
               color: q('#resourceColor').value,
               price_per_kg: n(q('#resourcePrice').value)
             }
-          : { power_kw: n(q('#resourcePower').value) })
+          : {
+              power_kw: n(q('#resourcePower').value),
+              maintenance_every_hours: Math.max(0, Math.round(n(q('#resourceMaint').value)))
+            })
       };
       // Updates may only touch the columns granted for update; workspace and kind are set once on insert.
       const query = resource.id
@@ -541,6 +552,7 @@ function showNewOrder(kind = 'customer') {
           .update({ status: 'ready' })
           .eq('id', data.id);
         if (readyError) throw readyError;
+        await addOrderPrinterHours({ ...data, status: 'ready' });
       }
       dialog.close();
       await Promise.all([loadResources(), refreshProductStock(p.id)]);
@@ -655,7 +667,11 @@ function showOrder(order) {
       '</div><div id="actualResult" class="notice small" role="status"></div><div class="field"><label for="actualNotes">Notas</label><textarea id="actualNotes">' +
       esc(order.notes) +
       '</textarea></div><div id="actualFeedback" class="small" role="status"></div>' +
-      (canEdit() ? '<button class="btn btn-primary" type="submit">Guardar avance</button>' : '') +
+      (canEdit()
+        ? '<div class="dialog-actions"><button class="btn btn-ghost" type="button" id="orderFailure">' +
+          icon('triangle-alert') +
+          'Registrar falla</button><button class="btn btn-primary" type="submit">Guardar avance</button></div>'
+        : '') +
       '</form>'
   );
   if (canEdit() && order.kind !== 'stock') {
@@ -710,6 +726,11 @@ function showOrder(order) {
   refreshActual();
   mountOrderInventory(order);
   mountOrderPayments(order, dialog);
+  mountOrderPhotos(order, dialog);
+  q('#orderFailure')?.addEventListener('click', () => {
+    dialog.close();
+    showFailure(order);
+  });
   q('#jobToProduct')?.addEventListener('click', () => {
     dialog.close();
     productFromJob(order);
@@ -743,6 +764,8 @@ function showOrder(order) {
         .select()
         .single();
       if (error) throw error;
+      // Finishing the order adds its print time to the printers' usage counters.
+      if (!isFinished(order.status) && isFinished(q('#orderStatus').value)) await addOrderPrinterHours(order);
       await loadOrders();
       await loadResources();
       dialog.close();
