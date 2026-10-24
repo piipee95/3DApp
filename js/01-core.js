@@ -26,6 +26,8 @@ const S = {
   quotes: [],
   customers: [],
   payments: [],
+  expenses: [],
+  transfers: [],
   quoteFilter: 'open',
   sort: 'recent',
   profitFilter: 'all',

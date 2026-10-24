@@ -742,6 +742,7 @@ const VIEW_MODES = [
   'production',
   'customers',
   'reports',
+  'finance',
   'inventory',
   'resources',
   'product',
@@ -782,6 +783,7 @@ async function restoreView() {
     }
     if (v.mode === 'files') await loadCustomerFileRequests();
     if (v.mode === 'quotes' || v.mode === 'customers') await Promise.all([loadQuotes(), loadCustomers()]);
+    if (v.mode === 'finance') await Promise.all([loadExpenses(), loadTransfers()]);
     S.mode = v.mode;
     return true;
   } catch (e) {

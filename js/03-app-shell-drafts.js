@@ -53,6 +53,7 @@ function render() {
   if (S.mode === 'quotes') return quotesView();
   if (S.mode === 'customers') return customersView();
   if (S.mode === 'reports') return reportsView();
+  if (S.mode === 'finance') return financeView();
   if (S.mode === 'inventory') return inventoryView();
   if (S.mode === 'resources') return resourcesView();
   if (S.mode === 'production') return productionView();

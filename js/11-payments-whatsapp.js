@@ -121,14 +121,22 @@ function orderMessage(o, kind) {
     '). ¡Gracias!'
   );
 }
-async function addPayment(order, amount, method = 'transfer', paidOn = null, note = '') {
+async function addPayment(
+  order,
+  amount,
+  method = 'transfer',
+  paidOn = null,
+  note = '',
+  receivedBy = currentPartner()
+) {
   const { error } = await supabase.from('order_payments').insert({
     workspace_id: S.workspace.id,
     order_id: order.id,
     amount: Math.round(n(amount)),
     method,
     note: note.slice(0, 300),
-    ...(paidOn ? { paid_on: paidOn } : {})
+    ...(paidOn ? { paid_on: paidOn } : {}),
+    ...(receivedBy ? { received_by: receivedBy } : {})
   });
   if (error) throw error;
   await loadPayments();
@@ -160,6 +168,7 @@ function paymentsMarkup(order) {
               new Date(p.paid_on + 'T12:00').toLocaleDateString('es-CL') +
               '</b> · ' +
               PAY_METHODS[p.method] +
+              (p.received_by ? ' · ' + esc(p.received_by) : '') +
               (p.note ? ' · ' + esc(p.note) : '') +
               '</span><b class="num">' +
               clp(p.amount) +
@@ -190,6 +199,7 @@ function paymentsMarkup(order) {
         '</select></div>' +
         fieldHtml('Fecha', 'payDate', new Date().toLocaleDateString('sv-SE'), 'date', 'required') +
         fieldHtml('Nota', 'payNote', '', 'text', 'maxlength="300" placeholder="Ej. abono 50%"') +
+        partnerField('payReceiver', 'Lo recibió') +
         '</div><div class="row pay-quick">' +
         (b.paid <= 0
           ? '<button type="button" class="btn btn-ghost btn-sm" data-pay-fill="half">50%</button>'
@@ -276,7 +286,8 @@ function mountOrderPayments(order, dialog) {
           q('#payAmount').value,
           q('#payMethod').value,
           q('#payDate').value,
-          q('#payNote').value.trim()
+          q('#payNote').value.trim(),
+          rememberPartner(q('#payReceiver')?.value)
         );
         toast('Pago registrado.');
         mountOrderPayments(order, dialog);

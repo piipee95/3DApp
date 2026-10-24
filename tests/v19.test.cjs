@@ -73,7 +73,7 @@ async function test(){
  assert.ok(manifest.icons.some(i=>i.purpose==='maskable'&&fs.existsSync(__dirname+'/../'+i.src)));
  assert.deepEqual(manifest.shortcuts.map(s=>s.url),['./?view=quotes','./?view=production','./?view=inventory']);
  const sw=fs.readFileSync(__dirname+'/../sw.js','utf8');
- for(const f of ['index.html','styles.css','manifest.webmanifest','js/supabase-client.js','js/01-core.js','js/19-start.js'])assert.ok(sw.includes("'"+f+"'"),f);
+ for(const f of ['index.html','styles.css','manifest.webmanifest','js/supabase-client.js','js/01-core.js','js/99-start.js'])assert.ok(sw.includes("'"+f+"'"),f);
  assert.ok(!/supabase\.co/.test(sw.replace(/^\/\/.*$/gm,'')),'never caches Supabase');
  assert.match(fs.readFileSync(__dirname+'/../js/10-search-install.js','utf8'),/serviceWorker\.register\('sw\.js'\)/);
  console.log('PASS V1.9: global search (accents, multi-word, all sections, keyboard, shortcuts), install prompt, home-screen shortcuts, manifest and service worker.');
