@@ -649,7 +649,8 @@ const BACKUP_TABLES = [
   ['customers', 'Clientes'],
   ['quotes', 'Cotizaciones'],
   ['expenses', 'Gastos'],
-  ['partner_transfers', 'Transferencias socios']
+  ['partner_transfers', 'Transferencias socios'],
+  ['price_lists', 'Precios rápidos']
 ];
 async function collectBackup() {
   const data = {},

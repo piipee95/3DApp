@@ -104,9 +104,14 @@ function dashboard() {
   root.innerHTML =
     header(
       'Productos',
-      canEdit()
-        ? '<button class="btn btn-primary" id="new">' + icon('plus') + '<span>Nuevo producto</span></button>'
-        : ''
+      '<button class="btn btn-secondary" id="priceListsBtn" type="button">' +
+        icon('calculator') +
+        '<span>Precios rápidos</span></button>' +
+        (canEdit()
+          ? '<button class="btn btn-primary" id="new">' +
+            icon('plus') +
+            '<span>Nuevo producto</span></button>'
+          : '')
     ) +
     '<main class="shell">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
@@ -204,6 +209,7 @@ function dashboard() {
     q('#searchProducts').setSelectionRange(pos, pos);
   };
   q('#new') && (q('#new').onclick = newProduct);
+  q('#priceListsBtn').onclick = showPriceLists;
   q('#showActive').onclick = () => {
     S.showArchived = false;
     dashboard();

@@ -86,6 +86,7 @@ function showQuickJob(kind, prefill = {}) {
           (isOrder ? ' required' : '')
       ) +
       customerOptions() +
+      priceListPicker() +
       fieldHtml(
         'Trabajo',
         'qjTitle',
@@ -146,6 +147,7 @@ function showQuickJob(kind, prefill = {}) {
   };
   dialog.querySelectorAll('input').forEach(el => el.addEventListener('input', preview));
   q('#qjIva').onchange = preview;
+  mountPriceListPicker(preview);
   q('#qjHalf')?.addEventListener('click', () => {
     q('#qjDeposit').value = Math.round(read().total / 2);
   });

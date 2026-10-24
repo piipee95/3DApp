@@ -120,7 +120,7 @@ async function test() {
   const calls = JSON.parse(run('JSON.stringify(calls)'));
   assert.ok(calls.includes('print_jobs:product_id in p1'));
   assert.ok(calls.includes('quotes:workspace_id=' + run('S.workspace.id')));
-  assert.equal(calls.length, 14);
+  assert.equal(calls.length, 15);
   const json = JSON.parse(await dom.window.eval(`files[0].blob.text()`));
   assert.equal(json.app, 'KultiApp');
   assert.equal(json.tables.products[0].name, 'Cuadro');

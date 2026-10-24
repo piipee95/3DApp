@@ -27,6 +27,7 @@ const S = {
   customers: [],
   payments: [],
   expenses: [],
+  priceLists: [],
   transfers: [],
   quoteFilter: 'open',
   sort: 'recent',
@@ -128,7 +129,7 @@ async function loadWorkspace() {
   await loadProducts();
   // Orders, quotes and customers feed Inicio and forms; the app still opens if they fail to load.
   await Promise.all(
-    [loadOrders, loadQuotes, loadCustomers, loadCustomerFileRequests].map(load =>
+    [loadOrders, loadQuotes, loadCustomers, loadCustomerFileRequests, loadPriceLists].map(load =>
       load().catch(e => console.warn('No se pudieron cargar los datos', e))
     )
   );
