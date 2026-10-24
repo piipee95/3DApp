@@ -170,7 +170,7 @@ async function saveSettings() {
   S.settings = { ...S.settings, ...v };
 }
 const PRODUCT_LIST_COLUMNS =
-  'id,workspace_id,name,description,quantity,iva_enabled,iva_rate,target_margin,round_to,status,sale_price,photo_path,stock_qty,stock_reserved,created_at,updated_at';
+  'id,workspace_id,name,description,quantity,iva_enabled,iva_rate,target_margin,round_to,status,sale_price,photo_path,stock_qty,stock_reserved,catalog_visible,catalog_price,created_at,updated_at';
 async function loadProducts() {
   let { data, error } = await supabase
     .from('products')
@@ -195,7 +195,8 @@ function fail(m) {
   render();
 }
 // Error log: what any team member hits is stored (max 20 different errors per session) for review.
-const APP_VERSION = 'v2.7';
+// Shown in the menu and stored with errors; keep it in step with CACHE in sw.js.
+const APP_VERSION = 'V3.2';
 const loggedErrors = new Set();
 function logError(kind, message, stack = '') {
   try {
@@ -228,7 +229,9 @@ function authView() {
   root.innerHTML =
     '<div class="shell"><div class="auth card"><img class="auth-logo" src="' +
     LOGO_SRC +
-    '" alt="Kultiverso Pop"><h1>KultiApp</h1><p class="muted">Costos y producción 3D</p><p class="small muted">Kultiverso Pop · Powered by ELARA</p>' +
+    '" alt="Kultiverso Pop"><h1>KultiApp</h1><p class="muted">Costos y producción 3D</p><p class="small muted">Kultiverso Pop · Powered by ELARA · ' +
+    APP_VERSION +
+    '</p>' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
     (S.msg ? '<div class="success">' + esc(S.msg) + '</div>' : '') +
     '<div class="login-tabs"><button class="btn tab active" data-mode="login">Ingresar</button><button class="btn tab" data-mode="signup">Crear cuenta</button></div><form id="authForm" class="grid"><div class="field"><label>Email</label><input id="email" type="email" required></div><div class="field"><label>Contraseña</label><input id="password" type="password" minlength="6" required><span id="passwordHint" class="small muted" hidden>' +

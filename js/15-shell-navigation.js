@@ -148,7 +148,9 @@ function mountShell() {
     roleName() +
     '</span></span>' +
     icon('ellipsis-vertical') +
-    '</button><p class="powered">Powered by <b>ELARA</b></p></div>';
+    '</button><p class="powered">Powered by <b>ELARA</b><span class="app-version">' +
+    APP_VERSION +
+    '</span></p></div>';
   root.prepend(side);
   const tabs = document.createElement('nav');
   tabs.className = 'tabbar';
@@ -241,7 +243,9 @@ function showMoreSheet() {
       icon('key-round') +
       'Cambiar contraseña</button><button type="button" class="menu-item danger" data-more="logout">' +
       icon('log-out') +
-      'Cerrar sesión</button></div><p class="powered">Kultiverso Pop · Powered by <b>ELARA</b></p>'
+      'Cerrar sesión</button></div><p class="powered">Kultiverso Pop · Powered by <b>ELARA</b> · ' +
+      APP_VERSION +
+      '</p>'
   );
   dialog.classList.add('sheet');
   const actions = {

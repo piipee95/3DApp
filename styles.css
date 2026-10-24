@@ -3925,7 +3925,8 @@ dialog[open]::backdrop {
   border-color: var(--cyan);
 }
 @media (max-width: 599px) {
-  #priceListsBtn span {
+  #priceListsBtn span,
+  #catalogBtn span {
     display: none;
   }
 }
@@ -4009,4 +4010,224 @@ dialog[open]::backdrop {
     width: 40px;
     padding: 0;
   }
+}
+/* V3.2: version, tracking and public catalog */
+.app-version {
+  float: right;
+  font-variant-numeric: tabular-nums;
+}
+.wrap-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.catalog-pick {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.catalog-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.catalog-pick-row:last-child {
+  border-bottom: 0;
+}
+.catalog-pick-row input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--action);
+  flex: none;
+}
+.catalog-pick-row .catPrice {
+  width: 110px;
+  flex: none;
+  text-align: right;
+}
+.public-page h1 {
+  font-size: 24px;
+  margin: 4px 0 6px;
+}
+.track-steps {
+  list-style: none;
+  margin: 22px 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+.track-steps li {
+  position: relative;
+  padding: 0 0 18px 34px;
+  color: var(--faint);
+}
+.track-steps li::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--line2);
+  background: var(--bg);
+}
+.track-steps li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 19px;
+  bottom: 0;
+  width: 2px;
+  background: var(--line2);
+}
+.track-steps li.done,
+.track-steps li.now {
+  color: var(--text);
+}
+.track-steps li.done::before {
+  background: var(--green);
+  border-color: var(--green);
+}
+.track-steps li.done::after {
+  background: var(--green);
+}
+.track-steps li.now::before {
+  background: var(--action);
+  border-color: var(--action);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--action) 25%, transparent);
+}
+.track-steps li span {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+}
+.track-due {
+  margin: -6px 0 16px;
+}
+.track-money {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.track-money div {
+  padding: 10px 12px;
+  background: var(--raised);
+  border-radius: var(--r);
+}
+.track-money dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.track-money dd {
+  margin: 2px 0 0;
+  font-weight: 700;
+}
+.track-h {
+  font-size: 16px;
+  margin: 6px 0 10px;
+}
+.track-wa {
+  width: 100%;
+  justify-content: center;
+  margin: 8px 0 12px;
+}
+.public-catalog {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+.catalog-head {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.catalog-head h1 {
+  font-size: 26px;
+}
+.catalog-head .customer-upload-logo {
+  margin-bottom: 12px;
+}
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px;
+}
+.catalog-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.catalog-card img,
+.catalog-noimg {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  background: var(--raised);
+}
+.catalog-noimg {
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 28px;
+  color: var(--faint);
+}
+.catalog-body {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  flex: 1;
+  align-content: start;
+}
+.catalog-body h2 {
+  font-size: 16px;
+}
+.catalog-body p {
+  margin: 0;
+  font-size: 13px;
+}
+.catalog-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.catalog-meta b {
+  font-size: 18px;
+}
+.catalog-body .btn {
+  justify-content: center;
+  margin-top: auto;
+}
+.catalog-foot {
+  text-align: center;
+  margin-top: 28px;
+}
+.catalog-meta b.ask {
+  font-size: 14px;
+  color: var(--label);
+}
+.catalog-pick-row .catPrice {
+  height: 38px;
+  padding: 0 10px;
+  font: inherit;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--line2);
+  border-radius: var(--r);
+}
+.catalog-pick-row .catPrice:focus {
+  outline: 2px solid var(--cyan);
+  outline-offset: 1px;
+}
+#catalogDialog .wrap-row,
+#trackingDialog .wrap-row {
+  margin: 10px 0 16px;
 }

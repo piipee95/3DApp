@@ -1,6 +1,6 @@
 // KultiApp service worker: opens offline with the last version and keeps the app shell fresh.
 // Supabase (data, auth, photos) is never cached: it always goes to the network.
-const CACHE = 'kultiapp-v31';
+const CACHE = 'kultiapp-v32';
 const SHELL = [
   './',
   'index.html',
@@ -26,6 +26,7 @@ const SHELL = [
   'js/19-finance.js',
   'js/20-price-lists.js',
   'js/21-production.js',
+  'js/22-public-pages.js',
   'js/99-start.js',
   'styles.css',
   'favicon.svg',
@@ -77,7 +78,8 @@ self.addEventListener('fetch', event => {
     return;
   }
   if (url.origin !== self.location.origin) return;
-  if (url.pathname === '/subir.html' || url.pathname === '/subir.js') return;
+  // Public pages for customers always come from the network.
+  if (/^\/(subir|seguimiento|catalogo)\.(html|js)$/.test(url.pathname)) return;
   // App files: network first so every deploy arrives at once; cache only when offline.
   event.respondWith(
     fetch(req)
