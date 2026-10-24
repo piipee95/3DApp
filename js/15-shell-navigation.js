@@ -70,7 +70,7 @@ function header(title = PAGE_TITLES[S.mode] || 'KultiApp', actions = '', { back 
       : '<img class="page-mark" src="favicon.svg" alt="">') +
     '<h1 class="page-title">' +
     esc(title) +
-    '</h1><div class="page-actions">' +
+    '</h1><span class="app-version" aria-label="Versión de la aplicación">' + APP_VERSION + '</span><div class="page-actions">' +
     (back
       ? ''
       : '<button class="btn icon-btn header-search" type="button" data-open-search aria-label="Buscar" title="Buscar">' +

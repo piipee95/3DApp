@@ -5,6 +5,7 @@ async function test(){
  const app=boot(),run=s=>app.window.run(s);
  run(`S.fileRequests=[{id:'r1',label:'Cliente <privado>',access_token:'abc',expires_at:new Date(Date.now()+172800000).toISOString(),submitted_at:null}];S.mode='files';render()`);
  assert.equal(run('q(".page-title").textContent'),'Archivos del cliente');
+ assert.equal(run('q(".app-version").textContent'),run('APP_VERSION'));
  assert.equal(run('qa(".sidebar .nav-item").length'),10);
  run(`showNewFileRequest()`);assert.match(run('q("#newFileRequestDialog").textContent'),/48 horas/);assert.equal(run('q("#fileRequestDays")'),null);
  run(`q('#newFileRequestDialog').close();showFileRequestLink(S.fileRequests[0])`);

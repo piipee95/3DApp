@@ -28,7 +28,7 @@ async function test(){
  run(`logError('handled','No se pudo guardar')`);
  let logged=JSON.parse(run('JSON.stringify(inserts.filter(i=>i.table==="app_errors").map(i=>i.v))'));
  assert.equal(logged.length,1);
- assert.equal(logged[0].kind,'handled');assert.equal(logged[0].screen,'quotes');assert.equal(logged[0].app_version,'v2.7');assert.equal(logged[0].workspace_id,run('S.workspace.id'));
+ assert.equal(logged[0].kind,'handled');assert.equal(logged[0].screen,'quotes');assert.equal(logged[0].app_version,run('APP_VERSION'));assert.equal(logged[0].workspace_id,run('S.workspace.id'));
  run(`for(let i=0;i<40;i++)logError('error','Error '+i)`);
  assert.equal(run('inserts.filter(i=>i.table==="app_errors").length'),20);
  // Without a session nothing is sent.
