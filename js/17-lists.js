@@ -369,7 +369,9 @@ function resourcesView() {
     header(
       'Impresoras',
       canEdit()
-        ? '<button class="btn btn-primary" data-add-resource="printer">' +
+        ? '<button class="btn btn-secondary" id="newFailureBtn">' +
+            icon('triangle-alert') +
+            '<span>Registrar falla</span></button><button class="btn btn-primary" data-add-resource="printer">' +
             icon('plus') +
             '<span>Impresora</span></button>'
         : ''
@@ -381,7 +383,7 @@ function resourcesView() {
       ? printers
           .map(
             r =>
-              '<div class="list-row static' +
+              '<div class="list-row static printer-row' +
               (!r.active ? ' archived' : '') +
               '"><span class="thumb-empty">' +
               icon('printer') +
@@ -389,7 +391,20 @@ function resourcesView() {
               esc(r.name) +
               '</b><span>' +
               n(r.power_kw).toLocaleString('es-CL') +
-              ' kW de consumo máximo</span></span><span class="chip ' +
+              ' kW de consumo máximo</span>' +
+              printerUsageMarkup(r) +
+              (canEdit() && r.active
+                ? '<span class="printer-actions"><button class="btn btn-ghost btn-sm" type="button" data-printer-hours="' +
+                  r.id +
+                  '">' +
+                  icon('plus') +
+                  'Sumar horas</button><button class="btn btn-ghost btn-sm" type="button" data-printer-maint="' +
+                  r.id +
+                  '">' +
+                  icon('wrench') +
+                  'Mantención hecha</button></span>'
+                : '') +
+              '</span><span class="chip ' +
               (r.active ? 'c-ready' : 'c-cancel') +
               '">' +
               (r.active ? 'Disponible' : 'Inactiva') +
@@ -409,7 +424,7 @@ function resourcesView() {
       : '<div class="panel-empty">' +
         icon('printer') +
         '<b>Aún no hay impresoras</b><span>Regístralas con su potencia para calcular la electricidad.</span></div>') +
-    '</section><p class="small muted footnote">La potencia se copia a cada impresión al elegir la impresora; cambiarla aquí no modifica productos anteriores.</p></main>';
+    '</section><section class="panel" id="failuresPanel" hidden></section><p class="small muted footnote">La potencia se copia a cada impresión al elegir la impresora; cambiarla aquí no modifica productos anteriores.</p></main>';
   common();
   qa('[data-add-resource]').forEach(
     b => (b.onclick = () => showResourceForm({ kind: b.dataset.addResource, active: true }))
@@ -417,4 +432,22 @@ function resourcesView() {
   qa('[data-edit-resource]').forEach(
     b => (b.onclick = () => showResourceForm(S.resources.find(r => r.id === b.dataset.editResource)))
   );
+  qa('[data-printer-hours]').forEach(
+    b =>
+      (b.onclick = () =>
+        printerAction(
+          S.resources.find(r => r.id === b.dataset.printerHours),
+          'add'
+        ))
+  );
+  qa('[data-printer-maint]').forEach(
+    b =>
+      (b.onclick = () =>
+        printerAction(
+          S.resources.find(r => r.id === b.dataset.printerMaint),
+          'maintenance'
+        ))
+  );
+  q('#newFailureBtn')?.addEventListener('click', () => showFailure());
+  failuresSummary();
 }

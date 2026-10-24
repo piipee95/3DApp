@@ -3932,3 +3932,81 @@ dialog[open]::backdrop {
 .partner-row:has(.rPrice) {
   grid-template-columns: minmax(0, 1fr) 108px auto auto;
 }
+/* V3.1: printer usage, failures and photos of finished work */
+.printer-usage {
+  display: grid;
+  gap: 2px;
+  margin-top: 6px;
+}
+.printer-usage .pu-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.printer-usage .pay-bar {
+  margin: 4px 0;
+  max-width: 320px;
+}
+.pay-bar i.due {
+  background: var(--red, #e5484d);
+}
+.printer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.order-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.order-photos figure {
+  position: relative;
+  margin: 0;
+}
+.order-photos img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+.order-photos .icon-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  background: var(--panel);
+}
+.printer-row {
+  align-items: flex-start;
+}
+.printer-row .lr-main {
+  grid-template-columns: minmax(0, 1fr);
+}
+.printer-row .lr-main span.printer-actions,
+.printer-usage span {
+  white-space: normal;
+  overflow: visible;
+}
+@media (max-width: 599px) {
+  .printer-row .chip.c-ready {
+    display: none;
+  }
+  #newFailureBtn > span {
+    display: none;
+  }
+  #newFailureBtn {
+    width: 40px;
+    padding: 0;
+  }
+}

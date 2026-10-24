@@ -468,7 +468,9 @@ function reportsView() {
         clp(r.madeCost) +
         '</dd></div></dl>'
       : '<p class="small muted report-empty">Sin fabricación para stock este mes.</p>') +
-    '</section></div><p class="footnote small muted">Ventas de pedidos de cliente creados en el mes (sin cancelados). La utilidad usa el costo real cuando está registrado y si no el estimado.</p></main>';
+    '</section></div><div class="home-cols">' +
+    failuresPanelMarkup(y, m) +
+    '</div><p class="footnote small muted">Ventas de pedidos de cliente creados en el mes (sin cancelados). La utilidad usa el costo real cuando está registrado y si no el estimado.</p></main>';
   common();
   q('#prevMonth').onclick = async () => {
     S.reportMonth = m === 0 ? [y - 1, 11] : [y, m - 1];
@@ -493,6 +495,7 @@ async function exportReport(y, m) {
   // Expenses feed the real profit and VAT lines; the report still exports if they can't load.
   try {
     if (!S.expensesLoaded) await loadExpenses();
+    if (!S.failures) await loadFailures();
   } catch {}
   const fin = financeMonth(y, m),
     r = monthReport(y, m),
@@ -516,6 +519,8 @@ async function exportReport(y, m) {
         ['Unidades fabricadas para stock', r.madeUnits],
         ['Costo de lo vendido', Math.round(fin.cogs)],
         ['Gastos del negocio', Math.round(fin.overhead)],
+        ['Fallas de impresión (cantidad)', failuresOfMonth(y, m).count],
+        ['Costo de fallas', Math.round(failuresOfMonth(y, m).cost)],
         ['Utilidad real', Math.round(fin.real)],
         ['IVA de ventas', Math.round(fin.ivaSales)],
         ['IVA de compras con factura', Math.round(fin.ivaPurchases)],
@@ -650,7 +655,8 @@ const BACKUP_TABLES = [
   ['quotes', 'Cotizaciones'],
   ['expenses', 'Gastos'],
   ['partner_transfers', 'Transferencias socios'],
-  ['price_lists', 'Precios rápidos']
+  ['price_lists', 'Precios rápidos'],
+  ['print_failures', 'Fallas']
 ];
 async function collectBackup() {
   const data = {},

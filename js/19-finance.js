@@ -80,7 +80,7 @@ async function loadTransfers() {
   S.transfers = data || [];
 }
 const ivaOf = (total, rate = IVA_RATE) => Math.round(n(total) - n(total) / (1 + rate));
-// Real profit of a month: net sales − cost of what was sold − overhead expenses.
+// Real profit of a month: net sales − cost of what was sold − overhead expenses − failures not in an order's cost.
 function financeMonth(y, m) {
   const r = monthReport(y, m),
     cogs = r.sales.reduce((s, o) => s + (orderNumbers(o).actualCost ?? n(o.estimated_cost)), 0),
@@ -93,7 +93,8 @@ function financeMonth(y, m) {
       (s, o) => s + (o.iva_enabled ? orderNumbers(o).sales - orderNumbers(o).net : 0),
       0
     ),
-    ivaPurchases = expenses.reduce((s, e) => s + n(e.iva_amount), 0);
+    ivaPurchases = expenses.reduce((s, e) => s + n(e.iva_amount), 0),
+    waste = failureWaste(y, m);
   return {
     report: r,
     expenses,
@@ -102,7 +103,8 @@ function financeMonth(y, m) {
     grossMargin,
     overhead,
     purchases,
-    real: gross - overhead,
+    waste,
+    real: gross - overhead - waste,
     // Sales needed to cover this month's overhead at the month's gross margin.
     breakEven: grossMargin > 0 ? overhead / grossMargin : null,
     ivaSales,
@@ -188,6 +190,7 @@ function financeView() {
       'sub-total'
     ) +
     line('− Gastos del negocio', clp(f.overhead)) +
+    (f.waste ? line('− Fallas de impresión', clp(f.waste)) : '') +
     line('= Utilidad real', clp(f.real), 'total ' + (f.real < 0 ? 'down' : 'up')) +
     '</div><p class="small muted fin-note">' +
     (f.breakEven == null

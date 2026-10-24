@@ -54,7 +54,7 @@ async function test(){
   S.resources=[{id:'p1',kind:'printer',name:'Anycubic Cobra X',power_kw:1.75,active:true}];showResourceForm(S.resources[0]);q('#resourcePower').value='1.3';q('#resourceForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
  await flush();await flush();
  const edit=JSON.parse(run('JSON.stringify(calls.find(c=>c.op==="update"))'));
- assert.deepEqual(Object.keys(edit.value).sort(),['active','name','power_kw']);
+ assert.deepEqual(Object.keys(edit.value).sort(),['active','maintenance_every_hours','name','power_kw']);
  assert.equal(edit.value.power_kw,1.3);
  run(`calls.length=0;showResourceForm({kind:'printer',active:true});q('#resourceName').value='Bambu A1';q('#resourcePower').value='0.35';q('#resourceForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
  await flush();await flush();
