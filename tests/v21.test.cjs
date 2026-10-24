@@ -82,6 +82,7 @@ async function test() {
   run(`q('#nextMonth').click()`);
   // Excel export opens as a valid workbook with the expected sheets and numbers.
   run(`q('#exportReport').click()`);
+  await flush();
   assert.equal(run('files[0].name'), 'KultiApp-reporte-2026-10.xlsx');
   const bytes = await dom.window.eval(`files[0].blob.arrayBuffer()`);
   const zip = readZip(Buffer.from(bytes));
@@ -105,7 +106,7 @@ async function test() {
     ]).toString();
     assert.match(
       out,
-      /\['Resumen', 'Pedidos', 'Por producto', 'Por cliente', 'Pagos', 'Cotizaciones'\] 33800 3/
+      /\['Resumen', 'Pedidos', 'Por producto', 'Por cliente', 'Pagos', 'Cotizaciones', 'Gastos'\] 33800 3/
     );
   } catch (e) {
     if (!/No module named|ENOENT/.test(String(e.stderr || e.message))) throw e;
@@ -119,7 +120,7 @@ async function test() {
   const calls = JSON.parse(run('JSON.stringify(calls)'));
   assert.ok(calls.includes('print_jobs:product_id in p1'));
   assert.ok(calls.includes('quotes:workspace_id=' + run('S.workspace.id')));
-  assert.equal(calls.length, 12);
+  assert.equal(calls.length, 14);
   const json = JSON.parse(await dom.window.eval(`files[0].blob.text()`));
   assert.equal(json.app, 'KultiApp');
   assert.equal(json.tables.products[0].name, 'Cuadro');

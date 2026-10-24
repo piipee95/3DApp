@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { mode: 'customers', label: 'Clientes', icon: 'users' },
   { mode: 'files', label: 'Archivos', icon: 'image' },
   { mode: 'reports', label: 'Reportes', icon: 'chart-column' },
+  { mode: 'finance', label: 'Finanzas', icon: 'wallet' },
   { mode: 'inventory', label: 'Inventario', icon: 'boxes' },
   { mode: 'resources', label: 'Impresoras', icon: 'printer' }
 ];
@@ -31,6 +32,7 @@ const PAGE_TITLES = {
   production: 'Pedidos',
   customers: 'Clientes',
   reports: 'Reportes',
+  finance: 'Finanzas',
   inventory: 'Inventario',
   files: 'Archivos del cliente',
   resources: 'Impresoras'
@@ -152,7 +154,9 @@ function mountShell() {
   tabs.className = 'tabbar';
   tabs.setAttribute('aria-label', 'Navegación');
   tabs.innerHTML =
-    NAV_ITEMS.filter(item => !['resources', 'quotes', 'customers', 'reports', 'files'].includes(item.mode))
+    NAV_ITEMS.filter(
+      item => !['resources', 'quotes', 'customers', 'reports', 'files', 'finance'].includes(item.mode)
+    )
       .map(
         item =>
           '<button type="button" class="tab-item' +
@@ -214,7 +218,9 @@ function showMoreSheet() {
       icon('users') +
       'Clientes</button><button type="button" class="menu-item" data-more="reports">' +
       icon('chart-column') +
-      'Reportes</button><button type="button" class="menu-item" data-more="resources">' +
+      'Reportes</button><button type="button" class="menu-item" data-more="finance">' +
+      icon('wallet') +
+      'Finanzas</button><button type="button" class="menu-item" data-more="resources">' +
       icon('printer') +
       'Impresoras</button><button type="button" class="menu-item" data-more="files">' +
       icon('image') +
@@ -246,6 +252,7 @@ function showMoreSheet() {
     quotes: () => goMode('quotes'),
     install: () => installApp(),
     reports: () => goMode('reports'),
+    finance: () => goMode('finance'),
     backup: () => showBackup(),
     files: () => goMode('files'),
     customers: () => goMode('customers')

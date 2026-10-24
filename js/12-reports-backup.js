@@ -489,8 +489,13 @@ function reportsView() {
   };
   q('#exportReport').onclick = () => exportReport(y, m);
 }
-function exportReport(y, m) {
-  const r = monthReport(y, m),
+async function exportReport(y, m) {
+  // Expenses feed the real profit and VAT lines; the report still exports if they can't load.
+  try {
+    if (!S.expensesLoaded) await loadExpenses();
+  } catch {}
+  const fin = financeMonth(y, m),
+    r = monthReport(y, m),
     { label } = reportMonth(),
     date = iso => (iso ? String(iso).slice(0, 10) : '');
   const sheets = [
@@ -508,7 +513,13 @@ function exportReport(y, m) {
         ['Cobrado en el mes', Math.round(r.collected)],
         ['Cotizaciones', r.quotes.length],
         ['Cotizaciones aceptadas', r.accepted],
-        ['Unidades fabricadas para stock', r.madeUnits]
+        ['Unidades fabricadas para stock', r.madeUnits],
+        ['Costo de lo vendido', Math.round(fin.cogs)],
+        ['Gastos del negocio', Math.round(fin.overhead)],
+        ['Utilidad real', Math.round(fin.real)],
+        ['IVA de ventas', Math.round(fin.ivaSales)],
+        ['IVA de compras con factura', Math.round(fin.ivaPurchases)],
+        ['IVA estimado a pagar', Math.round(fin.ivaDue)]
       ]
     },
     {
@@ -606,6 +617,20 @@ function exportReport(y, m) {
       ]
     }
   ];
+  sheets.push({
+    name: 'Gastos',
+    rows: [
+      ['Fecha', 'Categoría', 'Detalle', 'Monto', 'IVA', 'Pagó'],
+      ...fin.expenses.map(e => [
+        date(e.spent_on),
+        EXPENSE_CATEGORIES[e.category],
+        e.description,
+        n(e.amount),
+        n(e.iva_amount),
+        e.paid_by
+      ])
+    ]
+  });
   downloadBlob(xlsxBlob(sheets), 'KultiApp-reporte-' + y + '-' + String(m + 1).padStart(2, '0') + '.xlsx');
   toast('Reporte descargado.');
 }
@@ -622,7 +647,9 @@ const BACKUP_TABLES = [
   ['order_payments', 'Pagos'],
   ['product_stock_movements', 'Movimientos stock'],
   ['customers', 'Clientes'],
-  ['quotes', 'Cotizaciones']
+  ['quotes', 'Cotizaciones'],
+  ['expenses', 'Gastos'],
+  ['partner_transfers', 'Transferencias socios']
 ];
 async function collectBackup() {
   const data = {},

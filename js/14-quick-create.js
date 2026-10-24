@@ -112,7 +112,8 @@ function showQuickJob(kind, prefill = {}) {
           Object.entries(PAY_METHODS)
             .map(([k, v]) => '<option value="' + k + '">' + v + '</option>')
             .join('') +
-          '</select></div>'
+          '</select></div>' +
+          partnerField('qjReceiver', 'Lo recibió')
         : fieldHtml(
             'Plazo de entrega (opcional)',
             'qjDelivery',
@@ -186,7 +187,15 @@ function showQuickJob(kind, prefill = {}) {
           .select()
           .single();
         if (error) throw error;
-        if (deposit > 0) await addPayment(order, deposit, q('#qjMethod').value, null, 'Abono inicial');
+        if (deposit > 0)
+          await addPayment(
+            order,
+            deposit,
+            q('#qjMethod').value,
+            null,
+            'Abono inicial',
+            rememberPartner(q('#qjReceiver')?.value)
+          );
         dialog.close();
         S.orderFilter = 'open';
         await goMode('production');

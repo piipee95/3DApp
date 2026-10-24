@@ -3791,3 +3791,72 @@ dialog[open]::backdrop {
   gap: 6px;
   flex-wrap: wrap;
 }
+
+/* ---------- Finanzas (V2.9) ---------- */
+.list-rows.always {
+  display: block;
+}
+.fin-lines {
+  padding: 6px 16px 4px;
+}
+.fin-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.fin-line:last-child {
+  border-bottom: 0;
+}
+.fin-line span {
+  color: var(--muted);
+}
+.fin-line.sub-total b {
+  color: var(--text);
+}
+.fin-line.total {
+  font-size: 16px;
+}
+.fin-line.total span {
+  color: var(--text);
+  font-weight: 600;
+}
+.fin-line.total.up b {
+  color: var(--green);
+}
+.fin-line.total.down b {
+  color: var(--red);
+}
+.fin-note {
+  padding: 0 16px 14px;
+  margin: 0;
+}
+.settle {
+  padding: 10px 16px 14px;
+  display: grid;
+  gap: 8px;
+}
+.settle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--raised);
+}
+.partner-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 80px auto auto;
+  gap: 8px;
+  align-items: center;
+}
+.partner-row span {
+  color: var(--muted);
+}
+.partner-table td:first-child {
+  white-space: nowrap;
+}
