@@ -308,7 +308,7 @@ async function mountOrderPhotos(order, dialog) {
   }
   box.innerHTML =
     '<div class="pay-head"><h3>Fotos del trabajo</h3></div><p class="small muted">Cargando…</p>';
-  let photos = [];
+  let photos;
   try {
     photos = await loadOrderPhotos(order);
   } catch (error) {

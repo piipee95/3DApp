@@ -69,31 +69,64 @@ async function start() {
       mb = n => (n / 1048576).toFixed(n < 1048576 ? 2 : 1) + ' MB';
     let selected = null;
     const dropzone = document.querySelector('.drop-zone');
-    const feedback = document.querySelector('#uploadFeedback');
     const locked = () => jobs.some(job => job.slot);
     function paintFiles() {
       const files = selected || [...picker.files];
-      document.querySelector('#pickedFiles').innerHTML = files.map((f, i) => {
-        const invalid = !mimeOf(f) ? 'Formato no admitido' : f.size < 1 ? 'Archivo vacío' : f.size > 52428800 ? 'Supera 50 MB' : '';
-        return '<li><span><b>' + esc(f.name) + '</b><small class="' + (invalid ? 'bad' : 'muted') + '">' + mb(f.size) + ' · ' + (invalid || 'Original, sin compresión') + '</small></span><button type="button" class="btn btn-ghost" data-remove-photo="' + i + '" aria-label="Quitar ' + esc(f.name) + '"' + (locked() ? ' disabled' : '') + '>Quitar</button></li>';
-      }).join('') + (files.length > 5 ? '<li class="bad">Máximo 5 fotos por envío.</li>' : '');
-      document.querySelectorAll('[data-remove-photo]').forEach(b => b.onclick = () => {
-        if (locked()) return;
-        selected = files.filter((_, i) => i !== Number(b.dataset.removePhoto));
-        picker.required = selected.length === 0;
-        paintFiles();
-      });
-      dropzone.querySelector('b').textContent = files.length ? files.length + (files.length === 1 ? ' foto elegida' : ' fotos elegidas') : 'Elegir fotos';
+      document.querySelector('#pickedFiles').innerHTML =
+        files
+          .map((f, i) => {
+            const invalid = !mimeOf(f)
+              ? 'Formato no admitido'
+              : f.size < 1
+                ? 'Archivo vacío'
+                : f.size > 52428800
+                  ? 'Supera 50 MB'
+                  : '';
+            return (
+              '<li><span><b>' +
+              esc(f.name) +
+              '</b><small class="' +
+              (invalid ? 'bad' : 'muted') +
+              '">' +
+              mb(f.size) +
+              ' · ' +
+              (invalid || 'Original, sin compresión') +
+              '</small></span><button type="button" class="btn btn-ghost" data-remove-photo="' +
+              i +
+              '" aria-label="Quitar ' +
+              esc(f.name) +
+              '"' +
+              (locked() ? ' disabled' : '') +
+              '>Quitar</button></li>'
+            );
+          })
+          .join('') + (files.length > 5 ? '<li class="bad">Máximo 5 fotos por envío.</li>' : '');
+      document.querySelectorAll('[data-remove-photo]').forEach(
+        b =>
+          (b.onclick = () => {
+            if (locked()) return;
+            selected = files.filter((_, i) => i !== Number(b.dataset.removePhoto));
+            picker.required = selected.length === 0;
+            paintFiles();
+          })
+      );
+      dropzone.querySelector('b').textContent = files.length
+        ? files.length + (files.length === 1 ? ' foto elegida' : ' fotos elegidas')
+        : 'Elegir fotos';
     }
     picker.addEventListener('change', () => {
       if (locked()) return;
       selected = [...picker.files];
       paintFiles();
     });
-    dropzone.addEventListener('dragover', e => { e.preventDefault(); if (!locked()) dropzone.classList.add('drag-over'); });
+    dropzone.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!locked()) dropzone.classList.add('drag-over');
+    });
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
     dropzone.addEventListener('drop', e => {
-      e.preventDefault(); dropzone.classList.remove('drag-over');
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
       if (locked() || !e.dataTransfer?.files.length) return;
       selected = [...e.dataTransfer.files];
       picker.required = false;
@@ -116,7 +149,7 @@ async function start() {
         picker.disabled = true;
         document.querySelector('#clientName').readOnly = true;
         document.querySelector('#clientNote').readOnly = true;
-        document.querySelectorAll('[data-remove-photo]').forEach(b => b.disabled = true);
+        document.querySelectorAll('[data-remove-photo]').forEach(b => (b.disabled = true));
         for (let i = 0; i < jobs.length; i++) {
           const job = jobs[i];
           if (job.received) continue;
@@ -162,7 +195,7 @@ async function start() {
         picker.disabled = locked();
         document.querySelector('#clientName').readOnly = locked();
         document.querySelector('#clientNote').readOnly = locked();
-        if (!locked()) document.querySelectorAll('[data-remove-photo]').forEach(b => b.disabled = false);
+        if (!locked()) document.querySelectorAll('[data-remove-photo]').forEach(b => (b.disabled = false));
       }
     };
   } catch (error) {

@@ -1,0 +1,14 @@
+# Weekly update proposals for npm packages and GitHub Actions (security fixes arrive as soon as they exist).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-tools:
+        patterns: ['*']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
