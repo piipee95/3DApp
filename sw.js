@@ -1,6 +1,6 @@
 // KultiApp service worker: opens offline with the last version and keeps the app shell fresh.
 // Supabase (data, auth, photos) is never cached: it always goes to the network.
-const CACHE = 'kultiapp-v32';
+const CACHE = 'kultiapp-v33';
 const SHELL = [
   './',
   'index.html',
@@ -27,6 +27,7 @@ const SHELL = [
   'js/20-price-lists.js',
   'js/21-production.js',
   'js/22-public-pages.js',
+  'js/23-theme.js',
   'js/99-start.js',
   'styles.css',
   'favicon.svg',

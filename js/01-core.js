@@ -196,7 +196,7 @@ function fail(m) {
 }
 // Error log: what any team member hits is stored (max 20 different errors per session) for review.
 // Shown in every screen header and stored with errors; keep it in step with CACHE in sw.js.
-const APP_VERSION = 'v3.2';
+const APP_VERSION = 'v3.3';
 const loggedErrors = new Set();
 function logError(kind, message, stack = '') {
   try {

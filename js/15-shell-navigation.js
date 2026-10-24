@@ -142,6 +142,7 @@ function mountShell() {
     }).join('') +
     '</nav><div class="side-user"><div class="account-menu" id="accountMenu" hidden>' +
     accountMenuItems() +
+    themeSwitch() +
     '</div><button type="button" class="user-chip" id="accountButton" aria-haspopup="menu" aria-expanded="false"><span class="avatar">' +
     esc(userInitials()) +
     '</span><span class="user-text"><b>' +
@@ -243,7 +244,9 @@ function showMoreSheet() {
       icon('key-round') +
       'Cambiar contraseña</button><button type="button" class="menu-item danger" data-more="logout">' +
       icon('log-out') +
-      'Cerrar sesión</button></div><p class="powered">Kultiverso Pop · Powered by <b>ELARA</b> · ' +
+      'Cerrar sesión</button></div>' +
+      themeSwitch() +
+      '<p class="powered">Kultiverso Pop · Powered by <b>ELARA</b> · ' +
       APP_VERSION +
       '</p>'
   );
