@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#070C15" />
+  <meta name="theme-color" content="#0B0B10" />
   <meta name="description" content="KultiApp — Costos y producción 3D para Kultiverso Pop. Powered by ELARA." />
   <title>KultiApp — Costos y producción 3D</title>
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -15,6 +15,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" />
   <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Saved theme before the first paint (see js/23-theme.js).
+    try {
+      var t = localStorage.getItem('kultiapp_theme');
+      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <div id="app"></div>
@@ -42,6 +49,7 @@
   <script defer src="js/20-price-lists.js"></script>
   <script defer src="js/21-production.js"></script>
   <script defer src="js/22-public-pages.js"></script>
+  <script defer src="js/23-theme.js"></script>
   <script defer src="js/99-start.js"></script>
 </body>
 </html>

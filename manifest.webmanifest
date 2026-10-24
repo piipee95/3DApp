@@ -7,8 +7,8 @@
   "display": "standalone",
   "orientation": "any",
   "lang": "es-CL",
-  "background_color": "#070C15",
-  "theme_color": "#070C15",
+  "background_color": "#0B0B10",
+  "theme_color": "#0B0B10",
   "description": "Costos y producción 3D para Kultiverso Pop. Powered by ELARA.",
   "categories": ["business", "productivity"],
   "icons": [
