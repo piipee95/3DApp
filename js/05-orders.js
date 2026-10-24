@@ -65,7 +65,7 @@ async function goMode(mode) {
     if (mode === 'customers') await Promise.all([loadCustomers(), loadQuotes(), loadOrders()]);
     if (mode === 'reports') await Promise.all([loadQuotes(), loadOrders()]);
     if (mode === 'finance') await Promise.all([loadOrders(), loadExpenses(), loadTransfers()]);
-    if (mode === 'home') await Promise.all([loadProducts(), loadOrders(), loadResources()]);
+    if (mode === 'home') await Promise.all([loadProducts(), loadOrders(), loadResources(), loadQuotes()]);
     render();
   } catch (e) {
     fail(e.message);
