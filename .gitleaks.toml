@@ -1,0 +1,8 @@
+# Gitleaks: default rules plus an allowance for the Supabase publishable key,
+# which is meant to be public (row level security protects the data).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public client keys"
+regexes = ['''sb_publishable_[A-Za-z0-9_-]+''']
