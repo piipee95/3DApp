@@ -4011,11 +4011,7 @@ dialog[open]::backdrop {
     padding: 0;
   }
 }
-/* V3.2: version, tracking and public catalog */
-.app-version {
-  float: right;
-  font-variant-numeric: tabular-nums;
-}
+/* V3.2: tracking and public catalog */
 .wrap-row {
   display: flex;
   flex-wrap: wrap;
@@ -4230,4 +4226,49 @@ dialog[open]::backdrop {
 #catalogDialog .wrap-row,
 #trackingDialog .wrap-row {
   margin: 10px 0 16px;
+}
+
+/* Original photo selection: native controls, no paid UI dependencies. */
+.customer-upload .drop-zone.drag-over,
+.customer-upload .drop-zone:focus-within {
+  border-color: var(--primary, #d94f87);
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.picked-files li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.picked-files li small {
+  display: block;
+  margin-top: 4px;
+}
+.picked-files li button {
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .picked-files li {
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+.app-version {
+  display: inline-block;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(128, 128, 128, 0.12);
+  color: var(--muted, #6b7280);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+@media (max-width: 599px) {
+  /* On phones the title needs the room; the version shows in the Más menu. */
+  .page-title + .app-version {
+    display: none;
+  }
 }

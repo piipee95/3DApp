@@ -11,9 +11,9 @@ const publicPage=(file,url,body,client)=>{
 async function test(){
  const dom=boot(),run=s=>dom.window.run(s);
  // The version shown in the menu matches the service worker cache.
- const cache=fs.readFileSync(path.join(__dirname,'../sw.js'),'utf8').match(/kultiapp-v(\d)(\d+)/);
- assert.equal(run('APP_VERSION'),'V'+cache[1]+'.'+cache[2]);
- run(`S.mode='home';render()`);assert.match(run('q(".app-version").textContent'),/^V\d+\.\d+$/);
+ const cache=fs.readFileSync(path.join(__dirname,'../sw.js'),'utf8').match(/kultiapp-v(\d)(\d+)(?:-(\d+))?'/);
+ assert.equal(run('APP_VERSION'),'v'+cache[1]+'.'+cache[2]+(cache[3]?'.'+cache[3]:''));
+ run(`S.mode='home';render()`);assert.equal(run('q(".page-head .app-version, .app-version").textContent'),run('APP_VERSION'));
  // Tracking: create the private link from the order, share it and revoke it.
  run(`window.rpcs=[];supabase.rpc=async(name,args)=>{rpcs.push([name,args]);return{data:args.p_action==='create'?'b'.repeat(64):null,error:null}};
   S.customers=[{id:'c1',name:'Ana Pérez',phone:'+56 9 1234 5678'}];
