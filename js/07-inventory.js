@@ -274,9 +274,8 @@ async function deleteResource(r) {
 // A material that was never counted always starts with its first count.
 const STOCK_OUT_REASONS = ['Usado en un trabajo', 'Se dañó o se perdió', 'Regalo o muestra', 'Otro motivo'];
 function stockPriceLabel(r) {
-  return r.kind === 'filament'
-    ? 'Precio por kg'
-    : 'Precio por ' + (INVENTORY_UNITS[r.unit] || r.unit).replace(/s$/, '');
+  const one = { un: 'unidad', hoja: 'hoja', m: 'metro', g: 'gramo', kg: 'kilo', l: 'litro' };
+  return r.kind === 'filament' ? 'Precio por kg' : 'Precio por ' + (one[r.unit] || r.unit);
 }
 const shownPrice = r =>
   r.kind === 'filament' ? Math.round(n(r.unit_cost) * 1000) : Math.round(n(r.unit_cost) * 1000) / 1000;
