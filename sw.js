@@ -1,6 +1,6 @@
 // KultiApp service worker: opens offline with the last version and keeps the app shell fresh.
 // Supabase (data, auth, photos) is never cached: it always goes to the network.
-const CACHE = 'kultiapp-v46';
+const CACHE = 'kultiapp-v47';
 const SHELL = [
   './',
   'index.html',
