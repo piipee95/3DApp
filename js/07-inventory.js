@@ -211,11 +211,11 @@ async function resourceUsage(r) {
       .from('products')
       .select('name')
       .eq('workspace_id', S.workspace.id)
-      .contains('materials', [{ resource_id: r.id }]),
+      .contains('materials', JSON.stringify([{ resource_id: r.id }])),
     supabase
       .from('print_jobs')
       .select('product_id')
-      .contains('filaments', [{ resource_id: r.id }])
+      .contains('filaments', JSON.stringify([{ resource_id: r.id }]))
   ]);
   for (const x of [lines, products, prints]) if (x.error) throw x.error;
   const names = new Set((products.data || []).map(p => p.name));
