@@ -4443,3 +4443,52 @@ dialog[open]::backdrop {
     flex-wrap: wrap;
   }
 }
+/* V3.8: money in stock */
+.valuation {
+  margin-bottom: 16px;
+}
+.value-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.value-tiles > div {
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+  background: var(--surface);
+}
+.value-tiles span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.value-tiles b {
+  font-size: 20px;
+}
+.value-tiles small {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+.value-tiles .total b {
+  color: var(--action);
+}
+.value-detail {
+  padding: 0 16px 8px;
+}
+.value-detail > summary {
+  padding: 10px 0;
+  cursor: pointer;
+  color: var(--cyan);
+  font-weight: 600;
+  font-size: 13px;
+}
+@media (max-width: 599px) {
+  .value-tiles {
+    grid-template-columns: 1fr 1fr;
+  }
+  .value-tiles .total {
+    grid-column: 1 / -1;
+  }
+}
