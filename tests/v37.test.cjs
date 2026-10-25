@@ -25,6 +25,21 @@ async function test(){
  const names=run('[...new Set(qa("[data-open] b").map(b=>b.textContent))].join()');
  assert.match(names,/Cuadro Iron Man/);assert.match(names,/Cuadro Spiderman/);assert.doesNotMatch(names,/Llavero/);
  run(`q('#showActive').click()`);assert.equal(run('S.showStock'),false);
+ // Delete: confirm explains stock is kept; reserved orders are cancelled first; deleted rows checked.
+ run(`window.ops=[];window.asked=null;confirmDialog=async o=>{asked=o;return true};loadOrders=async()=>{};loadResources=async()=>{};refreshProductStock=async()=>{};
+  supabase.from=t=>{const c={t};const q={update(v){c.op='update';c.v=v;return q},delete(){c.op='delete';return q},eq(k,v){c.id=v;return q},select(){c.sel=true;return q},then(a,b){ops.push(c);return Promise.resolve({data:c.op==='delete'?[{id:c.id}]:null,error:null}).then(a,b)}};return q};
+  deleteOrder({...S.orders[0],stock_state:'added',product_id:'p1',inventory_state:'consumed'})`);
+ await new Promise(r=>setTimeout(r,20));
+ assert.match(run('asked.body'),/se mantienen/);
+ assert.deepEqual(JSON.parse(run('JSON.stringify(ops.map(o=>o.op+":"+o.id))')),['delete:s1']);
+ run(`ops.length=0;deleteOrder({...S.orders[1],inventory_state:'reserved',stock_state:'none'})`);
+ await new Promise(r=>setTimeout(r,20));
+ assert.match(run('asked.body'),/Primero se cancela/);
+ assert.deepEqual(JSON.parse(run('JSON.stringify(ops.map(o=>o.op+":"+o.id))')),['update:s2','delete:s2']);
+ assert.equal(run('ops[0].v.status'),'canceled');
+ // Viewers have no delete button.
+ run(`S.workspace.role='viewer';showOrder(S.orders[2])`);assert.equal(run('!!q("#orderDelete")'),false);
+ run(`q('#orderDialog')?.close();S.workspace.role='owner';showOrder(S.orders[2])`);assert.equal(run('!!q("#orderDelete")'),true);
  dom.window.close();
  console.log('PASS V3.7: finished fabrications are closed, hidden from Pedidos/Inicio except «Fabricación», Productos «En stock» tab.');
 }
