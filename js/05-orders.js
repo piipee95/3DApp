@@ -195,7 +195,15 @@ function setupV13() {
         (st.reserved === 1 ? ' reservada' : ' reservadas') +
         ' para pedidos</span>'
       : '') +
-    '</div></div><div class="row"><button type="button" class="btn btn-secondary" id="makeStock"' +
+    '</div></div><div class="row">' +
+    (st.available > 0
+      ? '<button type="button" class="btn btn-primary" id="sellStock"' +
+        (canEdit() ? '' : ' disabled') +
+        '>' +
+        icon('wallet') +
+        'Vender</button>'
+      : '') +
+    '<button type="button" class="btn btn-secondary" id="makeStock"' +
     (canEdit() ? '' : ' disabled') +
     '>' +
     icon('plus') +
@@ -235,6 +243,9 @@ function bindV13() {
     if (S.product.id && !S.dirty) showNewOrder('stock');
   };
   q('#adjustStock').onclick = () => showStockAdjust(S.product);
+  q('#sellStock')?.addEventListener('click', () =>
+    showSell(S.products.find(p => p.id === S.product.id) || S.product)
+  );
   if (!canEdit()) return;
   qa('.filamentSelect').forEach(
     select =>

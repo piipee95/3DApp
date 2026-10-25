@@ -4524,3 +4524,43 @@ dialog[open]::backdrop {
 .notify-preview {
   overflow-wrap: anywhere;
 }
+/* V4.1: sell from stock */
+.sell-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+.sell-summary > div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--raised);
+  border-radius: var(--r);
+}
+.sell-summary span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.sell-summary b {
+  font-size: 17px;
+}
+.product-row .sell-btn {
+  flex: none;
+}
+td.row-actions {
+  white-space: nowrap;
+}
+td.row-actions .sell-btn {
+  margin-right: 6px;
+}
+@media (max-width: 599px) {
+  .product-row {
+    flex-wrap: wrap;
+  }
+  .product-row .sell-btn {
+    order: 5;
+    flex: 1 0 calc(100% - 60px);
+    margin-left: 60px;
+    justify-content: center;
+  }
+}
