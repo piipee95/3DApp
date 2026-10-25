@@ -204,6 +204,45 @@ document.addEventListener('click', e => {
     q('#accountButton')?.setAttribute('aria-expanded', 'false');
   }
 });
+// ⋯ menus float above lists and cards (which clip overflow): placed on screen next to their
+// button, opening upwards when there is no room below. Scrolling closes them.
+function placeMenu(d) {
+  const pop = d.querySelector(':scope > .menu-pop');
+  if (!pop) return;
+  if (!d.open) return pop.classList.remove('floating');
+  const r = d.querySelector('summary').getBoundingClientRect();
+  pop.classList.add('floating');
+  Object.assign(pop.style, { top: '0px', left: '0px', bottom: 'auto', right: 'auto', maxHeight: '' });
+  // An animated (transformed) ancestor moves the origin of fixed elements: measure and compensate.
+  const origin = pop.getBoundingClientRect(),
+    w = pop.offsetWidth,
+    below = innerHeight - r.bottom - 12,
+    up = pop.offsetHeight > below && r.top > below,
+    room = Math.max(160, up ? r.top - 12 : below),
+    h = Math.min(pop.offsetHeight, room),
+    top = up ? r.top - 6 - h : r.bottom + 6,
+    left = Math.min(Math.max(8, r.right - w), innerWidth - w - 8);
+  Object.assign(pop.style, {
+    top: top - origin.top + 'px',
+    left: left - origin.left + 'px',
+    maxHeight: room + 'px'
+  });
+}
+document.addEventListener(
+  'toggle',
+  e => {
+    if (e.target.matches?.('details.row-menu')) placeMenu(e.target);
+  },
+  true
+);
+const closeFloatingMenus = e => {
+  if (e?.target?.closest?.('.menu-pop')) return;
+  qa('details.row-menu[open]').forEach(d => {
+    if (d.querySelector('.menu-pop.floating')) d.open = false;
+  });
+};
+addEventListener('scroll', closeFloatingMenus, { passive: true, capture: true });
+addEventListener('resize', closeFloatingMenus);
 function showMoreSheet() {
   const dialog = showDialog(
     'moreSheet',

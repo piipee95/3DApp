@@ -4492,3 +4492,13 @@ dialog[open]::backdrop {
     grid-column: 1 / -1;
   }
 }
+/* ⋯ menus float above clipping cards and lists */
+.menu-pop.floating {
+  position: fixed;
+  z-index: 60;
+  overflow-y: auto;
+}
+.menu-pop.floating {
+  width: max-content;
+  max-width: calc(100vw - 16px);
+}
