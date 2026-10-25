@@ -1,13 +1,14 @@
 ---
 name: kultiapp-versiones
-description: Versionado, notas de versión, ramas y publicación de KultiApp (sitio estático en GitHub Pages desde main). Usar al cerrar un cambio, subir la versión, escribir docs/VX_Y.md o preparar commit, rama y PR.
+description: Versionado, notas de versión, ramas y publicación de KultiApp (sitio estático en Vercel: main publica producción, las demás ramas generan vistas previas). Usar al cerrar un cambio, subir la versión, escribir docs/VX_Y.md o preparar commit, rama y PR.
 ---
 
 # Skill: versiones y publicación de KultiApp
 
 ## Publicación
 
-- GitHub Pages publica `main` desde la raíz del repositorio: **fusionar en `main` publica** para todos los usuarios.
+- Vercel (proyecto `costos3d`) publica el sitio estático desde la raíz del repositorio. URL de producción: `https://kultiapp.vercel.app` (`costos3d.vercel.app` redirige a ella). **Fusionar en `main` publica** para todos los usuarios.
+- Cada rama y PR recibe una vista previa de Vercel; sirve para revisar en el celular antes de fusionar.
 - Si el cambio necesita una migración, esta se aplica en Supabase antes de fusionar (Skill `kultiapp-supabase`).
 
 ## Al cerrar una versión
