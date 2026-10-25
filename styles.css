@@ -4982,3 +4982,120 @@ td.row-actions .sell-btn {
     filter: drop-shadow(0 8px 18px color-mix(in srgb, var(--action) 18%, transparent));
   }
 }
+/* V4.4: «Mi perfil» page */
+.avatar.has-photo {
+  background: var(--raised);
+  overflow: hidden;
+}
+.avatar.has-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.avatar-xl {
+  width: 76px;
+  height: 76px;
+  font-size: 26px;
+}
+button.sheet-user {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+button.sheet-user > div {
+  flex: 1;
+  min-width: 0;
+}
+button.sheet-user > svg {
+  color: var(--muted);
+}
+.profile-page {
+  display: grid;
+  gap: 14px;
+}
+.profile-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background:
+    radial-gradient(90% 140% at 0% 0%, color-mix(in srgb, var(--action) 12%, transparent), transparent 60%),
+    var(--surface);
+}
+.profile-id {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 200px;
+}
+.profile-id h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.profile-id .badge {
+  justify-self: start;
+}
+.profile-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.profile-section .panel-h h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.profile-section .panel-h svg {
+  width: 17px;
+  height: 17px;
+  color: var(--muted);
+}
+.profile-body {
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+.profile-body .btn[type='submit'] {
+  justify-self: start;
+}
+.profile-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.profile-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.profile-facts dt {
+  color: var(--muted);
+}
+.profile-facts dd {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .profile-card {
+    padding: 16px;
+  }
+}
+.sheet-user .avatar {
+  color: #fff;
+  font-size: 12px;
+}

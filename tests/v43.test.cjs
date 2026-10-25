@@ -27,8 +27,8 @@ async function test(){
  run(`S.session={user:{id:'u',email:'felipe.pino@kultiversopop.cl',user_metadata:{}}};window.updated=null;
   supabase.auth={updateUser:async v=>{updated=v;return{data:{user:{...S.session.user,user_metadata:v.data}},error:null}}};S.mode='home';render()`);
  assert.equal(run('userInitials()'),'FP');
- run(`showProfile();q('#profileName').value='Felipe Ignacio';q('#profileForm').requestSubmit()`);await flush();
- assert.deepEqual(JSON.parse(run('JSON.stringify(updated)')),{data:{name:'Felipe Ignacio'}});
+ run(`S.mode='profile';render();q('#profileName').value='Felipe Ignacio';q('#profileForm').requestSubmit()`);await flush();
+ assert.equal(run('updated.data.name'),'Felipe Ignacio');run(`S.mode='home';render()`);
  assert.equal(run('displayName()'),'Felipe Ignacio');assert.equal(run('userInitials()'),'FI');
  assert.match(run('q(".user-text b").textContent'),/Felipe Ignacio/);assert.match(run('q(".home-hello").textContent'),/Felipe/);
  // Splash with the logo until the first render.

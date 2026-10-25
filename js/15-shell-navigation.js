@@ -35,7 +35,8 @@ const PAGE_TITLES = {
   finance: 'Finanzas',
   inventory: 'Inventario',
   files: 'Archivos del cliente',
-  resources: 'Impresoras'
+  resources: 'Impresoras',
+  profile: 'Mi perfil'
 };
 function navActive(mode) {
   return S.mode === mode || (mode === 'dashboard' && S.mode === 'product');
@@ -144,9 +145,9 @@ function mountShell() {
     '</nav><div class="side-user"><div class="account-menu" id="accountMenu" hidden>' +
     accountMenuItems() +
     themeSwitch() +
-    '</div><button type="button" class="user-chip" id="accountButton" aria-haspopup="menu" aria-expanded="false"><span class="avatar">' +
-    esc(userInitials()) +
-    '</span><span class="user-text"><b>' +
+    '</div><button type="button" class="user-chip" id="accountButton" aria-haspopup="menu" aria-expanded="false">' +
+    userAvatar() +
+    '<span class="user-text"><b>' +
     esc(displayName() || S.session?.user?.email || '') +
     '</b><span>' +
     roleName() +
@@ -154,6 +155,7 @@ function mountShell() {
     icon('ellipsis-vertical') +
     '</button><p class="powered">Powered by <b>ELARA</b></p></div>';
   root.prepend(side);
+  loadAvatarUrl();
   const tabs = document.createElement('nav');
   tabs.className = 'tabbar';
   tabs.setAttribute('aria-label', 'Navegación');
@@ -247,15 +249,18 @@ addEventListener('resize', closeFloatingMenus);
 function showMoreSheet() {
   const dialog = showDialog(
     'moreSheet',
-    '<div class="section-title"><h2>Más</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><div class="sheet-user"><span class="avatar">' +
-      esc(userInitials()) +
-      '</span><div><b>' +
+    '<div class="section-title"><h2>Más</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><button type="button" class="sheet-user" data-more="profile">' +
+      userAvatar() +
+      '<div><b>' +
       esc(displayName() || S.session?.user?.email || '') +
       '</b><span>' +
+      (userName() ? '@' + esc(userName()) + ' · ' : '') +
       roleName() +
       ' · ' +
       esc(S.workspace?.name || 'Kultiverso Pop') +
-      '</span></div></div><div class="menu-list"><button type="button" class="menu-item" data-more="quotes">' +
+      '</span></div>' +
+      icon('chevron-right') +
+      '</button><div class="menu-list"><button type="button" class="menu-item" data-more="quotes">' +
       icon('file-text') +
       'Cotizaciones</button><button type="button" class="menu-item" data-more="customers">' +
       icon('users') +
