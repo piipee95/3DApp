@@ -778,6 +778,7 @@ function showOrder(order) {
   mountOrderInventory(order);
   mountOrderPayments(order, dialog);
   mountCustomerNotify(order, dialog);
+  mountOrderCostNotice(order, dialog);
   mountOrderPhotos(order, dialog);
   q('#orderFailure')?.addEventListener('click', () => {
     dialog.close();

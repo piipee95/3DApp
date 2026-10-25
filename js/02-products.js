@@ -816,6 +816,7 @@ async function saveProduct() {
     S.msg = 'Producto guardado y sincronizado correctamente.';
     render();
     if (S.pendingLink) setTimeout(() => offerPendingLink(id), 0);
+    else setTimeout(() => offerOrderCostRefresh(id), 0);
   } catch (e) {
     if (uploadedPath) removePhotoObject(uploadedPath);
     S.dirty = true;
