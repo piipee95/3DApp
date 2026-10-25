@@ -767,6 +767,7 @@ const VIEW_MODES = [
   'finance',
   'inventory',
   'resources',
+  'profile',
   'product',
   'files'
 ];

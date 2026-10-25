@@ -60,6 +60,7 @@ function render() {
   if (S.mode === 'production') return productionView();
   if (S.mode === 'product') return product();
   if (S.mode === 'home') return homeView();
+  if (S.mode === 'profile') return profileView();
   dashboard();
 }
 function enhanceFields() {
