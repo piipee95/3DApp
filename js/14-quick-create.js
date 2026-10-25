@@ -380,8 +380,9 @@ function showLinkProduct(order) {
             const fresh = S.orders.find(o => o.id === order.id);
             if (fresh) showOrder(fresh);
           } catch (error) {
-            q('#linkFeedback').textContent = error.message;
             qa('[data-link-product]').forEach(x => (x.disabled = false));
+            if (await offerStockCount(error, () => b.click())) return dialog.close();
+            q('#linkFeedback').textContent = error.message;
           }
         })
     );
@@ -395,6 +396,29 @@ function showLinkProduct(order) {
   return dialog;
 }
 // After saving a product created from a custom job, offer to link it to that order.
+// A material without its first count blocks reserving it. Offer to count it now and retry the action.
+async function offerStockCount(error, retry) {
+  const m = /stock inicial de (.+?) antes/.exec(error?.message || '');
+  if (!m || !canEdit()) return false;
+  if (!S.resources.length) await loadResources().catch(() => {});
+  const r = S.resources.find(x => x.name === m[1] && !x.counted);
+  if (!r) return false;
+  const ok = await confirmDialog({
+    title: 'Falta la cantidad de ' + r.name,
+    body:
+      'Para reservar materiales, la app necesita saber cuántas «' +
+      r.name +
+      '» tienes. Escríbelo ahora y la acción se completa sola.',
+    confirmLabel: 'Registrar cantidad'
+  });
+  if (!ok) {
+    toast('Cuando registres la cantidad de ' + r.name + ' en Inventario, podrás vincularlo desde el pedido.');
+    return true;
+  }
+  const dialog = showStockMovement(r);
+  dialog?.addEventListener('stocksaved', () => retry(), { once: true });
+  return true;
+}
 async function offerPendingLink(productId) {
   const orderId = S.pendingLink;
   S.pendingLink = null;
@@ -422,7 +446,15 @@ async function offerPendingLink(productId) {
     const product = S.products.find(p => p.id === productId) || S.product;
     toast(await linkOrderProduct(order, product));
   } catch (error) {
-    toast(error.message, 'error');
+    const retry = async () => {
+      try {
+        toast(await linkOrderProduct(order, product));
+        S.err = '';
+      } catch (again) {
+        toast(again.message, 'error');
+      }
+    };
+    if (!(await offerStockCount(error, retry))) toast(error.message, 'error');
   }
 }
 // A custom job (order without product) can become a catalogue product to cost it.
