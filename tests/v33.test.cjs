@@ -4,17 +4,17 @@ const{boot}=require('./v12.test.cjs');
 // V3.3: light/dark theme chosen in the menu and kept on the device.
 async function test(){
  const dom=boot(),run=s=>dom.window.run(s),html=dom.window.document.documentElement;
- run(`S.mode='home';render()`);
+ run(`S.mode='profile';render()`);
  assert.equal(run('savedTheme()'),'auto');assert.equal(html.dataset.theme,undefined);
- assert.equal(run('q("#accountMenu [data-theme-set=auto]").getAttribute("aria-pressed")'),'true');
- run(`q('#accountMenu [data-theme-set=light]').click()`);
+ assert.equal(run('q(".profile-page [data-theme-set=auto]").getAttribute("aria-pressed")'),'true');
+ run(`q('.profile-page [data-theme-set=light]').click()`);
  assert.equal(html.dataset.theme,'light');assert.equal(run('localStorage.getItem("kultiapp_theme")'),'light');
- assert.equal(run('q("#accountMenu [data-theme-set=light]").getAttribute("aria-pressed")'),'true');
- // The Más sheet shows the same switch with the current choice.
- run(`q('#moreTab').click()`);
- assert.equal(run('q("#moreSheet [data-theme-set=light]").getAttribute("aria-pressed")'),'true');
- run(`q('#moreSheet [data-theme-set=dark]').click()`);assert.equal(html.dataset.theme,'dark');
- run(`q('#moreSheet [data-theme-set=auto]').click()`);assert.equal(html.dataset.theme,undefined);assert.equal(run('savedTheme()'),'auto');
+ assert.equal(run('q(".profile-page [data-theme-set=light]").getAttribute("aria-pressed")'),'true');
+ // The switch lives in «Mi perfil» (V4.5) and keeps the current choice after re-render.
+ run(`render()`);
+ assert.equal(run('q(".profile-page [data-theme-set=light]").getAttribute("aria-pressed")'),'true');
+ run(`q('.profile-page [data-theme-set=dark]').click()`);assert.equal(html.dataset.theme,'dark');
+ run(`q('.profile-page [data-theme-set=auto]').click()`);assert.equal(html.dataset.theme,undefined);assert.equal(run('savedTheme()'),'auto');
  // A bad stored value falls back to automatic.
  run(`localStorage.setItem('kultiapp_theme','neon')`);assert.equal(run('savedTheme()'),'auto');
  // Both themes define every color token; index.html applies the saved theme before painting.
