@@ -51,12 +51,11 @@ function navCount(mode) {
   if (mode === 'quotes') return S.quotes.filter(qt => quoteState(qt) === 'open').length;
   return 0;
 }
+// V4.3: the name chosen in «Mi perfil» (Supabase user metadata); the email until there is one.
+const displayName = () => String(S.session?.user?.user_metadata?.name || '').trim();
 function userInitials() {
   const email = S.session?.user?.email || '';
-  const name = email
-    .split('@')[0]
-    .replace(/[^a-zA-ZÀ-ÿ]+/g, ' ')
-    .trim();
+  const name = (displayName() || email.split('@')[0]).replace(/[^a-zA-ZÀ-ÿ]+/g, ' ').trim();
   const parts = name.split(' ').filter(Boolean);
   return ((parts[0]?.[0] || 'K') + (parts[1]?.[0] || '')).toUpperCase();
 }
@@ -94,7 +93,9 @@ function accountMenuItems() {
       : '') +
     '<button type="button" class="menu-item" id="backupData">' +
     icon('database') +
-    'Respaldo de datos</button><button type="button" class="menu-item" id="changePassword">' +
+    'Respaldo de datos</button><button type="button" class="menu-item" id="editProfile">' +
+    icon('user') +
+    'Mi perfil</button><button type="button" class="menu-item" id="changePassword">' +
     icon('key-round') +
     'Cambiar contraseña</button><button type="button" class="menu-item danger" id="logout">' +
     icon('log-out') +
@@ -146,7 +147,7 @@ function mountShell() {
     '</div><button type="button" class="user-chip" id="accountButton" aria-haspopup="menu" aria-expanded="false"><span class="avatar">' +
     esc(userInitials()) +
     '</span><span class="user-text"><b>' +
-    esc(S.session?.user?.email || '') +
+    esc(displayName() || S.session?.user?.email || '') +
     '</b><span>' +
     roleName() +
     '</span></span>' +
@@ -249,7 +250,7 @@ function showMoreSheet() {
     '<div class="section-title"><h2>Más</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><div class="sheet-user"><span class="avatar">' +
       esc(userInitials()) +
       '</span><div><b>' +
-      esc(S.session?.user?.email || '') +
+      esc(displayName() || S.session?.user?.email || '') +
       '</b><span>' +
       roleName() +
       ' · ' +
@@ -279,7 +280,9 @@ function showMoreSheet() {
         : '') +
       '<button type="button" class="menu-item" data-more="backup">' +
       icon('database') +
-      'Respaldo de datos</button><button type="button" class="menu-item" data-more="password">' +
+      'Respaldo de datos</button><button type="button" class="menu-item" data-more="profile">' +
+      icon('user') +
+      'Mi perfil</button><button type="button" class="menu-item" data-more="password">' +
       icon('key-round') +
       'Cambiar contraseña</button><button type="button" class="menu-item danger" data-more="logout">' +
       icon('log-out') +
@@ -293,6 +296,7 @@ function showMoreSheet() {
   const actions = {
     invite: () => invite(),
     password: () => showPasswordDialog(),
+    profile: () => showProfile(),
     logout: () => supabase.auth.signOut(),
     resources: () => goMode('resources'),
     quotes: () => goMode('quotes'),

@@ -47,7 +47,7 @@ async function test(){
  assert.match(run('q(".panel-empty").textContent'),/Sin resultados/);
  // Phone "Más" sheet reaches Impresoras and account actions.
  run(`S.search='';goMode=m=>{window.went=m};render();q('#moreTab').click()`);
- assert.equal(run('qa("#moreSheet .menu-item").length'),10);
+ assert.equal(run('qa("#moreSheet .menu-item").length'),11);
  run(`q('#moreSheet [data-more=resources]').click()`);
  assert.equal(run('window.went'),'resources');
  // In-app confirmation replaces window.confirm when deleting a product.

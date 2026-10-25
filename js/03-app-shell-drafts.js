@@ -9,6 +9,7 @@ function common() {
   q('#logout')?.addEventListener('click', () => supabase.auth.signOut());
   q('#invite')?.addEventListener('click', invite);
   q('#changePassword')?.addEventListener('click', showPasswordDialog);
+  q('#editProfile')?.addEventListener('click', showProfile);
 }
 async function invite() {
   if (!isOwner()) return toast('Solo el propietario puede invitar.', 'error');
