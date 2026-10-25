@@ -10,7 +10,7 @@ async function test(){
   S.orders=[{id:'o1',order_no:30,title:'Cuadro Iron Man',product_id:'p1',kind:'customer',customer_name:'Ana',status:'printing',quantity:2,unit_price:10990,iva_enabled:true,iva_rate:.19,estimated_cost:10390,created_at:new Date().toISOString()},
    {id:'o2',order_no:31,title:'Cuadro Iron Man',product_id:'p1',kind:'customer',status:'delivered',quantity:1,unit_price:10990,estimated_cost:5195,created_at:new Date().toISOString()},
    {id:'o3',order_no:32,title:'Cuadro Iron Man',product_id:'p1',kind:'customer',status:'pending',quantity:1,unit_price:10990,estimated_cost:6000,created_at:new Date().toISOString()}];
-  loadOrders=async()=>{};`);
+  loadOrders=async()=>{};supabase.rpc=async()=>({error:{code:'PGRST202',message:'Could not find the function public.refresh_order_materials'}});`);
  // Only open orders with a different cost are offered; delivered keep their history.
  assert.equal(run(`staleOrders('p1',6000).map(o=>o.id).join()`),'o1');
  run(`window.asked=null;confirmDialog=async o=>{asked=o;return true};offerOrderCostRefresh('p1')`);await flush();
