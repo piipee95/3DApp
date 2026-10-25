@@ -557,8 +557,12 @@ function showNewOrder(kind = 'customer') {
       }
       dialog.close();
       await Promise.all([loadResources(), refreshProductStock(p.id)]);
-      S.orderFilter = made ? 'all' : 'open';
-      await goMode('production');
+      S.orderFilter = forStock ? 'stock' : 'open';
+      if (made) {
+        S.showArchived = false;
+        S.showStock = true;
+      }
+      await goMode(made ? 'dashboard' : 'production');
       S.msg = made
         ? qty +
           (qty === 1 ? ' unidad sumada' : ' unidades sumadas') +

@@ -24,7 +24,9 @@ const ORDER_CHIP = {
   delivered: 'c-done',
   canceled: 'c-cancel'
 };
+// A fabrication for stock is done once it is «Listo»: its units are already in the product's stock.
 function orderIsOpen(o) {
+  if (o.kind === 'stock') return !['ready', 'delivered', 'canceled'].includes(o.status);
   return !['delivered', 'canceled'].includes(o.status);
 }
 function orderIsLate(o) {

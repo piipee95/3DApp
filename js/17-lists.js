@@ -51,11 +51,13 @@ function bindSearch(id, apply, view) {
     q('#' + id).setSelectionRange(pos, pos);
   };
 }
+// Finished fabrications for stock only show under «Fabricación»: they are stock, not orders.
 function orderMatches(o, filter) {
-  if (filter === 'all') return true;
+  if (filter === 'stock') return o.kind === 'stock';
   if (filter === 'open') return orderIsOpen(o);
   if (filter === 'late') return orderIsLate(o);
-  if (filter === 'stock') return o.kind === 'stock';
+  if (o.kind === 'stock' && !orderIsOpen(o)) return false;
+  if (filter === 'all') return true;
   if (filter === 'unpaid') return orderBalance(o).due > 0;
   return o.status === filter;
 }
@@ -100,7 +102,7 @@ function productionView() {
     ['unpaid', 'Por cobrar', count('unpaid')],
     ['stock', 'Fabricación', count('stock')],
     ...Object.entries(ORDER_STATUSES).map(([k, label]) => [k, label, count(k)]),
-    ['all', 'Todos', S.orders.length]
+    ['all', 'Todos', count('all')]
   ].filter(([k, , c]) => c > 0 || ['open', 'all', filter].includes(k));
   const due = o =>
     '<span class="' + (orderIsLate(o) ? 'down' : '') + '">' + shortDate(o.due_date) + '</span>';
