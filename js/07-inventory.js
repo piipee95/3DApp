@@ -703,8 +703,28 @@ async function mountOrderInventory(order) {
         ? '<button id="consumeOrder" class="btn btn-secondary" type="button">Confirmar consumo real</button><p class="small muted">Puedes ajustar las cantidades incluyendo mermas. Marcar Listo o Entregado consume la reserva automáticamente si aún no se confirmó.</p>'
         : order.inventory_state === 'none'
           ? '<p class="small muted">Pedido anterior o producto sin materiales vinculados. No descuenta stock automáticamente.</p>'
-          : '');
+          : '') +
+      // V4.7: take the product's current recipe even when the cost did not change.
+      (canEdit() && order.product_id && !order.from_stock && order.status !== 'canceled'
+        ? '<button id="syncOrderMaterials" class="btn btn-ghost btn-sm" type="button">' +
+          icon('refresh-cw') +
+          'Usar materiales actuales del producto</button>'
+        : '');
     box.querySelector('#consumeOrder')?.addEventListener('click', () => showOrderConsumption(order, lines));
+    box.querySelector('#syncOrderMaterials')?.addEventListener('click', async e => {
+      const b = e.currentTarget;
+      b.disabled = true;
+      try {
+        await updateOrderCosts([order], productUnitCost(order.product_id));
+        toast('Materiales del pedido actualizados según el producto.');
+        dialog.close();
+        render();
+        showOrder(S.orders.find(o => o.id === order.id) || order);
+      } catch (error) {
+        toast(error.message, 'error');
+        b.disabled = false;
+      }
+    });
   } catch (error) {
     if (dialog.isConnected) box.textContent = 'No se pudo cargar el inventario: ' + error.message;
   }
