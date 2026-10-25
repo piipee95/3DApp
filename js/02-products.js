@@ -42,6 +42,43 @@ const sellButton = p =>
       icon('wallet') +
       'Vender</button>'
     : '';
+// V4.2: gallery view, a shop window of the products with their photo, price and stock.
+function productGrid(rows) {
+  return (
+    '<div class="product-grid">' +
+    rows
+      .map(p => {
+        const t = productNumbers(p),
+          s = productStock(p),
+          src = photoSrc(p);
+        return (
+          '<article class="product-card' +
+          (p.status === 'archived' ? ' archived' : '') +
+          '" data-open="' +
+          p.id +
+          '" role="button" tabindex="0"><div class="pc-photo">' +
+          (src
+            ? '<img src="' + esc(src) + '" alt="" loading="lazy">'
+            : '<span class="pc-empty">' + icon('package') + '</span>') +
+          (s.qty ? '<span class="pc-stock">' + s.available + ' en stock</span>' : '') +
+          '</div><div class="pc-body"><b class="pc-name">' +
+          esc(p.name) +
+          '</b><div class="pc-price"><b class="num">' +
+          (t.unit > 0 || p.sale_price != null ? clp(t.price) : '—') +
+          '</b>' +
+          marginChip(p) +
+          '</div><span class="pc-cost">' +
+          (t.unit > 0 ? 'Costo ' + clp(t.unit) : 'Sin costos registrados') +
+          '</span><div class="pc-actions">' +
+          sellButton(p) +
+          productMenu(p) +
+          '</div></div></article>'
+        );
+      })
+      .join('') +
+    '</div>'
+  );
+}
 function productMenu(p) {
   if (!canEdit()) return '';
   return (
@@ -77,6 +114,12 @@ function productMenu(p) {
   );
 }
 function dashboard() {
+  if (!S.productView)
+    try {
+      S.productView = localStorage.getItem('kultiapp_product_view') || 'list';
+    } catch {
+      S.productView = 'list';
+    }
   const active = S.products.filter(p => p.status !== 'archived'),
     arch = S.products.filter(p => p.status === 'archived'),
     inStock = active.filter(p => productStock(p).qty > 0),
@@ -145,66 +188,74 @@ function dashboard() {
     (S.showArchived ? 'btn-primary' : 'btn-secondary') +
     '" id="showArchived" role="tab">Archivados <span class="seg-count">' +
     arch.length +
-    '</span></button></div><select id="profitFilter" class="select-compact" aria-label="Rentabilidad"><option value="all">Margen: todos</option><option value="positive">Sin pérdida</option><option value="loss">Con pérdida</option><option value="uncosted">Sin costos registrados</option></select><select id="productSort" class="select-compact" aria-label="Ordenar"><option value="recent">Más recientes</option><option value="name">Nombre A–Z</option><option value="price">Precio mayor a menor</option><option value="cost">Costo mayor a menor</option><option value="margin">Margen mayor a menor</option></select></div><section class="panel product-panel">' +
+    '</span></button></div><button type="button" class="btn icon-btn view-toggle" id="viewToggle" aria-label="' +
+    (S.productView === 'grid' ? 'Ver como lista' : 'Ver como galería') +
+    '" title="' +
+    (S.productView === 'grid' ? 'Ver como lista' : 'Ver como galería') +
+    '">' +
+    icon(S.productView === 'grid' ? 'list' : 'layout-grid') +
+    '</button><select id="profitFilter" class="select-compact" aria-label="Rentabilidad"><option value="all">Margen: todos</option><option value="positive">Sin pérdida</option><option value="loss">Con pérdida</option><option value="uncosted">Sin costos registrados</option></select><select id="productSort" class="select-compact" aria-label="Ordenar"><option value="recent">Más recientes</option><option value="name">Nombre A–Z</option><option value="price">Precio mayor a menor</option><option value="cost">Costo mayor a menor</option><option value="margin">Margen mayor a menor</option></select></div><section class="panel product-panel">' +
     (rows.length
-      ? '<table class="data-table products-table"><thead><tr><th>Producto</th><th class="r">Costo unit.</th><th class="r">Precio final</th><th>Margen</th><th class="r">Stock</th><th>Actualizado</th><th></th></tr></thead><tbody>' +
-        rows
-          .map(
-            p =>
-              '<tr data-open="' +
-              p.id +
-              '" class="' +
-              (p.status === 'archived' ? 'archived' : '') +
-              '"><td><div class="prod-cell">' +
-              productThumb(p) +
-              '<div><b>' +
-              esc(p.name) +
-              '</b><span>' +
-              esc(p.description || 'Sin descripción') +
-              '</span></div></div></td><td class="r num">' +
-              cost(p) +
-              '</td><td class="r num">' +
-              price(p) +
-              '</td><td>' +
-              marginChip(p) +
-              '</td><td class="r num">' +
-              stockCell(p) +
-              '</td><td class="sub">' +
-              relativeDate(p.updated_at) +
-              '</td><td class="r row-actions">' +
-              sellButton(p) +
-              productMenu(p) +
-              '</td></tr>'
-          )
-          .join('') +
-        '</tbody></table><div class="list-rows">' +
-        rows
-          .map(
-            p =>
-              '<div class="list-row product-row' +
-              (p.status === 'archived' ? ' archived' : '') +
-              '" data-open="' +
-              p.id +
-              '" role="button" tabindex="0">' +
-              productThumb(p) +
-              '<span class="lr-main"><b>' +
-              esc(p.name) +
-              '</b><span>' +
-              (productNumbers(p).unit > 0
-                ? 'Costo ' + clp(productNumbers(p).unit)
-                : 'Sin costos registrados') +
-              (productStock(p).qty ? ' · Stock ' + productStock(p).available : '') +
-              '</span></span><span class="lr-end"><b class="num">' +
-              (productNumbers(p).unit > 0 || p.sale_price != null ? clp(productNumbers(p).price) : '') +
-              '</b>' +
-              marginChip(p) +
-              '</span>' +
-              sellButton(p) +
-              productMenu(p) +
-              '</div>'
-          )
-          .join('') +
-        '</div>'
+      ? S.productView === 'grid'
+        ? productGrid(rows)
+        : '<table class="data-table products-table"><thead><tr><th>Producto</th><th class="r">Costo unit.</th><th class="r">Precio final</th><th>Margen</th><th class="r">Stock</th><th>Actualizado</th><th></th></tr></thead><tbody>' +
+          rows
+            .map(
+              p =>
+                '<tr data-open="' +
+                p.id +
+                '" class="' +
+                (p.status === 'archived' ? 'archived' : '') +
+                '"><td><div class="prod-cell">' +
+                productThumb(p) +
+                '<div><b>' +
+                esc(p.name) +
+                '</b><span>' +
+                esc(p.description || 'Sin descripción') +
+                '</span></div></div></td><td class="r num">' +
+                cost(p) +
+                '</td><td class="r num">' +
+                price(p) +
+                '</td><td>' +
+                marginChip(p) +
+                '</td><td class="r num">' +
+                stockCell(p) +
+                '</td><td class="sub">' +
+                relativeDate(p.updated_at) +
+                '</td><td class="r row-actions">' +
+                sellButton(p) +
+                productMenu(p) +
+                '</td></tr>'
+            )
+            .join('') +
+          '</tbody></table><div class="list-rows">' +
+          rows
+            .map(
+              p =>
+                '<div class="list-row product-row' +
+                (p.status === 'archived' ? ' archived' : '') +
+                '" data-open="' +
+                p.id +
+                '" role="button" tabindex="0">' +
+                productThumb(p) +
+                '<span class="lr-main"><b>' +
+                esc(p.name) +
+                '</b><span>' +
+                (productNumbers(p).unit > 0
+                  ? 'Costo ' + clp(productNumbers(p).unit)
+                  : 'Sin costos registrados') +
+                (productStock(p).qty ? ' · Stock ' + productStock(p).available : '') +
+                '</span></span><span class="lr-end"><b class="num">' +
+                (productNumbers(p).unit > 0 || p.sale_price != null ? clp(productNumbers(p).price) : '') +
+                '</b>' +
+                marginChip(p) +
+                '</span>' +
+                sellButton(p) +
+                productMenu(p) +
+                '</div>'
+            )
+            .join('') +
+          '</div>'
       : empty) +
     '</section></main>';
   common();
@@ -228,6 +279,13 @@ function dashboard() {
   q('#new') && (q('#new').onclick = newProduct);
   q('#priceListsBtn').onclick = showPriceLists;
   q('#catalogBtn').onclick = showCatalog;
+  q('#viewToggle').onclick = () => {
+    S.productView = S.productView === 'grid' ? 'list' : 'grid';
+    try {
+      localStorage.setItem('kultiapp_product_view', S.productView);
+    } catch {}
+    dashboard();
+  };
   q('#showActive').onclick = () => {
     S.showArchived = false;
     S.showStock = false;

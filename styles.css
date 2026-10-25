@@ -4564,3 +4564,311 @@ td.row-actions .sell-btn {
     justify-content: center;
   }
 }
+/* Rows only show a focus ring for keyboard use, never after a tap. */
+.list-row:focus:not(:focus-visible),
+[data-open]:focus:not(:focus-visible) {
+  outline: none;
+}
+/* V4.2: product gallery */
+.view-toggle {
+  flex: none;
+}
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  padding: 14px;
+}
+.product-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    border-color 0.15s;
+}
+.product-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--line2);
+  box-shadow: var(--shadow);
+}
+.product-card.archived {
+  opacity: 0.6;
+}
+.pc-photo {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--raised);
+}
+.pc-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pc-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+}
+.pc-empty .i {
+  width: 40px;
+  height: 40px;
+}
+.pc-stock {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  padding: 4px 9px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+  background: color-mix(in srgb, var(--green) 88%, #000);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px #0003;
+}
+.pc-body {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+.pc-name {
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pc-price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.pc-price > b {
+  font-size: 17px;
+}
+.pc-cost {
+  font-size: 12px;
+  color: var(--muted);
+}
+.pc-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.pc-actions .sell-btn {
+  flex: 1;
+  justify-content: center;
+}
+.pc-actions .row-menu {
+  margin-left: auto;
+}
+@media (max-width: 599px) {
+  .product-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+  }
+  .pc-body {
+    padding: 10px;
+  }
+  .pc-price > b {
+    font-size: 15px;
+  }
+  .pc-actions .sell-btn {
+    padding-inline: 8px;
+  }
+}
+/* V4.2: personal Inicio */
+.home-hero {
+  margin-bottom: 18px;
+}
+.home-hero .home-date {
+  margin-bottom: 4px;
+}
+.home-hello {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.home-hello .i {
+  width: 22px;
+  height: 22px;
+  color: var(--yellow);
+}
+.home-sentence {
+  margin: 4px 0 16px;
+  color: var(--label);
+  font-size: 14.5px;
+}
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.quick-action {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  padding: 14px;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.quick-action:hover {
+  transform: translateY(-2px);
+  border-color: var(--line2);
+  box-shadow: var(--shadow);
+}
+.quick-action:active {
+  transform: scale(0.97);
+}
+.quick-action b {
+  font-size: 14px;
+}
+.quick-action > span:last-child {
+  font-size: 12px;
+  color: var(--muted);
+}
+.qa-ic {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 8px;
+  border-radius: 11px;
+  color: #fff;
+}
+.qa-sell .qa-ic {
+  background: linear-gradient(135deg, var(--action), color-mix(in srgb, var(--action) 65%, var(--yellow)));
+}
+.qa-order .qa-ic {
+  background: linear-gradient(135deg, var(--cyan), color-mix(in srgb, var(--cyan) 60%, var(--violet)));
+}
+.qa-stock .qa-ic {
+  background: linear-gradient(135deg, var(--green), color-mix(in srgb, var(--green) 60%, var(--cyan)));
+}
+.qa-quote .qa-ic {
+  background: linear-gradient(135deg, var(--violet), color-mix(in srgb, var(--violet) 60%, var(--action)));
+}
+@media (max-width: 599px) {
+  .home-hello {
+    font-size: 21px;
+  }
+  .quick-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .quick-action {
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 10px;
+    align-items: center;
+    padding: 12px;
+  }
+  .qa-ic {
+    grid-row: span 2;
+    margin: 0;
+    width: 36px;
+    height: 36px;
+  }
+}
+/* V4.2: gentle motion — cards rise in sequence, toasts and confirmations pop. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes check-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.quick-action,
+.kpis > .kpi,
+.product-card,
+.reminders > .reminder,
+.value-tiles > div {
+  animation: rise-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.quick-action:nth-child(2),
+.kpis > .kpi:nth-child(2),
+.product-card:nth-child(2),
+.reminders > .reminder:nth-child(3),
+.value-tiles > div:nth-child(2) {
+  animation-delay: 0.04s;
+}
+.quick-action:nth-child(3),
+.kpis > .kpi:nth-child(3),
+.product-card:nth-child(3),
+.reminders > .reminder:nth-child(4),
+.value-tiles > div:nth-child(3) {
+  animation-delay: 0.08s;
+}
+.quick-action:nth-child(4),
+.kpis > .kpi:nth-child(4),
+.product-card:nth-child(4),
+.reminders > .reminder:nth-child(5) {
+  animation-delay: 0.12s;
+}
+.kpis > .kpi:nth-child(n + 5),
+.product-card:nth-child(n + 5),
+.reminders > .reminder:nth-child(n + 6) {
+  animation-delay: 0.16s;
+}
+.toast .i:first-child {
+  animation: check-pop 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.kpi,
+.panel,
+.list-row {
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.product-grid .product-card {
+  padding: 0;
+  margin: 0;
+}
+.product-panel:has(.product-grid) {
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+.product-panel .product-grid {
+  padding: 0;
+}

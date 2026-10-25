@@ -167,3 +167,43 @@ function showSell(p) {
   };
   return dialog;
 }
+
+// Pick what to sell: products with available units, with photo and suggested price.
+function showSellPicker() {
+  const list = S.products
+    .filter(p => p.status !== 'archived' && productStock(p).available > 0)
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  if (!list.length)
+    return toast('No tienes productos en stock. Usa «Fabricar» para sumar unidades.', 'error');
+  const dialog = showDialog(
+    'sellPicker',
+    '<div class="section-title"><h2>¿Qué vendiste?</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><div class="stock-pick-list">' +
+      list
+        .map(
+          p =>
+            '<button type="button" class="list-row" data-sell-pick="' +
+            p.id +
+            '">' +
+            productThumb(p) +
+            '<span class="lr-main"><b>' +
+            esc(p.name) +
+            '</b><span>' +
+            productStock(p).available +
+            ' en stock · sugerido ' +
+            clp(productNumbers(p).price) +
+            '</span></span>' +
+            icon('chevron-right') +
+            '</button>'
+        )
+        .join('') +
+      '</div>'
+  );
+  dialog.querySelectorAll('[data-sell-pick]').forEach(
+    b =>
+      (b.onclick = () => {
+        dialog.close();
+        showSell(list.find(p => p.id === b.dataset.sellPick));
+      })
+  );
+  return dialog;
+}
