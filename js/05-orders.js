@@ -65,7 +65,8 @@ async function goMode(mode) {
     if (mode === 'quotes') await Promise.all([loadQuotes(), loadCustomers(), loadOrders()]);
     if (mode === 'customers') await Promise.all([loadCustomers(), loadQuotes(), loadOrders()]);
     if (mode === 'reports') await Promise.all([loadQuotes(), loadOrders()]);
-    if (mode === 'finance') await Promise.all([loadOrders(), loadExpenses(), loadTransfers()]);
+    if (mode === 'finance')
+      await Promise.all([loadOrders(), loadExpenses(), loadTransfers(), loadResources(), loadProducts()]);
     if (mode === 'home') await Promise.all([loadProducts(), loadOrders(), loadResources(), loadQuotes()]);
     render();
   } catch (e) {
@@ -557,8 +558,12 @@ function showNewOrder(kind = 'customer') {
       }
       dialog.close();
       await Promise.all([loadResources(), refreshProductStock(p.id)]);
-      S.orderFilter = made ? 'all' : 'open';
-      await goMode('production');
+      S.orderFilter = forStock ? 'stock' : 'open';
+      if (made) {
+        S.showArchived = false;
+        S.showStock = true;
+      }
+      await goMode(made ? 'dashboard' : 'production');
       S.msg = made
         ? qty +
           (qty === 1 ? ' unidad sumada' : ' unidades sumadas') +
@@ -643,7 +648,10 @@ function showOrder(order) {
         .join('') +
       '</select></div>' +
       fieldHtml('Entrega', 'actualDue', order.due_date, 'date') +
-      '<h3 class="form-section">Costos reales del lote</h3><p class="small muted">Déjalos vacíos mientras estén pendientes. Las fallas se suman aparte.</p><div class="grid grid-2">' +
+      // Real costs are optional: folded unless already filled, so the dialog stays short.
+      '<details class="real-costs"' +
+      (order.actual_cost != null || n(order.failures_cost) > 0 ? ' open' : '') +
+      '><summary>Costos reales (opcional)</summary><p class="small muted">Déjalos vacíos mientras estén pendientes. Las fallas se suman aparte.</p><div class="grid grid-2">' +
       fieldHtml(
         'Costo real base del lote CLP',
         'actualCost',
@@ -666,11 +674,13 @@ function showOrder(order) {
         'number',
         'min="0" step="0.01"'
       ) +
-      '</div><div id="actualResult" class="notice small" role="status"></div><div class="field"><label for="actualNotes">Notas</label><textarea id="actualNotes">' +
+      '</div><div id="actualResult" class="notice small" role="status"></div></details><div class="field"><label for="actualNotes">Notas</label><textarea id="actualNotes">' +
       esc(order.notes) +
       '</textarea></div><div id="actualFeedback" class="small" role="status"></div>' +
       (canEdit()
-        ? '<div class="dialog-actions"><button class="btn btn-ghost" type="button" id="orderFailure">' +
+        ? '<div class="dialog-actions"><button class="btn btn-ghost danger-text" type="button" id="orderDelete">' +
+          icon('trash-2') +
+          'Eliminar</button><button class="btn btn-ghost" type="button" id="orderFailure">' +
           icon('triangle-alert') +
           'Registrar falla</button><button class="btn btn-primary" type="submit">Guardar avance</button></div>'
         : '') +
@@ -742,6 +752,10 @@ function showOrder(order) {
   q('#orderFailure')?.addEventListener('click', () => {
     dialog.close();
     showFailure(order);
+  });
+  q('#orderDelete')?.addEventListener('click', () => {
+    dialog.close();
+    deleteOrder(order);
   });
   q('#jobToProduct')?.addEventListener('click', () => {
     dialog.close();
@@ -899,5 +913,52 @@ async function optimizePhoto(file) {
     throw Error('No se pudo optimizar la foto. Prueba una imagen más simple.');
   } finally {
     URL.revokeObjectURL(url);
+  }
+}
+
+// V3.7: remove an order. Reserved materials or units are released first by cancelling it,
+// so inventory never keeps a reservation for an order that no longer exists.
+async function deleteOrder(order) {
+  if (!canEdit()) return;
+  const reserved = order.inventory_state === 'reserved' || order.stock_state === 'reserved',
+    paid = orderPayments(order).reduce((s, p) => s + n(p.amount), 0),
+    product = S.products.find(p => p.id === order.product_id);
+  const ok = await confirmDialog({
+    title: 'Eliminar PED-' + order.order_no,
+    body:
+      '«' +
+      order.title +
+      '» se eliminará para todo el equipo.' +
+      (order.kind === 'stock' && order.stock_state === 'added'
+        ? ' Las unidades que ya sumó al stock' + (product ? ' de ' + product.name : '') + ' se mantienen.'
+        : '') +
+      (reserved ? ' Primero se cancela para devolver al stock lo que tenía reservado.' : '') +
+      (paid > 0 ? ' También se borran sus pagos registrados (' + clp(paid) + ').' : '') +
+      ' Esta acción no se puede deshacer.',
+    confirmLabel: 'Eliminar',
+    danger: true
+  });
+  if (!ok) return;
+  try {
+    if (reserved) {
+      const { error } = await supabase
+        .from('production_orders')
+        .update({ status: 'canceled', updated_at: new Date().toISOString() })
+        .eq('id', order.id);
+      if (error) throw error;
+    }
+    const { data, error } = await supabase.from('production_orders').delete().eq('id', order.id).select('id');
+    if (error) throw error;
+    if (!data?.length) throw Error('No se pudo eliminar: el pedido todavía tiene materiales reservados.');
+    await Promise.all([
+      loadOrders(),
+      loadResources(),
+      order.product_id ? refreshProductStock(order.product_id) : null
+    ]);
+    toast('PED-' + order.order_no + ' eliminado.');
+    render();
+  } catch (error) {
+    toast(error.message, 'error');
+    logError('handled', 'Eliminar pedido: ' + error.message);
   }
 }

@@ -71,7 +71,8 @@ function productMenu(p) {
 function dashboard() {
   const active = S.products.filter(p => p.status !== 'archived'),
     arch = S.products.filter(p => p.status === 'archived'),
-    list = S.showArchived ? arch : active,
+    inStock = active.filter(p => productStock(p).qty > 0),
+    list = S.showArchived ? arch : S.showStock ? inStock : active,
     term = S.search.toLocaleLowerCase('es');
   const rows = list
     .filter(p => (p.name + ' ' + (p.description || '')).toLocaleLowerCase('es').includes(term))
@@ -125,9 +126,13 @@ function dashboard() {
     '" aria-label="Buscar productos" value="' +
     esc(S.search) +
     '"></label><div class="view-tabs" role="tablist"><button class="btn ' +
-    (!S.showArchived ? 'btn-primary' : 'btn-secondary') +
+    (!S.showArchived && !S.showStock ? 'btn-primary' : 'btn-secondary') +
     '" id="showActive" role="tab">Activos <span class="seg-count">' +
     active.length +
+    '</span></button><button class="btn ' +
+    (S.showStock && !S.showArchived ? 'btn-primary' : 'btn-secondary') +
+    '" id="showStock" role="tab">En stock <span class="seg-count">' +
+    inStock.reduce((t, p) => t + productStock(p).available, 0) +
     '</span></button><button class="btn ' +
     (S.showArchived ? 'btn-primary' : 'btn-secondary') +
     '" id="showArchived" role="tab">Archivados <span class="seg-count">' +
@@ -215,10 +220,17 @@ function dashboard() {
   q('#catalogBtn').onclick = showCatalog;
   q('#showActive').onclick = () => {
     S.showArchived = false;
+    S.showStock = false;
+    dashboard();
+  };
+  q('#showStock').onclick = () => {
+    S.showArchived = false;
+    S.showStock = true;
     dashboard();
   };
   q('#showArchived').onclick = () => {
     S.showArchived = true;
+    S.showStock = false;
     dashboard();
   };
   // Rows open the product; the ⋯ menu and its actions don't.

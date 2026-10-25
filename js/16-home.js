@@ -24,7 +24,9 @@ const ORDER_CHIP = {
   delivered: 'c-done',
   canceled: 'c-cancel'
 };
+// A fabrication for stock is done once it is «Listo»: its units are already in the product's stock.
 function orderIsOpen(o) {
+  if (o.kind === 'stock') return !['ready', 'delivered', 'canceled'].includes(o.status);
   return !['delivered', 'canceled'].includes(o.status);
 }
 function orderIsLate(o) {
@@ -265,6 +267,18 @@ function homeView() {
         : '<span class="muted">Stock en orden</span>'
     ) +
     kpi(
+      'Valor en stock',
+      'boxes',
+      '<span class="full">' +
+        clp(stockValuation().invested) +
+        '</span><span class="short">' +
+        clpShort(stockValuation().invested) +
+        '</span>',
+      '<button type="button" class="link-btn" id="homeValue">Se vende en ' +
+        clpShort(stockValuation().expected) +
+        '</button>'
+    ) +
+    kpi(
       'Por cobrar',
       'wallet',
       '<span class="full">' + clp(dueTotal) + '</span><span class="short">' + clpShort(dueTotal) + '</span>',
@@ -282,6 +296,7 @@ function homeView() {
     '</section></div></main>';
   common();
   q('#homeNew')?.addEventListener('click', showCreateMenu);
+  q('#homeValue')?.addEventListener('click', () => goMode('finance'));
   q('#homeDue')?.addEventListener('click', () => {
     S.orderFilter = 'unpaid';
     goMode('production');
