@@ -304,7 +304,14 @@ function showDialog(id, html) {
     b.innerHTML = icon('x');
   });
   document.body.append(dialog);
-  dialog.onclose = () => dialog.remove();
+  dialog.onclose = () => {
+    dialog.remove();
+    // Closing returns focus to the row that opened it; on phones that draws a focus line across the list.
+    setTimeout(() => {
+      const el = document.activeElement;
+      if (el?.matches?.('.list-row, [data-open], tr')) el.blur();
+    });
+  };
   // Forms only close with their buttons or Esc so a stray tap never loses what was typed.
   if (!dialog.querySelector('form')) closeOnBackdrop(dialog);
   dialog.showModal();
