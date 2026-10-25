@@ -267,16 +267,28 @@ function homeView() {
         : '<span class="muted">Stock en orden</span>'
     ) +
     kpi(
-      'Valor en stock',
+      'Productos en stock',
+      'package',
+      '<span class="full">' +
+        clp(stockValuation().goodsCost) +
+        '</span><span class="short">' +
+        clpShort(stockValuation().goodsCost) +
+        '</span>',
+      '<button type="button" class="link-btn" id="homeValue">' +
+        stockValuation().units +
+        ' un. · se venden en ' +
+        clpShort(stockValuation().goodsSale) +
+        '</button>'
+    ) +
+    kpi(
+      'Materia prima',
       'boxes',
       '<span class="full">' +
-        clp(stockValuation().invested) +
+        clp(stockValuation().materials) +
         '</span><span class="short">' +
-        clpShort(stockValuation().invested) +
+        clpShort(stockValuation().materials) +
         '</span>',
-      '<button type="button" class="link-btn" id="homeValue">Se vende en ' +
-        clpShort(stockValuation().expected) +
-        '</button>'
+      '<button type="button" class="link-btn" id="homeMaterials">Filamento e insumos</button>'
     ) +
     kpi(
       'Por cobrar',
@@ -296,7 +308,12 @@ function homeView() {
     '</section></div></main>';
   common();
   q('#homeNew')?.addEventListener('click', showCreateMenu);
-  q('#homeValue')?.addEventListener('click', () => goMode('finance'));
+  q('#homeValue')?.addEventListener('click', () => {
+    S.showArchived = false;
+    S.showStock = true;
+    goMode('dashboard');
+  });
+  q('#homeMaterials')?.addEventListener('click', () => goMode('inventory'));
   q('#homeDue')?.addEventListener('click', () => {
     S.orderFilter = 'unpaid';
     goMode('production');

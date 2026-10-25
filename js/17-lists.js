@@ -286,7 +286,7 @@ function inventoryView() {
     ) +
     '<main class="shell">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
-    '<div class="summary-strip"><div><span>Valor del stock</span><b class="num">' +
+    '<div class="summary-strip"><div><span>Valor materia prima</span><b class="num">' +
     clp(value) +
     '</b></div><div><span>Bajo mínimo</span><b class="num ' +
     (count('low') ? 'down' : '') +

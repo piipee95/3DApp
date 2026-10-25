@@ -453,7 +453,15 @@ function showNewOrder(kind = 'customer') {
             '',
             'text',
             'list="customerList" autocomplete="off"'
-          ) + customerOptions()) +
+          ) +
+          customerOptions() +
+          fieldHtml(
+            'WhatsApp del cliente (opcional)',
+            'orderPhone',
+            '',
+            'tel',
+            'maxlength="30" inputmode="tel" autocomplete="off" placeholder="+56 9 1234 5678"'
+          )) +
       '<div class="grid grid-2">' +
       fieldHtml('Cantidad', 'orderQty', forStock ? 1 : t.qty, 'number', 'min="1" step="1" required') +
       (forStock
@@ -515,6 +523,7 @@ function showNewOrder(kind = 'customer') {
     q('#newOrderStock').closest('.notice').hidden = fromStock();
     q('#orderQty').max = fromStock() ? stock.available : '';
   });
+  bindCustomerPhone('#orderCustomer', '#orderPhone');
   q('#newOrderForm').onsubmit = async e => {
     e.preventDefault();
     const b = e.submitter || e.target.querySelector('button[type=submit]');
@@ -523,7 +532,9 @@ function showNewOrder(kind = 'customer') {
     const qty = Math.max(1, Math.floor(n(q('#orderQty').value))),
       made = forStock && q('#orderAlreadyMade').checked;
     try {
-      const customer_id = forStock ? null : await ensureCustomer(q('#orderCustomer').value);
+      const customer_id = forStock
+        ? null
+        : await ensureCustomer(q('#orderCustomer').value, q('#orderPhone')?.value);
       const { data, error } = await supabase
         .from('production_orders')
         .insert({
@@ -748,6 +759,7 @@ function showOrder(order) {
   refreshActual();
   mountOrderInventory(order);
   mountOrderPayments(order, dialog);
+  mountCustomerNotify(order, dialog);
   mountOrderPhotos(order, dialog);
   q('#orderFailure')?.addEventListener('click', () => {
     dialog.close();
@@ -791,11 +803,15 @@ function showOrder(order) {
         .single();
       if (error) throw error;
       // Finishing the order adds its print time to the printers' usage counters.
-      if (!isFinished(order.status) && isFinished(q('#orderStatus').value)) await addOrderPrinterHours(order);
+      const newStatus = q('#orderStatus').value;
+      if (!isFinished(order.status) && isFinished(newStatus)) await addOrderPrinterHours(order);
       await loadOrders();
       await loadResources();
       dialog.close();
       render();
+      // A new state is news for the customer: offer the WhatsApp message.
+      if (newStatus !== order.status)
+        offerStatusMessage(S.orders.find(o => o.id === order.id) || { ...order, status: newStatus });
     } catch (error) {
       q('#actualFeedback').textContent = error.message;
     } finally {

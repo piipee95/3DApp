@@ -6,7 +6,7 @@ async function test(){
  const dom=boot(),run=s=>dom.window.run(s);
  run(`window.writes=[];window.usage={inventory_order_lines:[],products:[],print_jobs:[]};
   supabase.from=table=>{const call={table,eqs:[]};const q={select(){return q},eq(k,v){call.eqs.push([k,v]);return q},order(){return q},limit(){return q},single(){return q},
-   contains(k,v){call.contains=[k,v];return q},insert(v){call.op='insert';call.value=v;writes.push(call);return q},update(v){call.op='update';call.value=v;writes.push(call);return q},
+   contains(k,v){call.contains=[k,v];window.lastContains=[k,v];return q},insert(v){call.op='insert';call.value=v;writes.push(call);return q},update(v){call.op='update';call.value=v;writes.push(call);return q},
    then(a,b){const data=call.op?{id:'new1',...call.value}:(table==='workspace_resources'?S.__db||[]:usage[table]||[]);return Promise.resolve({data,error:null}).then(a,b)}};return q};
   S.__db=[{id:'a',kind:'supply',name:'Cuadros con fondo A4',unit:'un',unit_cost:3000,counted:false,active:true,stock_qty:0,reserved_qty:0,min_stock:9},
    {id:'b',kind:'supply',name:'Caja Embalaje',unit:'un',unit_cost:380,counted:true,active:true,stock_qty:50,reserved_qty:5,min_stock:0},
@@ -58,6 +58,8 @@ async function test(){
  // Delete: used by products → explains and offers archive; unused → hidden for good.
  run(`usage.products=[{name:'Cuadro Formula 1'},{name:'Cuadro Capitan America'}];window.asked=[];confirmDialog=async o=>{asked.push(o);return false};writes.length=0;deleteResource(S.resources.find(r=>r.id==='a'))`);await flush();
  assert.match(run('asked[0].body'),/Cuadro Formula 1, Cuadro Capitan America/);assert.equal(run('writes.length'),0);
+ // jsonb containment must be sent as JSON text (an array object becomes a Postgres array literal and fails).
+ assert.equal(run('JSON.stringify(window.lastContains)'),JSON.stringify(['filaments',JSON.stringify([{resource_id:'a'}])]));
  run(`usage.products=[];asked.length=0;confirmDialog=async o=>{asked.push(o);return true};deleteResource(S.resources.find(r=>r.id==='f'))`);await flush();
  assert.equal(run('asked[0].title'),'Eliminar PLA Rojo');
  w=JSON.parse(run('JSON.stringify(writes[0])'));assert.equal(w.value.active,false);assert.ok(w.value.deleted_at);

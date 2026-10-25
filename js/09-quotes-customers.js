@@ -35,14 +35,22 @@ const sameName = (a, b) =>
     .trim()
     .toLocaleLowerCase('es');
 // Links a typed client name to a customer, creating it the first time it is used.
-async function ensureCustomer(name) {
+// Finds or creates the customer by name; a WhatsApp typed in the form is saved on it.
+async function ensureCustomer(name, phone = '') {
   name = String(name || '').trim();
+  phone = String(phone || '').trim();
   if (!name || !canEdit()) return null;
   const found = S.customers.find(c => sameName(c.name, name));
-  if (found) return found.id;
+  if (found) {
+    if (phone && phone !== found.phone) {
+      const { error } = await supabase.from('customers').update({ phone }).eq('id', found.id);
+      if (!error) found.phone = phone;
+    }
+    return found.id;
+  }
   const { data, error } = await supabase
     .from('customers')
-    .insert({ workspace_id: S.workspace.id, name: name.slice(0, 120) })
+    .insert({ workspace_id: S.workspace.id, name: name.slice(0, 120), ...(phone ? { phone } : {}) })
     .select()
     .single();
   if (error) {
@@ -52,6 +60,20 @@ async function ensureCustomer(name) {
   }
   S.customers.push(data);
   return data.id;
+}
+// Choosing a known customer fills their WhatsApp if the field is still empty.
+function bindCustomerPhone(nameSel, phoneSel) {
+  const name = q(nameSel),
+    phone = q(phoneSel);
+  if (!name || !phone) return;
+  let auto = '';
+  const fill = () => {
+    const c = S.customers.find(x => sameName(x.name, name.value));
+    if (c?.phone && (!phone.value || phone.value === auto)) phone.value = auto = c.phone;
+  };
+  name.addEventListener('input', fill);
+  name.addEventListener('change', fill);
+  fill();
 }
 function customerOptions() {
   return (
