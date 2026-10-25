@@ -7,7 +7,8 @@ async function loadResources() {
     .eq('workspace_id', S.workspace.id)
     .order('name');
   if (error) throw error;
-  S.resources = data || [];
+  // Deleted materials and printers stay in the database for past history only.
+  S.resources = (data || []).filter(r => !r.deleted_at);
 }
 // Startup loads the last 12 months plus anything still open; Reportes fetches older months on demand.
 const HISTORY_MONTHS = 12;
@@ -570,6 +571,7 @@ function showNewOrder(kind = 'customer') {
       render();
     } catch (error) {
       q('#orderFeedback').textContent = error.message;
+      offerStockCount(error, () => q('#newOrderForm')?.requestSubmit());
     } finally {
       b.disabled = false;
     }

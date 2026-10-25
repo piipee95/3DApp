@@ -219,12 +219,23 @@ function inventoryMatches(r, filter) {
   return true;
 }
 function inventoryActions(r) {
+  const item = (attr, ic, label, cls = '') =>
+    '<button type="button" class="btn' +
+    cls +
+    '" ' +
+    attr +
+    '="' +
+    r.id +
+    '">' +
+    icon(ic) +
+    label +
+    '</button>';
   return (
     (canEdit()
       ? '<button class="btn btn-secondary btn-sm" type="button" data-stock="' +
         r.id +
         '">' +
-        (r.counted ? 'Movimiento' : 'Contar stock') +
+        (r.counted ? icon('plus') + 'Ingreso' : 'Contar stock') +
         '</button>'
       : '') +
     '<details class="row-menu"><summary class="btn icon-btn" aria-label="Acciones de ' +
@@ -233,17 +244,21 @@ function inventoryActions(r) {
     icon('ellipsis-vertical') +
     '</summary><div class="menu-pop">' +
     (canEdit()
-      ? '<button type="button" class="btn" data-inventory-edit="' +
-        r.id +
-        '">' +
-        icon('pencil') +
-        'Editar</button>'
+      ? item('data-inventory-edit', 'pencil', 'Editar precio y datos') +
+        (r.counted
+          ? item('data-stock-set', 'refresh-cw', 'Cambiar cantidad') +
+            item('data-stock-out', 'log-out', 'Sacar del stock')
+          : '')
       : '') +
-    '<button type="button" class="btn" data-ledger="' +
-    r.id +
-    '">' +
-    icon('history') +
-    'Historial</button></div></details>'
+    item('data-ledger', 'history', 'Historial') +
+    (canEdit()
+      ? item(
+          'data-inventory-archive',
+          r.active ? 'archive' : 'archive-restore',
+          r.active ? 'Archivar' : 'Restaurar'
+        ) + item('data-inventory-delete', 'trash-2', 'Eliminar', ' danger-text')
+      : '') +
+    '</div></details>'
   );
 }
 function inventoryView() {
@@ -361,6 +376,17 @@ function inventoryView() {
   );
   qa('[data-ledger]').forEach(
     b => (b.onclick = () => showInventoryLedger(S.resources.find(r => r.id === b.dataset.ledger)))
+  );
+  const byId = id => S.resources.find(r => r.id === id);
+  qa('[data-stock-set]').forEach(b => (b.onclick = () => showStockMovement(byId(b.dataset.stockSet), 'set')));
+  qa('[data-stock-out]').forEach(b => (b.onclick = () => showStockMovement(byId(b.dataset.stockOut), 'out')));
+  qa('[data-inventory-archive]').forEach(
+    b =>
+      (b.onclick = () =>
+        archiveResource(byId(b.dataset.inventoryArchive), !byId(b.dataset.inventoryArchive).active))
+  );
+  qa('[data-inventory-delete]').forEach(
+    b => (b.onclick = () => deleteResource(byId(b.dataset.inventoryDelete)))
   );
 }
 function resourcesView() {
