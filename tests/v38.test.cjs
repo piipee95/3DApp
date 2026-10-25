@@ -22,7 +22,7 @@ async function test(){
  assert.match(run('q(".valuation").textContent'),/Tu dinero hoy.*Materias primas\$45\.700.*Productos fabricados\$18\.500.*7 unidades en stock.*Invertido en stock\$64\.200/);
  assert.match(run('q(".valuation").textContent'),/Ingreso proyectado\$72\.600/);
  run(`S.mode='home';render()`);
- assert.match(run('q(".kpis").textContent'),/Valor en stock\$64\.200/);
+ assert.match(run(`q(".kpis").textContent`),/Productos en stock\$18\.500.*7 un\. · se venden en.*Materia prima\$45\.700/);
  dom.window.close();
  console.log('PASS V3.8: stock valuation (filament/supplies at average cost, finished goods at cost and sale price, projected profit, receivables), Finanzas panel and Inicio tile.');
 }

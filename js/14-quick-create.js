@@ -86,6 +86,13 @@ function showQuickJob(kind, prefill = {}) {
           (isOrder ? ' required' : '')
       ) +
       customerOptions() +
+      fieldHtml(
+        'WhatsApp del cliente (opcional)',
+        'qjPhone',
+        prefill.phone || '',
+        'tel',
+        'maxlength="30" inputmode="tel" autocomplete="off" placeholder="+56 9 1234 5678"'
+      ) +
       priceListPicker() +
       fieldHtml(
         'Trabajo',
@@ -148,6 +155,7 @@ function showQuickJob(kind, prefill = {}) {
   dialog.querySelectorAll('input').forEach(el => el.addEventListener('input', preview));
   q('#qjIva').onchange = preview;
   mountPriceListPicker(preview);
+  bindCustomerPhone('#qjClient', '#qjPhone');
   q('#qjHalf')?.addEventListener('click', () => {
     q('#qjDeposit').value = Math.round(read().total / 2);
   });
@@ -162,7 +170,7 @@ function showQuickJob(kind, prefill = {}) {
       title = q('#qjTitle').value.trim(),
       detail = q('#qjDetail').value.trim();
     try {
-      const customer_id = await ensureCustomer(client);
+      const customer_id = await ensureCustomer(client, q('#qjPhone').value);
       if (isOrder) {
         const deposit = Math.round(n(q('#qjDeposit').value));
         if (deposit > v.total) throw new Error('El abono no puede superar el total del pedido.');

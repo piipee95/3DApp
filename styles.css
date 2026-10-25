@@ -4502,3 +4502,25 @@ dialog[open]::backdrop {
   width: max-content;
   max-width: calc(100vw - 16px);
 }
+/* V4.0: customer updates */
+.notify-preview {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  white-space: pre-line;
+  font-size: 13px;
+  background: color-mix(in srgb, var(--green) 9%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--green) 25%, transparent);
+  border-radius: 10px 10px 10px 2px;
+}
+.notify-phone {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.notify-phone input {
+  flex: 1;
+  min-width: 0;
+}
+.notify-preview {
+  overflow-wrap: anywhere;
+}
