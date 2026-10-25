@@ -19,8 +19,23 @@ function staleOrders(productId, unit) {
       Math.abs(orderCostFor(o, unit) - Math.round(n(o.estimated_cost))) >= 1
   );
 }
+// V4.6: the order also takes the product's current materials (refresh_order_materials):
+// a reservation is redone, and consumed stock moves only by the difference.
 async function updateOrderCosts(list, unit) {
+  let materials = false;
   for (const o of list) {
+    if (o.product_id && !o.from_stock) {
+      const { data, error } = await supabase.rpc('refresh_order_materials', { p_order: o.id });
+      if (!error) {
+        o.estimated_cost = n(data?.estimated_cost ?? orderCostFor(o, unit));
+        if (data?.state) o.inventory_state = data.state;
+        materials = true;
+        continue;
+      }
+      // Without the database function (not deployed yet) only the cost is updated.
+      if (!/refresh_order_materials|PGRST202|schema cache/i.test(error.message + ' ' + error.code))
+        throw error;
+    }
     const { error } = await supabase
       .from('production_orders')
       .update({ estimated_cost: orderCostFor(o, unit), updated_at: new Date().toISOString() })
@@ -28,6 +43,8 @@ async function updateOrderCosts(list, unit) {
     if (error) throw error;
     o.estimated_cost = orderCostFor(o, unit);
   }
+  if (materials) await Promise.all([loadResources(), loadOrders()]).catch(() => {});
+  return materials;
 }
 // After saving a product: offer to carry its new cost to the open orders that use it.
 async function offerOrderCostRefresh(productId) {
@@ -49,16 +66,17 @@ async function offerOrderCostRefresh(productId) {
           o => 'PED-' + o.order_no + ' (' + clp(o.estimated_cost) + ' → ' + clp(orderCostFor(o, unit)) + ')'
         )
         .join(', ') +
-      '. Los pedidos entregados o cancelados no cambian.',
-    confirmLabel: 'Actualizar costo'
+      '. También toman los materiales actuales del producto (reserva o consumo se ajustan por la diferencia). Los pedidos entregados o cancelados no cambian.',
+    confirmLabel: 'Actualizar'
   });
   if (!ok) return;
   try {
-    await updateOrderCosts(list, unit);
+    const materials = await updateOrderCosts(list, unit),
+      what = materials ? 'Costo y materiales' : 'Costo';
     toast(
       list.length === 1
-        ? 'Costo del pedido actualizado.'
-        : 'Costo actualizado en ' + list.length + ' pedidos.'
+        ? what + ' del pedido actualizados.'
+        : what + ' actualizados en ' + list.length + ' pedidos.'
     );
   } catch (error) {
     toast(error.message, 'error');
@@ -82,13 +100,18 @@ function mountOrderCostNotice(order, dialog) {
     (canEdit()
       ? '<button type="button" class="btn btn-secondary btn-sm" id="refreshOrderCost">' +
         icon('refresh-cw') +
-        'Actualizar costo</button>'
+        (order.product_id && !order.from_stock ? 'Actualizar costo y materiales' : 'Actualizar costo') +
+        '</button>'
       : '');
   (dialog.querySelector('.facts') || dialog.querySelector('.order-head')).after(box);
   box.querySelector('#refreshOrderCost')?.addEventListener('click', async () => {
     try {
-      await updateOrderCosts([order], unit);
-      toast('Costo del pedido actualizado a ' + clp(next) + '.');
+      const materials = await updateOrderCosts([order], unit);
+      toast(
+        (materials ? 'Materiales y costo del pedido actualizados: ' : 'Costo del pedido actualizado a ') +
+          clp(order.estimated_cost) +
+          '.'
+      );
       dialog.close();
       render();
       showOrder(S.orders.find(o => o.id === order.id) || order);
