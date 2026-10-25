@@ -95,18 +95,18 @@ async function test() {
   // The open screen is remembered for the next load.
   run(`S.mode='customers';render()`);
   assert.equal(run('JSON.parse(localStorage.getItem(viewKey())).mode'), 'customers');
-  run(`S.mode='home';window.restored=null;restoreView().then(v=>window.restored=v)`);
+  run(`history.replaceState(null,'',location.pathname);S.mode='home';window.restored=null;restoreView().then(v=>window.restored=v)`);
   await flush(6);
   assert.equal(run('window.restored'), true);
   assert.equal(run('S.mode'), 'customers');
   run(
-    `openProduct=async id=>{S.mode='product';S.product={id}};localStorage.setItem(viewKey(),JSON.stringify({mode:'product',product:'prod1',tab:'costs'}));S.mode='home';restoreView()`
+    `history.replaceState(null,'',location.pathname);openProduct=async id=>{S.mode='product';S.product={id}};localStorage.setItem(viewKey(),JSON.stringify({mode:'product',product:'prod1',tab:'costs'}));S.mode='home';restoreView()`
   );
   await flush();
   assert.equal(run('S.mode'), 'product');
   assert.equal(run('S.editorTab'), 'costs');
   run(
-    `localStorage.setItem(viewKey(),JSON.stringify({mode:'product',product:'borrado'}));S.mode='home';restoreView().then(v=>window.restored=v)`
+    `history.replaceState(null,'',location.pathname);localStorage.setItem(viewKey(),JSON.stringify({mode:'product',product:'borrado'}));S.mode='home';restoreView().then(v=>window.restored=v)`
   );
   await flush();
   assert.equal(run('window.restored'), false);

@@ -92,15 +92,9 @@ function accountMenuItems() {
     (isOwner()
       ? '<button type="button" class="menu-item" id="invite">' + icon('user-plus') + 'Invitar socio</button>'
       : '') +
-    '<button type="button" class="menu-item" id="backupData">' +
-    icon('database') +
-    'Respaldo de datos</button><button type="button" class="menu-item" id="editProfile">' +
+    '<button type="button" class="menu-item" id="editProfile">' +
     icon('user') +
-    'Mi perfil</button><button type="button" class="menu-item" id="changePassword">' +
-    icon('key-round') +
-    'Cambiar contraseña</button><button type="button" class="menu-item danger" id="logout">' +
-    icon('log-out') +
-    'Cerrar sesión</button>'
+    'Mi perfil</button>'
   );
 }
 function mountShell() {
@@ -144,7 +138,6 @@ function mountShell() {
     }).join('') +
     '</nav><div class="side-user"><div class="account-menu" id="accountMenu" hidden>' +
     accountMenuItems() +
-    themeSwitch() +
     '</div><button type="button" class="user-chip" id="accountButton" aria-haspopup="menu" aria-expanded="false">' +
     userAvatar() +
     '<span class="user-text"><b>' +
@@ -194,7 +187,6 @@ function mountShell() {
   qa('[data-open-search]').forEach(b => (b.onclick = showSearch));
   qa('[data-open-create]').forEach(b => (b.onclick = showCreateMenu));
   q('#installApp')?.addEventListener('click', installApp);
-  q('#backupData')?.addEventListener('click', showBackup);
 }
 // Close the account menu and any open ⋯ menu when clicking anywhere else.
 document.addEventListener('click', e => {
@@ -283,16 +275,7 @@ function showMoreSheet() {
           icon('download') +
           'Instalar app</button>'
         : '') +
-      '<button type="button" class="menu-item" data-more="backup">' +
-      icon('database') +
-      'Respaldo de datos</button><button type="button" class="menu-item" data-more="profile">' +
-      icon('user') +
-      'Mi perfil</button><button type="button" class="menu-item" data-more="password">' +
-      icon('key-round') +
-      'Cambiar contraseña</button><button type="button" class="menu-item danger" data-more="logout">' +
-      icon('log-out') +
-      'Cerrar sesión</button></div>' +
-      themeSwitch() +
+      '</div>' +
       '<p class="powered">Kultiverso Pop · Powered by <b>ELARA</b> · ' +
       APP_VERSION +
       '</p>'
@@ -300,15 +283,12 @@ function showMoreSheet() {
   dialog.classList.add('sheet');
   const actions = {
     invite: () => invite(),
-    password: () => showPasswordDialog(),
     profile: () => showProfile(),
-    logout: () => supabase.auth.signOut(),
     resources: () => goMode('resources'),
     quotes: () => goMode('quotes'),
     install: () => installApp(),
     reports: () => goMode('reports'),
     finance: () => goMode('finance'),
-    backup: () => showBackup(),
     files: () => goMode('files'),
     customers: () => goMode('customers')
   };

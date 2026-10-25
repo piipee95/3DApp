@@ -6,9 +6,7 @@ function common() {
   enhanceFields();
   flashMessages();
   if (S.mode === 'dashboard' || S.mode === 'home') showDraftResume();
-  q('#logout')?.addEventListener('click', () => supabase.auth.signOut());
   q('#invite')?.addEventListener('click', invite);
-  q('#changePassword')?.addEventListener('click', showPasswordDialog);
   q('#editProfile')?.addEventListener('click', showProfile);
 }
 async function invite() {
