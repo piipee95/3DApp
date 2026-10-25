@@ -34,6 +34,14 @@ function stockCell(p) {
     '<b>' + s.available + '</b>' + (s.reserved ? '<span class="sub"> +' + s.reserved + ' res.</span>' : '')
   );
 }
+const sellButton = p =>
+  canEdit() && p.status !== 'archived' && productStock(p).available > 0
+    ? '<button type="button" class="btn btn-secondary btn-sm sell-btn" data-sell="' +
+      p.id +
+      '">' +
+      icon('wallet') +
+      'Vender</button>'
+    : '';
 function productMenu(p) {
   if (!canEdit()) return '';
   return (
@@ -163,7 +171,8 @@ function dashboard() {
               stockCell(p) +
               '</td><td class="sub">' +
               relativeDate(p.updated_at) +
-              '</td><td class="r">' +
+              '</td><td class="r row-actions">' +
+              sellButton(p) +
               productMenu(p) +
               '</td></tr>'
           )
@@ -190,6 +199,7 @@ function dashboard() {
               '</b>' +
               marginChip(p) +
               '</span>' +
+              sellButton(p) +
               productMenu(p) +
               '</div>'
           )
@@ -236,13 +246,14 @@ function dashboard() {
   // Rows open the product; the ⋯ menu and its actions don't.
   qa('[data-open]').forEach(row => {
     row.onclick = e => {
-      if (e.target.closest('.row-menu')) return;
+      if (e.target.closest('.row-menu,[data-sell]')) return;
       openProduct(row.dataset.open);
     };
     row.onkeydown = e => {
       if (e.key === 'Enter' && e.target === row) openProduct(row.dataset.open);
     };
   });
+  qa('[data-sell]').forEach(b => (b.onclick = () => showSell(S.products.find(p => p.id === b.dataset.sell))));
   qa('[data-dup]').forEach(b => (b.onclick = () => duplicateProduct(b.dataset.dup)));
   qa('[data-arc]').forEach(b => (b.onclick = () => archiveProduct(b.dataset.arc)));
   qa('[data-quick]').forEach(
