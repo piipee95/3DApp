@@ -10,11 +10,11 @@ description: Base de datos de KultiApp en Supabase (Postgres con RLS, funciones 
 - Todo dato pertenece a un `workspace_id`. Los permisos se comprueban con funciones `private.*` (`private.can_edit_workspace` para escribir, `private.is_workspace_member` para leer) dentro de las políticas RLS.
 - Roles del espacio: propietario, editor y solo lectura.
 - Fotos en Storage privado (`product-photos`); los enlaces públicos usan tokens propios (seguimiento: 64 hexadecimales; catálogo: `catalog_slug`).
-- `docs/SCHEMA_V*.sql` es la **referencia** de cada migración ya aplicada. No se vuelve a ejecutar.
+- `docs/migraciones/SCHEMA_V*.sql` es la **referencia** de cada migración ya aplicada (no se vuelve a ejecutar); `docs/BASE_DE_DATOS.md` es la foto del esquema vigente.
 
 ## Reglas para un cambio de esquema
 
-1. Escribir el SQL nuevo como `docs/SCHEMA_V<versión>.sql`, con la cabecera «Reference of the deployment migration …; do not re-run».
+1. Escribir el SQL nuevo como `docs/migraciones/SCHEMA_V<versión>.sql`, con la cabecera «Reference of the deployment migration …; do not re-run», y actualizar `docs/BASE_DE_DATOS.md`.
 2. Toda tabla nueva: `enable row level security` y políticas para `authenticated` basadas en `private.is_workspace_member` (lectura) y `private.can_edit_workspace` (escritura). Nunca una tabla sin RLS.
 3. Funciones `security definer` con `set search_path = ''` y comprobación de `auth.uid()` y permisos al principio.
 4. `grant` por columna cuando el cliente solo debe escribir algunas columnas.

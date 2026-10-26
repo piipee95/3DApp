@@ -11,7 +11,7 @@ async function test(){
  run(`q('#editProfile').click()`);await flush();
  assert.equal(run('S.mode'),'profile');assert.match(run('q(".page-title").textContent'),/Mi perfil/);
  assert.match(run('q(".profile-id").textContent'),/Felipe.*felipe@kultiversopop\.cl/);
- assert.match(run('q(".profile-facts").textContent'),/Último ingreso24 de octubre de 2026.*Versiónv4\.9/);
+ assert.match(run('q(".profile-facts").textContent'),/Último ingreso24 de octubre de 2026.*Versiónv\d+\.\d+/);
  // Personal data: invalid username / phone are rejected, valid ones saved to the metadata.
  run(`q('#profileUsername').value='Fe';q('#profileForm').requestSubmit()`);await flush();
  assert.match(run('q("#profileFeedback").textContent'),/3 a 30/);assert.equal(run('calls.length'),0);

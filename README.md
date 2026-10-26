@@ -1,34 +1,42 @@
-# KultiApp — Costos y producción 3D
+# KultiApp — Gestión de tu taller 3D
 
-Aplicación web de Kultiverso Pop para costear productos de impresión 3D,
-cotizar, gestionar pedidos de producción e inventario. Funciona sobre
-Supabase (Auth, Postgres con RLS y Storage) y se publica como sitio estático.
+Aplicación de Kultiverso Pop para gestionar un taller de impresión 3D: costos de productos, cotizaciones,
+pedidos y producción, inventario de filamentos e insumos, stock terminado, ventas, cobros, finanzas y
+reportes. Funciona en celular y computador, se instala como app y la comparte todo el equipo.
 
-## Funciones
-- Login/registro y espacio de trabajo compartido con invitaciones (propietario, editor, solo lectura).
-- Productos con varias impresiones, hasta siete filamentos por impresión, costos directos y adicionales.
-- Margen objetivo, IVA configurable, redondeo comercial, precio manual y escenarios Mínimo/Promo/Recomendado/Premium.
-- Fotos de producto en Supabase Storage (bucket privado `product-photos`).
-- Cotizaciones con folio, cliente, vigencia, plazo de entrega, condiciones y contacto; vista, PDF e imagen PNG para WhatsApp.
-- Pedidos de producción con reserva y consumo de inventario.
-- Borradores locales por usuario y espacio de trabajo.
+Publicada en https://kultiapp.vercel.app · Powered by ELARA.
 
-## Estructura
-- `index.html`, `styles.css` y `js/`: la aplicación (sin paso de compilación). `index.html` carga
-  `js/supabase-client.js` (módulo del SDK) y luego los archivos `js/01-…` a `js/99-start.js` **en orden**;
-  comparten un mismo ámbito global, así que una función de un archivo puede usar las de otro.
-  Para agregar un archivo nuevo: créalo en `js/`, agrégalo a `index.html` antes de `99-start.js`
-  y a la lista `SHELL` de `sw.js` (las pruebas leen el orden desde `index.html`).
-- `docs/`: notas de cada versión y referencias de las migraciones aplicadas (`SCHEMA_V*.sql`).
-- `tests/`: pruebas con jsdom y un backend simulado (no escriben en Supabase).
+## Qué hace
 
-## Pruebas
+- **Productos**: costeo por impresiones, filamentos e insumos; margen, IVA, redondeo y escenarios de precio;
+  fotos; stock terminado; catálogo público y listas de precios rápidos.
+- **Cotizaciones**: documento, PDF o imagen para WhatsApp; se convierten en pedido.
+- **Pedidos**: ficha con estado, materiales (reserva y consumo), pagos, avisos al cliente, enlace de
+  seguimiento, fotos y fallas; revisión contra la receta del producto.
+- **Inventario**: ficha de cada material con movimientos, pesaje de rollos, historial y deshacer; modo
+  conteo; lista de compras.
+- **Clientes**, **Impresoras**, **Reportes**, **Finanzas** (dinero hoy, utilidad real, gastos, IVA, socios),
+  **Inicio** con pendientes y **Mi perfil**.
+
+## Documentación
+
+- [Manual de uso](docs/MANUAL.md)
+- [Arquitectura](docs/ARQUITECTURA.md)
+- [Base de datos](docs/BASE_DE_DATOS.md)
+- [Historial de versiones](docs/HISTORIAL.md) (detalle en `docs/versiones/`, SQL en `docs/migraciones/`)
+- [Versiones de consolidación](docs/CONSOLIDACION.md)
+
+## Desarrollo
+
+Sitio estático sin compilación: `index.html`, `styles.css` y `js/01-core.js` … `js/13-home.js`, scripts
+clásicos por tema que comparten el ámbito global (ver Arquitectura). Backend en Supabase (Auth, Postgres con
+RLS y Storage).
+
 ```sh
-npm install
+npm ci
+npm run lint
 npm test
 ```
-GitHub Actions ejecuta `npm test` en cada push y pull request.
 
-## Publicación
-Sitio estático publicado con Vercel desde `main` (`https://kultiapp.vercel.app`); cada rama y PR genera una vista previa. Las migraciones
-de base de datos se aplican en Supabase antes de publicar el cliente que las usa.
+GitHub Actions corre lint y pruebas, CodeQL y gitleaks. Vercel publica `main` en producción y genera una
+vista previa por rama. Las migraciones se aplican en Supabase antes de publicar el cliente que las usa.

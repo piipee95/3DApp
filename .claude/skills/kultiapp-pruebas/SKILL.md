@@ -1,6 +1,6 @@
 ---
 name: kultiapp-pruebas
-description: Validación de cambios en KultiApp con sus herramientas reales (ESLint, pruebas jsdom tests/vNN.test.cjs con backend simulado, CodeQL y gitleaks en CI). Usar al preparar, escribir, ejecutar o informar pruebas de cualquier cambio.
+description: Validación de cambios en KultiApp con sus herramientas reales (ESLint, pruebas jsdom tests/<tema>.test.cjs con backend simulado, CodeQL y gitleaks en CI). Usar al preparar, escribir, ejecutar o informar pruebas de cualquier cambio.
 ---
 
 # Skill: pruebas de KultiApp
@@ -10,16 +10,16 @@ description: Validación de cambios en KultiApp con sus herramientas reales (ESL
 ```sh
 npm ci
 npm run lint   # ESLint (eslint.config.mjs)
-npm test       # todas las suites tests/*.test.cjs en orden
+npm test       # tests/run.cjs: cada tests/*.test.cjs en su propio proceso
 ```
 
 CI (`.github/workflows/`): `test.yml` (Node 22: lint y pruebas), `codeql.yml` (seguridad) y `secrets.yml` (gitleaks). Dependabot propone actualizaciones semanales.
 
 ## Escribir una prueba
 
-- Una suite por versión: `tests/vNN.test.cjs`, reutilizando `boot()` de `tests/v12.test.cjs` (jsdom y backend simulado) y `dom.window.run(...)`.
-- Añadirla al final del script `test` de `package.json`.
-- Terminar con `console.log('PASS VX.Y: …')` describiendo lo comprobado y `process.exitCode=1` si falla.
+- Una suite por tema, nombrada por lo que revisa: `tests/<tema>-<qué>.test.cjs` (por ejemplo `inventario-ficha-y-conteo.test.cjs`), con `boot()` de `tests/boot.cjs` (jsdom y backend simulado) y `dom.window.run(...)`. `tests/run.cjs` la encuentra sola.
+- Terminar con `console.log('PASS …')` describiendo lo comprobado y `process.exitCode=1` si falla.
+- Si cambian cifras que se muestran en varias pantallas, ampliar `tests/recorrido-completo.test.cjs`.
 - Datos ficticios. Nunca datos reales de clientes ni escrituras en Supabase.
 
 ## Reglas

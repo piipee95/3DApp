@@ -6,7 +6,9 @@ function authView() {
     LOGO_SRC +
     '" alt="Kultiverso Pop"><h1>KultiApp <span class="app-version">' +
     APP_VERSION +
-    '</span></h1><p class="muted">Costos y producción 3D</p><p class="small muted">Kultiverso Pop · Powered by ELARA</p>' +
+    '</span></h1><p class="muted">' +
+    APP_TAGLINE +
+    '</p><p class="small muted">Kultiverso Pop · Powered by ELARA</p>' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
     (S.msg ? '<div class="success">' + esc(S.msg) + '</div>' : '') +
     '<div class="login-tabs"><button class="btn tab active" data-mode="login">Ingresar</button><button class="btn tab" data-mode="signup">Crear cuenta</button></div><form id="authForm" class="grid"><div class="field"><label>Email</label><input id="email" type="email" required></div><div class="field"><label>Contraseña</label><input id="password" type="password" minlength="6" required><span id="passwordHint" class="small muted" hidden>' +
