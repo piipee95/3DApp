@@ -17,6 +17,7 @@ Publicada en https://kultiapp.vercel.app · Powered by ELARA.
   conteo; lista de compras.
 - **Clientes**, **Impresoras**, **Reportes**, **Finanzas** (dinero hoy, utilidad real, gastos, IVA, socios),
   **Inicio** con pendientes y **Mi perfil**.
+- **Kit de marca**: logos, tarjetas, redes sociales y etiquetas oficiales, con descarga del original.
 
 ## Documentación
 
@@ -28,7 +29,7 @@ Publicada en https://kultiapp.vercel.app · Powered by ELARA.
 
 ## Desarrollo
 
-Sitio estático sin compilación: `index.html`, `styles.css` y `js/01-core.js` … `js/13-home.js`, scripts
+Sitio estático sin compilación: `index.html`, `styles.css` y `js/01-core.js` … `js/14-brand.js`, scripts
 clásicos por tema que comparten el ámbito global (ver Arquitectura). Backend en Supabase (Auth, Postgres con
 RLS y Storage).
 

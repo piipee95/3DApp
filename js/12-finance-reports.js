@@ -653,6 +653,7 @@ const BACKUP_TABLES = [
   ['order_payments', 'Pagos'],
   ['product_stock_movements', 'Movimientos stock'],
   ['customers', 'Clientes'],
+  ['brand_assets', 'Kit de marca'],
   ['quotes', 'Cotizaciones'],
   ['expenses', 'Gastos'],
   ['partner_transfers', 'Transferencias socios'],

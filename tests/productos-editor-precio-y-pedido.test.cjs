@@ -59,7 +59,7 @@ async function test(){
  assert.equal(run('q("#orderForm button[type=submit]")'),null);
  run(`q('#orderDialog').close();S.mode='resources';resourcesView()`);
  assert.equal(run('qa("[data-add-resource]").length'),0);
- assert.equal(run('qa(".app-nav button").length'),10);
+ assert.equal(run('qa(".app-nav button").length'),11);
  console.log('PASS V1.3: catalog selection, resource snapshots, printer electricity, manual price/quote/margins, saved bundle, order creation and actuals, filters and viewer restrictions.');
  dom.window.close();
 }

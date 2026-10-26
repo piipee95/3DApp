@@ -134,6 +134,7 @@ function render() {
   if (S.mode === 'material') return materialView();
   if (S.mode === 'order') return orderView();
   if (S.mode === 'customer') return customerView();
+  if (S.mode === 'brand') return brandView();
   if (S.mode === 'stockcount') return stockCountView();
   dashboard();
 }
@@ -146,6 +147,7 @@ async function goMode(mode) {
   if (S.workspace && mode !== 'product') skeletonView(mode);
   try {
     if (mode === 'files') await loadCustomerFileRequests();
+    if (mode === 'brand') await Promise.all([loadBrandAssets(), loadBrandUsage()]);
     if (mode === 'production') {
       await loadOrders();
       await loadResources();
@@ -180,6 +182,7 @@ const VIEW_MODES = [
   'stockcount',
   'order',
   'customer',
+  'brand',
   'product',
   'files'
 ];
@@ -202,7 +205,8 @@ const VIEW_SLUGS = {
   material: 'material',
   stockcount: 'conteo',
   order: 'pedido',
-  customer: 'cliente'
+  customer: 'cliente',
+  brand: 'marca'
 };
 // 5.0: «fichas» with their own page and link: which state field holds the open record.
 const ID_PAGES = { material: 'materialId', order: 'orderId', customer: 'customerId' };
@@ -305,6 +309,7 @@ async function restoreView() {
       S[ID_PAGES[v.mode]] = id;
     }
     if (v.mode === 'files') await loadCustomerFileRequests();
+    if (v.mode === 'brand') await Promise.all([loadBrandAssets(), loadBrandUsage()]);
     if (v.mode === 'quotes' || v.mode === 'customers') await Promise.all([loadQuotes(), loadCustomers()]);
     if (v.mode === 'finance') await Promise.all([loadExpenses(), loadTransfers()]);
     S.mode = v.mode;
@@ -573,6 +578,7 @@ const NAV_ITEMS = [
   { mode: 'production', label: 'Pedidos', icon: 'clipboard-list' },
   { mode: 'customers', label: 'Clientes', icon: 'users' },
   { mode: 'files', label: 'Archivos', icon: 'image' },
+  { mode: 'brand', label: 'Kit de marca', icon: 'palette' },
   { mode: 'reports', label: 'Reportes', icon: 'chart-column' },
   { mode: 'finance', label: 'Finanzas', icon: 'wallet' },
   { mode: 'inventory', label: 'Inventario', icon: 'boxes' },
@@ -593,6 +599,7 @@ const PAGE_TITLES = {
   material: 'Material',
   order: 'Pedido',
   customer: 'Cliente',
+  brand: 'Kit de marca',
   stockcount: 'Modo conteo'
 };
 function navActive(mode) {
@@ -709,7 +716,8 @@ function mountShell() {
   tabs.setAttribute('aria-label', 'Navegación');
   tabs.innerHTML =
     NAV_ITEMS.filter(
-      item => !['resources', 'quotes', 'customers', 'reports', 'files', 'finance'].includes(item.mode)
+      item =>
+        !['resources', 'quotes', 'customers', 'reports', 'files', 'brand', 'finance'].includes(item.mode)
     )
       .map(
         item =>
@@ -774,7 +782,9 @@ function showMoreSheet() {
       icon('users') +
       'Clientes</button><button type="button" class="menu-item" data-more="files">' +
       icon('image') +
-      'Archivos de clientes</button><button type="button" class="menu-item" data-more="reports">' +
+      'Archivos de clientes</button><button type="button" class="menu-item" data-more="brand">' +
+      icon('palette') +
+      'Kit de marca</button><button type="button" class="menu-item" data-more="reports">' +
       icon('chart-column') +
       'Reportes</button><button type="button" class="menu-item" data-more="finance">' +
       icon('wallet') +
@@ -806,6 +816,7 @@ function showMoreSheet() {
     reports: () => goMode('reports'),
     finance: () => goMode('finance'),
     files: () => goMode('files'),
+    brand: () => goMode('brand'),
     customers: () => goMode('customers')
   };
   dialog.querySelectorAll('[data-more]').forEach(

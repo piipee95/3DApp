@@ -12,10 +12,10 @@ Auth para las cuentas, Postgres con RLS para los datos y Storage para las fotos.
 | `index.html` | La app. Carga el tema antes de pintar, muestra la pantalla de carga y los scripts en orden. |
 | `styles.css` | Todos los estilos. Colores como tokens en `:root` (oscuro) y `:root[data-theme='light']`. |
 | `js/supabase-client.js` | Módulo que importa el SDK de Supabase (versión fija) y deja `createClient` global. |
-| `js/01-core.js` … `js/13-home.js` | La aplicación, por tema (ver abajo). |
+| `js/01-core.js` … `js/14-brand.js` | La aplicación, por tema (ver abajo). |
 | `js/99-start.js` | Arranca la app (`init()`). |
 | `sw.js` | Service worker: abre sin conexión con la última versión. Supabase nunca se guarda en caché. |
-| `manifest.webmanifest`, `assets/` | App instalable: nombre, íconos y accesos directos. |
+| `manifest.webmanifest`, `assets/` | App instalable: nombre, íconos y accesos directos. `assets/brand/` guarda las piezas para WhatsApp. |
 | `catalogo.*`, `seguimiento.*`, `subir.*` | Páginas públicas (módulos ES), sin cuenta: catálogo, seguimiento de pedido y subida de fotos. |
 | `tests/` | Pruebas jsdom con backend simulado (`boot.cjs`, `run.cjs`, `*.test.cjs`). |
 | `docs/` | Manual, arquitectura, base de datos, historial, lista de consolidación, notas por versión y migraciones. |
@@ -41,6 +41,7 @@ las funciones se llaman después, cuando ya está todo cargado.
 | `11-customers-quotes.js` | Clientes, cotizaciones (documento e imagen) y archivos de clientes. |
 | `12-finance-reports.js` | Finanzas, reportes, exportación a Excel y respaldo. |
 | `13-home.js` | Inicio y recordatorios. |
+| `14-brand.js` | Kit de marca: galería, subida de originales, vista previa segura, versiones y archivos de la app. |
 
 Para agregar un archivo: crearlo en `js/`, agregarlo a `index.html` antes de `99-start.js` y a `SHELL` en `sw.js`.
 
