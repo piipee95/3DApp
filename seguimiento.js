@@ -23,6 +23,7 @@ const STEPS = [
   ['printing', 'En impresión', 'Estamos imprimiendo tu pedido.'],
   ['assembly', 'Terminaciones', 'Lo estamos armando y dando los últimos detalles.'],
   ['ready', 'Listo', 'Tu pedido está listo para entrega o retiro.'],
+  ['shipped', 'Enviado', 'Tu pedido va en camino.'],
   ['delivered', 'Entregado', '¡Gracias por tu compra!']
 ];
 async function photos(folder) {

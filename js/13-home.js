@@ -369,13 +369,18 @@ function reminders() {
       order: o.id
     });
   }
-  // Delivered but still owing money.
-  for (const o of (S.orders || []).filter(o => o.status === 'delivered' && orderBalance(o).due > 0))
+  // Shipped or delivered but still owing money.
+  for (const o of (S.orders || []).filter(
+    o => ['shipped', 'delivered'].includes(o.status) && orderBalance(o).due > 0
+  ))
     list.push({
       tone: 'warn',
       icon: 'wallet',
       text: ref(o),
-      sub: 'Entregado con saldo pendiente de ' + clp(orderBalance(o).due),
+      sub:
+        (o.status === 'shipped' ? 'Enviado' : 'Entregado') +
+        ' con saldo pendiente de ' +
+        clp(orderBalance(o).due),
       order: o.id
     });
   const soon = Date.now() + 2 * 864e5;

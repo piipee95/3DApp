@@ -74,8 +74,10 @@ cotizaciones por vencer, mantenciones y el conteo de inventario cuando toca.
   estado; **Pagos** (abonos, saldo, recordatorios); **Materiales y stock** (reserva, consumo real, «Usar
   materiales actuales del producto»); **Fotos del trabajo**; estado, entrega, costos reales y notas;
   *Registrar falla* y *Eliminar*.
-- **Estados**: pendiente → imprimiendo → armado → listo → entregado (o cancelado). Al cambiar el estado, la
-  app ofrece enviar el aviso al cliente.
+- **Estados**: pendiente → imprimiendo → armado → listo → **enviado** → entregado (o cancelado). Al cambiar el
+  estado, la app ofrece enviar el aviso al cliente. Un pedido **enviado** va en camino: sigue «en curso» hasta
+  marcarlo entregado, pero ya no aparece como atrasado; el cliente lo ve en su seguimiento. Solo existe en
+  pedidos de clientes (no en fabricación para stock).
 - **Fabricación para stock**: suma unidades al producto al quedar lista; no es una venta.
 - **Trabajo a medida sin producto**: se puede vincular a un producto o crear uno desde el pedido.
 

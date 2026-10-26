@@ -1,4 +1,4 @@
-# Base de datos de KultiApp (estado a la versión 5.1)
+# Base de datos de KultiApp (estado a la versión 5.2)
 
 Supabase: Postgres con RLS en todas las tablas, Auth y Storage privado. Esta es la foto del esquema vigente;
 el SQL de cada cambio aplicado está en `docs/migraciones/` (referencia, no se vuelve a ejecutar).
@@ -19,7 +19,7 @@ el SQL de cada cambio aplicado está en `docs/migraciones/` (referencia, no se v
 | `cost_items` | Costos directos y adicionales del producto | categoría, monto |
 | `product_cost_summary` (vista) | Costo total y precio recomendado por producto | con `security_invoker`: respeta los permisos |
 | `product_stock_movements` | Historial del stock terminado | fabricación, venta, ajuste |
-| `production_orders` | Pedidos y fabricaciones | tipo (cliente o stock), cliente, cantidad, precio, IVA, costo estimado y real, estado, entrega, inventario, desde stock, enlace de seguimiento |
+| `production_orders` | Pedidos y fabricaciones | tipo (cliente o stock), cliente, cantidad, precio, IVA, costo estimado y real, estado (pendiente, imprimiendo, armado, listo, enviado, entregado, cancelado), entrega, inventario, desde stock, enlace de seguimiento |
 | `order_payments` | Pagos de pedidos | monto, medio, fecha, quién recibió |
 | `quotes` | Cotizaciones | folio, cliente, producto, precio, costo, vigencia, estado, pedido creado |
 | `customers` | Clientes | nombre, teléfono, email, Instagram, notas |

@@ -41,6 +41,7 @@ const ORDER_STATUSES = {
   printing: 'Imprimiendo',
   assembly: 'Armado',
   ready: 'Listo',
+  shipped: 'Enviado',
   delivered: 'Entregado',
   canceled: 'Cancelado'
 };
@@ -306,6 +307,7 @@ function orderSheet(order) {
         : '') +
       '</div><form id="orderForm" class="grid"><div class="field"><label for="orderStatus">Estado</label><select id="orderStatus">' +
       Object.entries(ORDER_STATUSES)
+        .filter(([key]) => key !== 'shipped' || order.kind !== 'stock' || order.status === 'shipped')
         .map(([key, label]) => '<option value="' + key + '">' + label + '</option>')
         .join('') +
       '</select></div>' +
@@ -978,16 +980,18 @@ const ORDER_CHIP = {
   printing: 'c-print',
   assembly: 'c-asm',
   ready: 'c-ready',
+  shipped: 'c-ship',
   delivered: 'c-done',
   canceled: 'c-cancel'
 };
 // A fabrication for stock is done once it is «Listo»: its units are already in the product's stock.
 function orderIsOpen(o) {
-  if (o.kind === 'stock') return !['ready', 'delivered', 'canceled'].includes(o.status);
+  if (o.kind === 'stock') return !['ready', 'shipped', 'delivered', 'canceled'].includes(o.status);
   return !['delivered', 'canceled'].includes(o.status);
 }
+// A shipped order is on its way: no longer late, though it stays open until it is delivered.
 function orderIsLate(o) {
-  return orderIsOpen(o) && o.due_date && o.due_date < localToday();
+  return orderIsOpen(o) && o.status !== 'shipped' && o.due_date && o.due_date < localToday();
 }
 function orderChip(o) {
   const late = orderIsLate(o);
