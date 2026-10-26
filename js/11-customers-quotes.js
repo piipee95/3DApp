@@ -587,8 +587,10 @@ function quoteState(qt) {
 function quoteSums(qt) {
   const total = Math.round(n(qt.unit_price)) * n(qt.quantity),
     net = qt.iva_enabled ? total / (1 + n(qt.iva_rate)) : total,
-    cost = n(qt.unit_cost) * n(qt.quantity);
-  return { total, net, profit: net - cost, margin: net > 0 && cost > 0 ? (net - cost) / net : null };
+    // 5.0: a quick quote saved without cost takes the cost of the product it was linked to later.
+    unit = n(qt.unit_cost) || (qt.product_id ? productUnitCost(qt.product_id) : 0),
+    cost = unit * n(qt.quantity);
+  return { total, net, cost, profit: net - cost, margin: net > 0 && cost > 0 ? (net - cost) / net : null };
 }
 function quoteChip(qt) {
   const s = quoteState(qt);
@@ -815,7 +817,7 @@ function showSavedQuote(qt) {
       '</dd></div><div><dt>Utilidad estimada</dt><dd class="' +
       (s.profit < 0 ? 'down' : 'up') +
       '">' +
-      (n(qt.unit_cost) > 0 ? clp(s.profit) + (s.margin == null ? '' : ' · ' + pct(s.margin)) : '—') +
+      (s.cost > 0 ? clp(s.profit) + (s.margin == null ? '' : ' · ' + pct(s.margin)) : '—') +
       '</dd></div></dl>' +
       (order
         ? '<p class="notice small">Convertida en el pedido <b>PED-' +
