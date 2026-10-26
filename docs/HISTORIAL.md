@@ -2,6 +2,11 @@
 
 Resumen de cada versión, de la más reciente a la más antigua. El detalle completo de cada una está en `docs/versiones/`.
 
+## 5.1.1 · Kit oficial en el Kit de marca
+
+- Los paquetes del equipo («KIT PNG V3» y «Tarjetas y etiquetas») quedan listos para agregar: logos, isotipo K,
+  tarjetas, etiquetas, piezas web, íconos y referencia, más la foto de perfil de Instagram.
+
 ## 5.1 · Kit de marca
 
 - Sección **Kit de marca**: logos, tarjetas, redes sociales, etiquetas y recursos de la app, con búsqueda y filtros.

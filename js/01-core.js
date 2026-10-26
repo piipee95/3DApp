@@ -70,7 +70,7 @@ function fail(m) {
 }
 // Error log: what any team member hits is stored (max 20 different errors per session) for review.
 // Shown in every screen header and stored with errors; keep it in step with CACHE in sw.js.
-const APP_VERSION = 'v5.1';
+const APP_VERSION = 'v5.1.1';
 // 5.0: what KultiApp is, shown under the name (login, title, installed app). Change it here and in
 // index.html <title>/description and manifest.webmanifest.
 const APP_TAGLINE = 'El taller bajo control';

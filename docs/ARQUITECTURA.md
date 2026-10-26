@@ -15,7 +15,7 @@ Auth para las cuentas, Postgres con RLS para los datos y Storage para las fotos.
 | `js/01-core.js` … `js/14-brand.js` | La aplicación, por tema (ver abajo). |
 | `js/99-start.js` | Arranca la app (`init()`). |
 | `sw.js` | Service worker: abre sin conexión con la última versión. Supabase nunca se guarda en caché. |
-| `manifest.webmanifest`, `assets/` | App instalable: nombre, íconos y accesos directos. `assets/brand/` guarda las piezas para WhatsApp. |
+| `manifest.webmanifest`, `assets/` | App instalable: nombre, íconos y accesos directos. `assets/brand/` guarda las piezas para WhatsApp y `assets/brand/kit/` el kit de marca del equipo (se importa al Kit de marca). |
 | `catalogo.*`, `seguimiento.*`, `subir.*` | Páginas públicas (módulos ES), sin cuenta: catálogo, seguimiento de pedido y subida de fotos. |
 | `tests/` | Pruebas jsdom con backend simulado (`boot.cjs`, `run.cjs`, `*.test.cjs`). |
 | `docs/` | Manual, arquitectura, base de datos, historial, lista de consolidación, notas por versión y migraciones. |
