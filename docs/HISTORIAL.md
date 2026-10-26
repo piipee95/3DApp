@@ -4,7 +4,7 @@ Resumen de cada versión, de la más reciente a la más antigua. El detalle comp
 
 ## 5.0 · Consolidación
 
-- Identidad «KultiApp — Gestión de tu taller 3D».
+- Identidad «KultiApp — El taller bajo control».
 - Fichas de Pedido y Cliente como página con enlace propio; vocabulario y menús unificados.
 - Código reorganizado por tema, pruebas por tema con prueba del recorrido completo, revisión con datos reales.
 - Manual, arquitectura, base de datos y lista de consolidación para las próximas versiones redondas.

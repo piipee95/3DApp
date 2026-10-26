@@ -1,4 +1,4 @@
-# KultiApp — Gestión de tu taller 3D
+# KultiApp — El taller bajo control
 
 Aplicación de Kultiverso Pop para gestionar un taller de impresión 3D: costos de productos, cotizaciones,
 pedidos y producción, inventario de filamentos e insumos, stock terminado, ventas, cobros, finanzas y

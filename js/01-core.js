@@ -73,7 +73,7 @@ function fail(m) {
 const APP_VERSION = 'v5.0';
 // 5.0: what KultiApp is, shown under the name (login, title, installed app). Change it here and in
 // index.html <title>/description and manifest.webmanifest.
-const APP_TAGLINE = 'Gestión de tu taller 3D';
+const APP_TAGLINE = 'El taller bajo control';
 const loggedErrors = new Set();
 function logError(kind, message, stack = '') {
   try {
