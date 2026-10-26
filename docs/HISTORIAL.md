@@ -2,6 +2,13 @@
 
 Resumen de cada versión, de la más reciente a la más antigua. El detalle completo de cada una está en `docs/versiones/`.
 
+## 5.2 · Estado «Enviado»
+
+- Nuevo estado de pedido **Enviado**, entre Listo y Entregado: el pedido va en camino, sigue en curso pero no se
+  marca atrasado.
+- Aviso por WhatsApp «ya va en camino», paso «Enviado» en el seguimiento del cliente y recordatorio de cobro si
+  queda saldo.
+
 ## 5.1.3 · Carga del kit sin cortes
 
 - Si la carga del kit se interrumpe (página cerrada o recargada), se retoma sola al volver a abrirlo; salir a

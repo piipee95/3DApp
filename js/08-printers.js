@@ -366,7 +366,7 @@ async function addOrderPrinterHours(order) {
     logError('handled', 'Horas de impresora: ' + error.message);
   }
 }
-const isFinished = status => ['ready', 'delivered'].includes(status);
+const isFinished = status => ['ready', 'shipped', 'delivered'].includes(status);
 function printerUsage(r) {
   const since = Math.max(0, n(r.hours_used) - n(r.hours_at_maintenance)),
     every = n(r.maintenance_every_hours);

@@ -1706,6 +1706,10 @@ div.shell {
   color: var(--violet);
   background: color-mix(in srgb, var(--violet) 8%, transparent);
 }
+.c-ship {
+  color: var(--magenta);
+  background: color-mix(in srgb, var(--magenta) 8%, transparent);
+}
 .c-done {
   color: var(--muted);
   background: var(--raised);

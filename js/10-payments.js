@@ -173,7 +173,7 @@ function paymentsMarkup(order) {
       : '') +
     (order.kind !== 'stock'
       ? '<div class="wa-actions"><span class="small muted">Avisar por WhatsApp:</span>' +
-        (['ready', 'delivered'].includes(order.status) || order.status === 'assembly'
+        (['ready', 'shipped', 'delivered'].includes(order.status) || order.status === 'assembly'
           ? '<button type="button" class="btn btn-ghost btn-sm" data-wa="ready">' +
             icon('message-circle') +
             'Pedido listo</button>'
@@ -372,6 +372,12 @@ function statusMessage(o) {
       printing: who + ', tu pedido ' + ref + ' ya está en impresión.' + due,
       assembly: who + ', estamos dando los últimos detalles a tu pedido ' + ref + '.' + due,
       ready: orderMessage(o, 'ready'),
+      shipped:
+        who +
+        ', tu pedido ' +
+        ref +
+        ' ya va en camino.' +
+        (orderBalance(o).due > 0 ? ' Saldo pendiente: ' + clp(orderBalance(o).due) + '.' : ''),
       delivered: who + ', ¡gracias por tu compra! Esperamos que disfrutes tu pedido ' + ref + '.'
     };
   return texts[o.status] ? texts[o.status] + (o.status === 'delivered' ? '' : track) : '';
