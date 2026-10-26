@@ -75,7 +75,7 @@ async function test(){
  const sw=fs.readFileSync(__dirname+'/../sw.js','utf8');
  for(const f of ['index.html','styles.css','manifest.webmanifest','js/supabase-client.js','js/01-core.js','js/99-start.js'])assert.ok(sw.includes("'"+f+"'"),f);
  assert.ok(!/supabase\.co/.test(sw.replace(/^\/\/.*$/gm,'')),'never caches Supabase');
- assert.match(fs.readFileSync(__dirname+'/../js/10-search-install.js','utf8'),/serviceWorker\.register\('sw\.js'\)/);
+ assert.match(fs.readFileSync(__dirname+'/../js/03-app.js','utf8'),/serviceWorker\.register\('sw\.js'\)/);
  console.log('PASS V1.9: global search (accents, multi-word, all sections, keyboard, shortcuts), install prompt, home-screen shortcuts, manifest and service worker.');
 }
 if(require.main===module)test().catch(error=>{console.error(error);process.exitCode=1});

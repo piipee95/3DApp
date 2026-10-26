@@ -1,4 +1,143 @@
 'use strict';
+// Cuenta: nombre e iniciales, Mi perfil, contraseña e invitaciones de socios.
+function authView() {
+  root.innerHTML =
+    '<div class="shell"><div class="auth card"><img class="auth-logo" src="' +
+    LOGO_SRC +
+    '" alt="Kultiverso Pop"><h1>KultiApp <span class="app-version">' +
+    APP_VERSION +
+    '</span></h1><p class="muted">Costos y producción 3D</p><p class="small muted">Kultiverso Pop · Powered by ELARA</p>' +
+    (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
+    (S.msg ? '<div class="success">' + esc(S.msg) + '</div>' : '') +
+    '<div class="login-tabs"><button class="btn tab active" data-mode="login">Ingresar</button><button class="btn tab" data-mode="signup">Crear cuenta</button></div><form id="authForm" class="grid"><div class="field"><label>Email</label><input id="email" type="email" required></div><div class="field"><label>Contraseña</label><input id="password" type="password" minlength="6" required><span id="passwordHint" class="small muted" hidden>' +
+    PASSWORD_HINT +
+    '</span></div><button class="btn btn-primary" type="submit">Ingresar</button></form></div></div>';
+  let mode = 'login';
+  qa('[data-mode]').forEach(
+    b =>
+      (b.onclick = () => {
+        mode = b.dataset.mode;
+        qa('[data-mode]').forEach(x => x.classList.toggle('active', x === b));
+        q('#authForm button[type=submit]').textContent = mode === 'login' ? 'Ingresar' : 'Crear cuenta';
+        q('#password').minLength = mode === 'login' ? 6 : PASSWORD_MIN;
+        q('#password').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+        q('#passwordHint').hidden = mode === 'login';
+      })
+  );
+  q('#authForm').onsubmit = async e => {
+    e.preventDefault();
+    const email = q('#email').value.trim(),
+      password = q('#password').value;
+    if (mode === 'login') {
+      let { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) fail(error.message);
+    } else {
+      const problem = await checkNewPassword(password);
+      if (problem) return fail(problem);
+      let { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: location.origin + location.pathname }
+      });
+      if (error) fail(error.message);
+      else {
+        S.msg = 'Cuenta creada. Revisa tu correo si se solicita verificación.';
+        render();
+      }
+    }
+  };
+}
+async function invite() {
+  if (!isOwner()) return toast('Solo el propietario puede invitar.', 'error');
+  const dialog = showDialog(
+    'inviteDialog',
+    '<div class="section-title"><h2>Invitar socio</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><form id="inviteForm" class="grid"><div class="field"><label for="inviteRole">Permisos</label><select id="inviteRole"><option value="editor">Editor · crea y modifica productos, pedidos e inventario</option><option value="viewer">Solo lectura · consulta sin modificar</option></select></div><div id="inviteResult" role="status"></div><div class="dialog-actions"><button class="btn btn-primary" type="submit">Crear enlace</button></div></form>'
+  );
+  q('#inviteForm').onsubmit = async e => {
+    e.preventDefault();
+    const b = e.submitter || e.target.querySelector('button[type=submit]');
+    b.disabled = true;
+    const { data, error } = await supabase.rpc('create_workspace_invite', {
+      wid: S.workspace.id,
+      invite_role: q('#inviteRole').value,
+      valid_hours: 168
+    });
+    b.disabled = false;
+    if (error) return (q('#inviteResult').innerHTML = '<div class="error">' + esc(error.message) + '</div>');
+    const url = location.origin + location.pathname + '?invite=' + encodeURIComponent(data);
+    q('#inviteResult').innerHTML =
+      '<div class="field"><label for="inviteLink">Enlace de invitación · válido por 7 días</label><div class="input-action"><input id="inviteLink" readonly value="' +
+      esc(url) +
+      '"><button type="button" class="btn btn-secondary" id="copyInvite">' +
+      icon('copy') +
+      '<span>Copiar</span></button></div></div>';
+    b.textContent = 'Crear otro enlace';
+    q('#copyInvite').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast('Enlace copiado.');
+      } catch {
+        q('#inviteLink').select();
+      }
+    };
+  };
+  return dialog;
+}
+// Password policy. The free Supabase plan cannot reject leaked passwords on the server, so new
+// passwords are checked here against Have I Been Pwned using k-anonymity: only the first five
+// characters of the SHA-1 hash leave the device.
+const PASSWORD_MIN = 10,
+  PASSWORD_HINT =
+    'Mínimo ' +
+    PASSWORD_MIN +
+    ' caracteres, con letras y números. Se revisa que no aparezca en filtraciones conocidas.';
+function passwordProblem(pw) {
+  if (pw.length < PASSWORD_MIN) return 'La contraseña debe tener al menos ' + PASSWORD_MIN + ' caracteres.';
+  if (!/[a-zA-ZÀ-ÿ]/.test(pw) || !/\d/.test(pw)) return 'La contraseña debe combinar letras y números.';
+  return '';
+}
+async function pwnedCount(pw) {
+  const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-1', new TextEncoder().encode(pw)))]
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+      .toUpperCase(),
+    prefix = hash.slice(0, 5),
+    suffix = hash.slice(5);
+  const res = await fetch('https://api.pwnedpasswords.com/range/' + prefix);
+  if (!res.ok) throw Error('HIBP ' + res.status);
+  for (const line of (await res.text()).split('\n')) {
+    const [s, c] = line.trim().split(':');
+    if (s === suffix) return parseInt(c, 10) || 0;
+  }
+  return 0;
+}
+// The leak check fails open: if the service is unreachable, the length and character rules still apply.
+async function checkNewPassword(pw) {
+  const problem = passwordProblem(pw);
+  if (problem) return problem;
+  try {
+    if ((await pwnedCount(pw)) > 0)
+      return 'Esta contraseña aparece en filtraciones de datos conocidas. Elige otra distinta.';
+  } catch (e) {
+    console.warn('No se pudo revisar la contraseña en filtraciones', e);
+  }
+  return '';
+}
+// V4.3: the name chosen in «Mi perfil» (Supabase user metadata); the email until there is one.
+const displayName = () => String(S.session?.user?.user_metadata?.name || '').trim();
+function userInitials() {
+  const email = S.session?.user?.email || '';
+  const name = (displayName() || email.split('@')[0]).replace(/[^a-zA-ZÀ-ÿ]+/g, ' ').trim();
+  const parts = name.split(' ').filter(Boolean);
+  return ((parts[0]?.[0] || 'K') + (parts[1]?.[0] || '')).toUpperCase();
+}
+// V4.2: personal greeting, the day in one sentence and big shortcuts to the daily actions.
+function userFirstName() {
+  const meta = S.session?.user?.user_metadata || {},
+    raw = meta.first_name || meta.name || String(S.session?.user?.email || '').split('@')[0];
+  const first = String(raw).split(/[\s._-]+/)[0] || '';
+  return first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : '';
+}
 // ---------------------------------------------------------------------------
 // V4.4: «Mi perfil» page: photo, name, username and WhatsApp, login email, password,
 // appearance and session. Personal data lives in the Supabase user metadata; the photo in

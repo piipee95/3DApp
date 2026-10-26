@@ -1,4 +1,172 @@
 'use strict';
+// Impresoras: horas de uso, mantención y fallas de impresión.
+function showResourceForm(resource) {
+  if (!canEdit()) return;
+  const isFilament = resource.kind === 'filament';
+  const dialog = showDialog(
+    'resourceDialog',
+    '<div class="section-title"><h2>' +
+      (isFilament ? 'Filamento' : 'Impresora') +
+      '</h2><button class="btn btn-ghost" data-close>Volver</button></div><form id="resourceForm" class="grid">' +
+      fieldHtml('Nombre', 'resourceName', resource.name, 'text', 'required maxlength="160"') +
+      (isFilament
+        ? fieldHtml('Marca / material', 'resourceMaterial', resource.material) +
+          fieldHtml('Color', 'resourceColor', resource.color || '#303030', 'color') +
+          fieldHtml(
+            'Precio por kilogramo CLP',
+            'resourcePrice',
+            resource.price_per_kg ?? S.settings.filament_price_per_kg,
+            'number',
+            'min="0" step="1" required'
+          )
+        : fieldHtml(
+            'Potencia eléctrica kW',
+            'resourcePower',
+            resource.power_kw ?? S.settings.printer_power_kw,
+            'number',
+            'min="0" max="100" step="0.01" required'
+          ) +
+          fieldHtml(
+            'Mantención cada (horas de impresión)',
+            'resourceMaint',
+            resource.maintenance_every_hours || '',
+            'number',
+            'min="0" max="100000" step="1" placeholder="Ej. 200 · vacío: sin aviso"'
+          )) +
+      '<label class="small"><input type="checkbox" id="resourceActive" ' +
+      (resource.active ? 'checked' : '') +
+      '> Disponible para seleccionar</label><div id="resourceFeedback" role="status" class="small"></div><button class="btn btn-primary" type="submit">Guardar recurso</button></form>'
+  );
+  q('#resourceForm').onsubmit = async e => {
+    e.preventDefault();
+    const b = e.submitter || e.target.querySelector('button[type=submit]');
+    if (b.disabled) return;
+    b.disabled = true;
+    try {
+      const value = {
+        name: q('#resourceName').value.trim(),
+        active: q('#resourceActive').checked,
+        ...(isFilament
+          ? {
+              material: q('#resourceMaterial').value.trim(),
+              color: q('#resourceColor').value,
+              price_per_kg: n(q('#resourcePrice').value)
+            }
+          : {
+              power_kw: n(q('#resourcePower').value),
+              maintenance_every_hours: Math.max(0, Math.round(n(q('#resourceMaint').value)))
+            })
+      };
+      // Updates may only touch the columns granted for update; workspace and kind are set once on insert.
+      const query = resource.id
+        ? supabase
+            .from('workspace_resources')
+            .update(value)
+            .eq('id', resource.id)
+            .eq('workspace_id', S.workspace.id)
+        : supabase
+            .from('workspace_resources')
+            .insert({ ...value, workspace_id: S.workspace.id, kind: resource.kind });
+      const { error } = await query.select().single();
+      if (error) throw error;
+      await loadResources();
+      dialog.close();
+      render();
+    } catch (error) {
+      q('#resourceFeedback').textContent = error.message;
+    } finally {
+      b.disabled = false;
+    }
+  };
+}
+function resourcesView() {
+  const printers = S.resources.filter(r => r.kind === 'printer');
+  root.innerHTML =
+    header(
+      'Impresoras',
+      canEdit()
+        ? '<button class="btn btn-secondary" id="newFailureBtn">' +
+            icon('triangle-alert') +
+            '<span>Registrar falla</span></button><button class="btn btn-primary" data-add-resource="printer">' +
+            icon('plus') +
+            '<span>Impresora</span></button>'
+        : ''
+    ) +
+    '<main class="shell narrow">' +
+    (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
+    '<section class="panel">' +
+    (printers.length
+      ? printers
+          .map(
+            r =>
+              '<div class="list-row static printer-row' +
+              (!r.active ? ' archived' : '') +
+              '"><span class="thumb-empty">' +
+              icon('printer') +
+              '</span><span class="lr-main"><b>' +
+              esc(r.name) +
+              '</b><span>' +
+              n(r.power_kw).toLocaleString('es-CL') +
+              ' kW de consumo máximo</span>' +
+              printerUsageMarkup(r) +
+              (canEdit() && r.active
+                ? '<span class="printer-actions"><button class="btn btn-ghost btn-sm" type="button" data-printer-hours="' +
+                  r.id +
+                  '">' +
+                  icon('plus') +
+                  'Sumar horas</button><button class="btn btn-ghost btn-sm" type="button" data-printer-maint="' +
+                  r.id +
+                  '">' +
+                  icon('wrench') +
+                  'Mantención hecha</button></span>'
+                : '') +
+              '</span><span class="chip ' +
+              (r.active ? 'c-ready' : 'c-cancel') +
+              '">' +
+              (r.active ? 'Disponible' : 'Inactiva') +
+              '</span>' +
+              (canEdit()
+                ? '<button class="btn icon-btn" type="button" data-edit-resource="' +
+                  r.id +
+                  '" aria-label="Editar ' +
+                  esc(r.name) +
+                  '" title="Editar">' +
+                  icon('pencil') +
+                  '</button>'
+                : '') +
+              '</div>'
+          )
+          .join('')
+      : '<div class="panel-empty">' +
+        icon('printer') +
+        '<b>Aún no hay impresoras</b><span>Regístralas con su potencia para calcular la electricidad.</span></div>') +
+    '</section><section class="panel" id="failuresPanel" hidden></section><p class="small muted footnote">La potencia se copia a cada impresión al elegir la impresora; cambiarla aquí no modifica productos anteriores.</p></main>';
+  common();
+  qa('[data-add-resource]').forEach(
+    b => (b.onclick = () => showResourceForm({ kind: b.dataset.addResource, active: true }))
+  );
+  qa('[data-edit-resource]').forEach(
+    b => (b.onclick = () => showResourceForm(S.resources.find(r => r.id === b.dataset.editResource)))
+  );
+  qa('[data-printer-hours]').forEach(
+    b =>
+      (b.onclick = () =>
+        printerAction(
+          S.resources.find(r => r.id === b.dataset.printerHours),
+          'add'
+        ))
+  );
+  qa('[data-printer-maint]').forEach(
+    b =>
+      (b.onclick = () =>
+        printerAction(
+          S.resources.find(r => r.id === b.dataset.printerMaint),
+          'maintenance'
+        ))
+  );
+  q('#newFailureBtn')?.addEventListener('click', () => showFailure());
+  failuresSummary();
+}
 // ---------------------------------------------------------------------------
 // V3.1: failed prints, printer hours/maintenance and photos of finished work.
 // ---------------------------------------------------------------------------
@@ -283,108 +451,6 @@ async function printerAction(r, action) {
   } catch (error) {
     toast(error.message, 'error');
   }
-}
-// ---- Photos of finished work (stored with product photos, under orders/) -----
-const orderPhotoFolder = order => S.workspace.id + '/orders/' + order.id;
-async function loadOrderPhotos(order) {
-  const folder = orderPhotoFolder(order);
-  const { data, error } = await supabase.storage
-    .from(PHOTO_BUCKET)
-    .list(folder, { limit: 20, sortBy: { column: 'created_at', order: 'asc' } });
-  if (error) throw error;
-  const paths = (data || []).filter(f => f.name && !f.name.startsWith('.')).map(f => folder + '/' + f.name);
-  if (!paths.length) return [];
-  const { data: signed, error: se } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrls(paths, 3600);
-  if (se) throw se;
-  return (signed || []).map((s, i) => ({ path: paths[i], url: s.signedUrl })).filter(p => p.url);
-}
-async function mountOrderPhotos(order, dialog) {
-  let box = dialog.querySelector('#orderPhotos');
-  if (!box) {
-    box = document.createElement('section');
-    box.id = 'orderPhotos';
-    box.className = 'pay-card';
-    dialog.querySelector('#orderForm').before(box);
-  }
-  box.innerHTML =
-    '<div class="pay-head"><h3>Fotos del trabajo</h3></div><p class="small muted">Cargando…</p>';
-  let photos;
-  try {
-    photos = await loadOrderPhotos(order);
-  } catch (error) {
-    box.querySelector('p').textContent = 'No se pudieron cargar las fotos: ' + error.message;
-    return;
-  }
-  if (!dialog.isConnected) return;
-  box.innerHTML =
-    '<div class="pay-head"><h3>Fotos del trabajo</h3>' +
-    (canEdit()
-      ? '<label class="btn btn-secondary btn-sm" for="orderPhotoFile">' +
-        icon('image') +
-        'Agregar foto</label><input id="orderPhotoFile" class="visually-hidden" type="file" accept="image/*">'
-      : '') +
-    '</div>' +
-    (photos.length
-      ? '<div class="order-photos">' +
-        photos
-          .map(
-            p =>
-              '<figure><a href="' +
-              esc(p.url) +
-              '" target="_blank" rel="noopener"><img src="' +
-              esc(p.url) +
-              '" alt="Trabajo terminado" loading="lazy"></a>' +
-              (canEdit()
-                ? '<button type="button" class="btn icon-btn" data-del-photo="' +
-                  esc(p.path) +
-                  '" aria-label="Quitar foto">' +
-                  icon('trash-2') +
-                  '</button>'
-                : '') +
-              '</figure>'
-          )
-          .join('') +
-        '</div>'
-      : '<p class="small muted">Sube la foto del trabajo terminado: queda como registro y para tu portafolio.</p>') +
-    '<div class="small" id="orderPhotoFeedback" role="status"></div>';
-  box.querySelector('#orderPhotoFile')?.addEventListener('change', async e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    box.querySelector('#orderPhotoFeedback').textContent = 'Subiendo…';
-    try {
-      const dataUrl = await optimizePhoto(file),
-        bin = atob(dataUrl.split(',')[1]),
-        blob = new Blob([Uint8Array.from(bin, c => c.charCodeAt(0))], { type: 'image/jpeg' });
-      const { error } = await supabase.storage
-        .from(PHOTO_BUCKET)
-        .upload(orderPhotoFolder(order) + '/' + crypto.randomUUID() + '.jpg', blob, {
-          contentType: 'image/jpeg',
-          upsert: false
-        });
-      if (error) throw error;
-      toast('Foto agregada.');
-      mountOrderPhotos(order, dialog);
-    } catch (error) {
-      box.querySelector('#orderPhotoFeedback').textContent = error.message;
-    }
-  });
-  box.querySelectorAll('[data-del-photo]').forEach(
-    b =>
-      (b.onclick = async () => {
-        if (
-          !(await confirmDialog({
-            title: 'Quitar foto',
-            body: 'La foto se eliminará del pedido.',
-            confirmLabel: 'Quitar',
-            danger: true
-          }))
-        )
-          return;
-        const { error } = await supabase.storage.from(PHOTO_BUCKET).remove([b.dataset.delPhoto]);
-        if (error) return toast(error.message, 'error');
-        mountOrderPhotos(order, dialog);
-      })
-  );
 }
 // Failures not already part of an order's real cost (loose or on orders without a real cost) reduce real profit.
 function failureWaste(y, m) {
