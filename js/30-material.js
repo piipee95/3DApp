@@ -17,6 +17,45 @@ const qtyText = (v, r) =>
   stockNumber(Math.round(n(v) * 1000) / 1000) + ' ' + (isFilament(r) ? 'g' : unitWord(r));
 // Grams left on a spool weighed with its empty spool (tare).
 const spoolGrams = (gross, tare) => Math.max(0, Math.round((n(gross) - n(tare)) * 10) / 10);
+// Physical count reminder: every material should be counted at least once a month.
+const COUNT_EVERY_DAYS = 30;
+const daysSince = iso => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 864e5) : null);
+function countAgo(r) {
+  const d = daysSince(r.counted_at);
+  return d == null
+    ? 'Nunca contado'
+    : d < 1
+      ? 'Contado hoy'
+      : d === 1
+        ? 'Contado ayer'
+        : 'Contado hace ' + d + ' días';
+}
+const countIsDue = r => r.active && (!r.counted_at || daysSince(r.counted_at) >= COUNT_EVERY_DAYS);
+const countDue = () => inventoryItems().filter(countIsDue);
+async function markCounted(ids) {
+  if (!ids.length) return;
+  const at = new Date().toISOString(),
+    { error } = await supabase
+      .from('workspace_resources')
+      .update({ counted_at: at })
+      .eq('workspace_id', S.workspace.id)
+      .in('id', ids);
+  if (error) throw error;
+  for (const r of S.resources) if (ids.includes(r.id)) r.counted_at = at;
+}
+function countReminder() {
+  const due = canEdit() ? countDue() : [];
+  if (!due.length) return '';
+  return (
+    '<button type="button" class="notice inventory-alert count-alert" id="countReminder">' +
+    icon('clipboard-check') +
+    '<span>' +
+    (due.length === 1
+      ? '«' + esc(due[0].name) + '» lleva más de ' + COUNT_EVERY_DAYS + ' días sin conteo físico.'
+      : due.length + ' materiales llevan más de ' + COUNT_EVERY_DAYS + ' días sin conteo físico.') +
+    ' <b>Hacer conteo →</b></span></button>'
+  );
+}
 function openMaterial(id) {
   if (!S.resources.some(r => r.id === id)) return toast('Ese material ya no existe.', 'error');
   S.materialId = id;
@@ -91,6 +130,12 @@ function materialView() {
             stockNumber(r.spool_net_g) +
             ' g'
           : '') +
+        '</p><p class="small mat-counted ' +
+        (countIsDue(r) ? 'warn' : 'muted') +
+        '">' +
+        icon('clipboard-check') +
+        countAgo(r) +
+        (countIsDue(r) ? ' · conviene contarlo de nuevo' : '') +
         '</p>'
       : '<p class="notice small">Aún no registras cuánto tienes de este material. Cuéntalo para empezar a controlar su stock.</p>') +
     (edit
@@ -651,6 +696,8 @@ function stockCountView() {
       esc(r.name) +
       '</b><span class="small muted">' +
       (r.counted ? 'En la app: ' + qtyText(r.stock_qty, r) : 'Sin conteo') +
+      ' · ' +
+      (countIsDue(r) ? '<span class="warn">' + countAgo(r) + '</span>' : countAgo(r)) +
       (n(r.reserved_qty) ? ' · reservado ' + qtyText(r.reserved_qty, r) : '') +
       '</span></div></div><div class="count-input">' +
       (isFilament(r)
@@ -701,10 +748,8 @@ function stockCountView() {
     if (!d || d.value === '' || d.value == null) return null;
     return isFilament(r) && d.weigh ? spoolGrams(d.value, r.spool_tare_g) : Math.max(0, n(d.value));
   };
-  const changes = () =>
-    items
-      .map(r => ({ r, qty: grams(r) }))
-      .filter(x => x.qty != null && (!x.r.counted || Math.abs(x.qty - n(x.r.stock_qty)) > 0.0005));
+  const filled = () => items.map(r => ({ r, qty: grams(r) })).filter(x => x.qty != null);
+  const changes = () => filled().filter(x => !x.r.counted || Math.abs(x.qty - n(x.r.stock_qty)) > 0.0005);
   const refresh = () => {
     for (const r of items) {
       const el = q('[data-count-diff="' + r.id + '"]'),
@@ -725,11 +770,15 @@ function stockCountView() {
             ? 'Sin cambio'
             : (diff > 0 ? '+' : '−') + qtyText(Math.abs(diff), r));
     }
-    const k = changes().length;
-    q('#countSummary').textContent = k
-      ? k + (k === 1 ? ' material cambia' : ' materiales cambian')
-      : 'Sin cambios';
-    q('#countSave').disabled = !k;
+    const k = changes().length,
+      f = filled().length;
+    q('#countSummary').textContent = f
+      ? f +
+        (f === 1 ? ' contado' : ' contados') +
+        ' · ' +
+        (k ? k + (k === 1 ? ' cambia' : ' cambian') : 'sin cambios')
+      : 'Escribe lo que cuentes';
+    q('#countSave').disabled = !f;
   };
   qa('[data-count-input]').forEach(
     input =>
@@ -754,9 +803,11 @@ function stockCountView() {
   };
   q('#countSave').onclick = async () => {
     const list = changes(),
+      counted = filled().map(x => x.r.id),
       b = q('#countSave');
     b.disabled = true;
-    const failed = [];
+    const failed = [],
+      failedIds = new Set();
     let done = 0;
     for (const { r, qty } of list) {
       try {
@@ -772,16 +823,27 @@ function stockCountView() {
           request_key: crypto.randomUUID()
         });
         if (error) throw error;
-        delete S.countDraft[r.id];
         done++;
       } catch (error) {
+        failedIds.add(r.id);
         failed.push(r.name + ': ' + error.message);
       }
     }
+    // Everything counted gets today's date, also what did not change.
+    const ok = counted.filter(id => !failedIds.has(id));
+    try {
+      await markCounted(ok);
+      for (const id of ok) delete S.countDraft[id];
+    } catch (error) {
+      failed.push(error.message);
+    }
     await loadResources();
-    if (done)
+    if (ok.length)
       toast(
-        'Conteo guardado: ' + done + (done === 1 ? ' material actualizado.' : ' materiales actualizados.')
+        'Conteo guardado: ' +
+          ok.length +
+          (ok.length === 1 ? ' material contado' : ' materiales contados') +
+          (done ? ' (' + done + ' con ajuste).' : ', sin diferencias.')
       );
     if (failed.length) toast('No se guardó ' + failed.join(' · '), 'error');
     if (!failed.length) {

@@ -169,6 +169,7 @@ function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
           });
           if (me) throw me;
         }
+        await markCounted([id]);
       }
       await loadResources();
       dialog.close();
@@ -390,6 +391,7 @@ function showStockMovement(r, mode = 'in') {
         request_key: key
       });
       if (error && error.code !== '23505') throw error;
+      if (mode === 'set' || mode === 'first') await markCounted([r.id]);
       await loadResources();
       dialog.close();
       toast('Stock de ' + r.name + ' actualizado.');

@@ -5494,3 +5494,24 @@ button.sheet-user > svg {
     display: none;
   }
 }
+.count-alert {
+  gap: 10px;
+  align-items: center;
+  margin: 12px 0;
+}
+.count-alert svg,
+.mat-counted svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.mat-counted {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.mat-counted.warn,
+.count-name .warn {
+  color: var(--yellow);
+}

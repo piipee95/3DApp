@@ -21,6 +21,9 @@ async function test(){
   S.orders=[{id:'o1',order_no:22,title:'Cuadro F1',inventory_state:'reserved',status:'printing',kind:'customer',quantity:1,created_at:new Date().toISOString()}];
   S.mode='inventory';render()`);
  // List: quick + / −, a level bar, the count mode button; tapping the row opens the sheet with its own link.
+ // Physical count reminder: never-counted materials ask for a count (Inventario and Inicio's Pendientes).
+ assert.match(run('q("#countReminder").textContent'),/2 materiales llevan más de 30 días sin conteo físico/);
+ assert.ok(run('reminders().some(x=>x.go==="stockcount")'));
  assert.ok(run(`!!q('[data-stock="${F}"]')&&!!q('[data-stock-out="${F}"]')&&!!q('#stockCount')&&!!q('[data-material-row="${F}"] .level')`));
  run(`q('[data-material-row="${F}"] .inv-name').click()`);await flush();
  assert.equal(run('S.mode'),'material');assert.equal(run('location.hash'),'#material/'+F);
@@ -62,10 +65,13 @@ async function test(){
  run(`q('[data-count-weigh="${F}"]').click()`);
  run(`const i=q('[data-count-input="${F}"]');i.value='1190';i.dispatchEvent(new Event('input'));const j=q('[data-count-input="${C}"]');j.value='30';j.dispatchEvent(new Event('input'))`);
  assert.match(run(`q('[data-count-diff="${F}"]').textContent`),/= 1\.010 g · −490 g/);assert.match(run(`q('[data-count-diff="${C}"]').textContent`),/Sin cambio/);
- assert.equal(run('q("#countSummary").textContent'),'1 material cambia');
+ assert.equal(run('q("#countSummary").textContent'),'2 contados · 1 cambia');
  run(`writes.length=0;q('#countSave').click()`);await flush(30);
  const mv=JSON.parse(run('JSON.stringify(writes.filter(w=>w.op==="insert").map(w=>w.v))'));
- assert.equal(mv.length,1);assert.equal(mv[0].quantity,-490);assert.equal(mv[0].note,'Conteo físico');assert.equal(run('S.mode'),'inventory');
+ assert.equal(mv.length,1);assert.equal(mv[0].quantity,-490);
+ // Both counted materials get today's date (the unchanged one too) and the reminder goes away.
+ assert.ok(run('!!writes.find(w=>w.op==="update"&&w.v.counted_at)'));
+ assert.equal(run('countDue().length'),0);assert.match(run('q("#countReminder")?.textContent||"none"'),/none/);assert.equal(mv[0].note,'Conteo físico');assert.equal(run('S.mode'),'inventory');
  // Reload with the material link restores the sheet.
  run(`history.replaceState(null,'','#material/${F}');S.mode='home'`);assert.equal(await dom.window.eval('restoreView()'),true);assert.equal(run('S.mode'),'material');
  dom.window.close();

@@ -308,7 +308,9 @@ function inventoryView() {
     count('uncounted') +
     '</b></div><div><span>Materiales</span><b class="num">' +
     items.length +
-    '</b></div></div><div class="toolbar">' +
+    '</b></div></div>' +
+    countReminder() +
+    '<div class="toolbar">' +
     searchBox('inventorySearch', 'Buscar material', S.inventorySearch) +
     (canEdit()
       ? '<button id="stockCount" class="btn btn-secondary" type="button">' +
@@ -395,6 +397,7 @@ function inventoryView() {
   );
   qa('[data-material]').forEach(b => (b.onclick = () => openMaterial(b.dataset.material)));
   q('#stockCount')?.addEventListener('click', () => goMode('stockcount'));
+  q('#countReminder')?.addEventListener('click', () => goMode('stockcount'));
   // Tapping a row (outside its buttons and menu) opens the material sheet.
   qa('[data-material-row]').forEach(
     row =>

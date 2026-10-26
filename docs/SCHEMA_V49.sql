@@ -9,3 +9,13 @@ alter table public.workspace_resources
 grant select (spool_net_g, spool_tare_g, pack_size, notes) on public.workspace_resources to authenticated;
 grant insert (spool_net_g, spool_tare_g, pack_size, notes) on public.workspace_resources to authenticated;
 grant update (spool_net_g, spool_tare_g, pack_size, notes) on public.workspace_resources to authenticated;
+
+-- Second step (migration kultiapp_v49_counted_at): when each material was last physically counted,
+-- for the «Modo conteo» reminder. Backfilled from the last first count or adjustment.
+alter table public.workspace_resources add column counted_at timestamptz;
+grant select (counted_at) on public.workspace_resources to authenticated;
+grant insert (counted_at) on public.workspace_resources to authenticated;
+grant update (counted_at) on public.workspace_resources to authenticated;
+update public.workspace_resources w set counted_at = m.last
+ from (select resource_id, max(created_at) last from public.inventory_movements where kind in ('opening', 'adjustment') group by resource_id) m
+ where m.resource_id = w.id and w.counted;

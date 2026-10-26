@@ -21,7 +21,7 @@ async function test(){
    {id:'q2',title:'Maceta',client_name:'Luis',status:'sent',validity_days:15,created_at:ago(2)},
    {id:'q3',title:'Viejo',status:'sent',validity_days:5,created_at:ago(9)}];
   S.resources=[{id:'pr',kind:'printer',name:'Bambu A1',active:true,hours_used:250,hours_at_maintenance:0,maintenance_every_hours:200},
-   {id:'m1',kind:'supply',name:'Marco 30x40',unit:'un',active:true,counted:true,stock_qty:1,reserved_qty:0,min_stock:3}];`);
+   {id:'m1',kind:'supply',name:'Marco 30x40',unit:'un',active:true,counted:true,stock_qty:1,reserved_qty:0,min_stock:3,counted_at:ago(1)}];`);
  const list=JSON.parse(run('JSON.stringify(reminders())'));
  assert.deepEqual(list.map(r=>r.order||r.quote||r.go),['late','today','tom','ready','owed','q1','resources','inventory']);
  assert.match(list[0].sub,/^Atrasado: era para el/);assert.equal(list[1].sub,'Se entrega hoy · Armado');assert.equal(list[2].sub,'Se entrega mañana · Pendiente');

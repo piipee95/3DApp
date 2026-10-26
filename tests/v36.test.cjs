@@ -5,7 +5,7 @@ const flush=async(k=8)=>{for(let i=0;i<k;i++)await new Promise(r=>setTimeout(r,0
 async function test(){
  const dom=boot(),run=s=>dom.window.run(s);
  run(`window.writes=[];window.usage={inventory_order_lines:[],products:[],print_jobs:[]};
-  supabase.from=table=>{const call={table,eqs:[]};const q={select(){return q},eq(k,v){call.eqs.push([k,v]);return q},order(){return q},limit(){return q},single(){return q},
+  supabase.from=table=>{const call={table,eqs:[]};const q={select(){return q},eq(k,v){call.eqs.push([k,v]);return q},in(){return q},order(){return q},limit(){return q},single(){return q},
    contains(k,v){call.contains=[k,v];window.lastContains=[k,v];return q},insert(v){call.op='insert';call.value=v;writes.push(call);return q},update(v){call.op='update';call.value=v;writes.push(call);return q},
    then(a,b){const data=call.op?{id:'new1',...call.value}:(table==='workspace_resources'?S.__db||[]:usage[table]||[]);return Promise.resolve({data,error:null}).then(a,b)}};return q};
   S.__db=[{id:'a',kind:'supply',name:'Cuadros con fondo A4',unit:'un',unit_cost:3000,counted:false,active:true,stock_qty:0,reserved_qty:0,min_stock:9},
@@ -26,11 +26,11 @@ async function test(){
  run(`q('#stockQuantity').value=12;q('#stockQuantity').dispatchEvent(new Event('input'))`);
  assert.match(run('q("#stockPreview").textContent'),/Total: \$36\.000.*Quedarás con 12 unidades/);
  run(`q('#stockForm').requestSubmit()`);await flush();
- let w=JSON.parse(run('JSON.stringify(writes.pop())'));
+ let w=JSON.parse(run('JSON.stringify(writes.filter(x=>x.table==="inventory_movements").pop())'));
  assert.equal(w.table,'inventory_movements');assert.equal(w.value.kind,'opening');assert.equal(w.value.quantity,12);assert.equal(w.value.unit_cost,3000);assert.equal(w.value.note,'');
  // Intake for a filament: price per kg becomes cost per gram.
  run(`showStockMovement(S.resources.find(r=>r.id==='f'));q('#stockQuantity').value=1000;q('#stockPrice').value=16000;q('#stockForm').requestSubmit()`);await flush();
- w=JSON.parse(run('JSON.stringify(writes.pop())'));assert.equal(w.value.kind,'purchase');assert.equal(w.value.quantity,1000);assert.equal(w.value.unit_cost,16);
+ w=JSON.parse(run('JSON.stringify(writes.filter(x=>x.table==="inventory_movements").pop())'));assert.equal(w.value.kind,'purchase');assert.equal(w.value.quantity,1000);assert.equal(w.value.unit_cost,16);
  // Change quantity: type what you have; the difference is recorded.
  run(`showStockMovement(S.resources.find(r=>r.id==='b'),'set')`);
  assert.equal(run('q("#stockQuantity").value'),'50');
@@ -39,10 +39,10 @@ async function test(){
  run(`q('#stockQuantity').value=3;q('#stockForm').requestSubmit()`);await flush();
  assert.match(run('q("#stockFeedback").textContent'),/reservadas para pedidos/);
  run(`q('#stockQuantity').value=40;q('#stockForm').requestSubmit()`);await flush();
- w=JSON.parse(run('JSON.stringify(writes.pop())'));assert.equal(w.value.kind,'adjustment');assert.equal(w.value.quantity,-10);
+ w=JSON.parse(run('JSON.stringify(writes.filter(x=>x.table==="inventory_movements").pop())'));assert.equal(w.value.kind,'adjustment');assert.equal(w.value.quantity,-10);
  // Take out with a reason.
  run(`showStockMovement(S.resources.find(r=>r.id==='b'),'out');q('#stockQuantity').value=2;q('#stockReason').value='Regalo o muestra';q('#stockNote').value='Feria';q('#stockForm').requestSubmit()`);await flush();
- w=JSON.parse(run('JSON.stringify(writes.pop())'));assert.equal(w.value.kind,'loss');assert.equal(w.value.quantity,-2);assert.equal(w.value.note,'Regalo o muestra · Feria');
+ w=JSON.parse(run('JSON.stringify(writes.filter(x=>x.table==="inventory_movements").pop())'));assert.equal(w.value.kind,'loss');assert.equal(w.value.quantity,-2);assert.equal(w.value.note,'Regalo o muestra · Feria');
  // Edit form: price and quantity together; a changed quantity is saved as a correction.
  run(`writes.length=0;showInventoryForm(S.resources.find(r=>r.id==='b'));q('#invCost').value=400;q('#invQty').value=45;q('#inventoryForm').requestSubmit()`);await flush();
  w=JSON.parse(run('JSON.stringify(writes)'));
