@@ -483,7 +483,7 @@ function brandBytes(v) {
   const x = n(v);
   if (x >= 1073741824) return (x / 1073741824).toLocaleString('es-CL', { maximumFractionDigits: 2 }) + ' GB';
   if (x >= 1048576) return (x / 1048576).toLocaleString('es-CL', { maximumFractionDigits: 1 }) + ' MB';
-  return Math.max(1, Math.round(x / 1024)).toLocaleString('es-CL') + ' KB';
+  return (x ? Math.max(1, Math.round(x / 1024)) : 0).toLocaleString('es-CL') + ' KB';
 }
 // The type is taken from the browser, or from the extension when the browser leaves it empty
 // (SVG and ZIP on some systems).
@@ -663,7 +663,16 @@ function brandView() {
     '</div><span class="small muted">Hasta ' +
     brandBytes(BRAND_MAX_BYTES) +
     ' por archivo · PNG, JPG, WebP, SVG, PDF y ZIP · se guardan originales, sin compresión ni cambios de tamaño</span></section>' +
-    (missing.length && filter !== 'archived'
+    (S.brandImport
+      ? '<section class="panel brand-importing"><b>' +
+        icon('palette') +
+        'Ordenando el kit de marca</b><span class="small muted" id="brandImportText">' +
+        brandImportText() +
+        '</span><span class="level brand-level ok"><i id="brandImportBar" style="width:' +
+        brandImportPct() +
+        '%"></i></span></section>'
+      : '') +
+    (missing.length && filter !== 'archived' && !S.brandImport
       ? '<details class="panel brand-missing"' +
         (live.length < 4 ? ' open' : '') +
         '><summary class="panel-h"><h2>' +
@@ -779,6 +788,14 @@ function brandView() {
       })
   );
   q('#brandImport')?.addEventListener('click', importBrandAppFiles);
+  // An empty kit is filled once with the team's files, so editors find it ordered without a click.
+  if (edit && Array.isArray(S.brandAssets) && !S.brandAssets.length && !S.brandImport) {
+    S.brandAutoImported ??= new Set();
+    if (!S.brandAutoImported.has(S.workspace.id)) {
+      S.brandAutoImported.add(S.workspace.id);
+      importBrandAppFiles();
+    }
+  }
   q('#brandUpload')?.addEventListener('click', () =>
     pickBrandFiles({ category: BRAND_CATEGORIES[filter] ? filter : 'other' })
   );
@@ -1043,17 +1060,27 @@ function showBrandUpload(files, preset = {}) {
 }
 const brandAppPending = () =>
   BRAND_APP_FILES.filter(f => !(S.brandAssets || []).some(a => a.original_name === f.path.split('/').pop()));
+const brandImportText = () =>
+  'Agregando ' +
+  S.brandImport.step +
+  ' de ' +
+  S.brandImport.total +
+  ' archivos, tal cual, cada uno en su categoría…';
+const brandImportPct = () => Math.max(2, Math.round((S.brandImport.step / S.brandImport.total) * 100));
 // Adds the brand files that ship with KultiApp, byte for byte.
 async function importBrandAppFiles() {
-  if (!canEdit()) return;
-  const b = q('#brandImport'),
-    pending = brandAppPending(),
+  if (!canEdit() || S.brandImport) return;
+  const pending = brandAppPending(),
     groups = {};
-  if (b) b.disabled = true;
+  if (!pending.length) return;
+  S.brandImport = { step: 0, total: pending.length };
+  if (S.mode === 'brand') render();
   let done = 0;
   const failed = [];
-  for (const [i, f] of pending.entries()) {
-    if (b) b.textContent = 'Agregando ' + (i + 1) + ' de ' + pending.length + '…';
+  for (const f of pending) {
+    S.brandImport.step++;
+    if (q('#brandImportText')) q('#brandImportText').textContent = brandImportText();
+    if (q('#brandImportBar')) q('#brandImportBar').style.width = brandImportPct() + '%';
     const name = f.path.split('/').pop();
     try {
       const res = await fetch(f.path, { cache: 'no-store' });
@@ -1079,6 +1106,7 @@ async function importBrandAppFiles() {
       failed.push(f.name + ': ' + error.message);
     }
   }
+  S.brandImport = null;
   await Promise.all([loadBrandAssets().catch(() => {}), loadBrandUsage()]);
   if (done) toast(done + (done === 1 ? ' archivo agregado al kit.' : ' archivos agregados al kit.'));
   if (failed.length) toast('No se pudo agregar ' + failed.join(' · '), 'error');

@@ -5856,3 +5856,13 @@ button.sheet-user > svg {
 .brand-missing:not([open]) > summary {
   border-bottom: 0;
 }
+
+.brand-importing {
+  display: grid;
+  gap: 8px;
+}
+.brand-importing b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

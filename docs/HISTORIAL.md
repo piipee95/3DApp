@@ -2,6 +2,11 @@
 
 Resumen de cada versión, de la más reciente a la más antigua. El detalle completo de cada una está en `docs/versiones/`.
 
+## 5.1.2 · El kit se ordena solo
+
+- La primera vez que un propietario o editor abre un Kit de marca vacío, se cargan solos todos los archivos de
+  la marca, cada uno en su categoría, con una barra de avance. Después no se repite (lo borrado no vuelve).
+
 ## 5.1.1 · Kit oficial en el Kit de marca
 
 - Los paquetes del equipo («KIT PNG V3» y «Tarjetas y etiquetas») quedan listos para agregar: logos, isotipo K,
