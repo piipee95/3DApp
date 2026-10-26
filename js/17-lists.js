@@ -193,6 +193,7 @@ function productionView() {
         '</span></div>') +
     '</section></main>';
   common();
+  mountOrderReview();
   bindSearch('orderSearch', v => (S.orderSearch = v), productionView);
   qa('[data-order-filter]').forEach(
     b =>
@@ -278,11 +279,14 @@ function inventoryView() {
   root.innerHTML =
     header(
       'Inventario',
-      canEdit()
-        ? '<button id="addInventory" class="btn btn-primary">' +
+      '<button id="shoppingList" class="btn btn-secondary" type="button" aria-label="Lista de compras" title="Lista de compras">' +
+        icon('shopping-cart') +
+        '<span>Lista de compras</span></button>' +
+        (canEdit()
+          ? '<button id="addInventory" class="btn btn-primary">' +
             icon('plus') +
             '<span>Material</span></button>'
-        : ''
+          : '')
     ) +
     '<main class="shell">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
@@ -370,6 +374,7 @@ function inventoryView() {
   );
   q('#reloadInventory').onclick = () => goMode('inventory');
   q('#addInventory')?.addEventListener('click', () => showInventoryForm());
+  q('#shoppingList').onclick = () => showShoppingList();
   qa('[data-stock]').forEach(
     b => (b.onclick = () => showStockMovement(S.resources.find(r => r.id === b.dataset.stock)))
   );
