@@ -235,25 +235,31 @@ function inventoryActions(r) {
     '</button>';
   return (
     (canEdit()
-      ? '<button class="btn btn-secondary btn-sm" type="button" data-stock="' +
-        r.id +
-        '">' +
-        (r.counted ? icon('plus') + 'Ingreso' : 'Contar stock') +
-        '</button>'
+      ? r.counted
+        ? '<button class="btn btn-secondary btn-sm icon-only" type="button" data-stock="' +
+          r.id +
+          '" aria-label="Ingreso de ' +
+          esc(r.name) +
+          '" title="Ingreso">' +
+          icon('plus') +
+          '</button><button class="btn btn-secondary btn-sm icon-only" type="button" data-stock-out="' +
+          r.id +
+          '" aria-label="Salida de ' +
+          esc(r.name) +
+          '" title="Salida">' +
+          icon('minus') +
+          '</button>'
+        : '<button class="btn btn-secondary btn-sm" type="button" data-stock="' +
+          r.id +
+          '">Contar stock</button>'
       : '') +
     '<details class="row-menu"><summary class="btn icon-btn" aria-label="Acciones de ' +
     esc(r.name) +
     '">' +
     icon('ellipsis-vertical') +
     '</summary><div class="menu-pop">' +
-    (canEdit()
-      ? item('data-inventory-edit', 'pencil', 'Editar precio y datos') +
-        (r.counted
-          ? item('data-stock-set', 'refresh-cw', 'Cambiar cantidad') +
-            item('data-stock-out', 'log-out', 'Sacar del stock')
-          : '')
-      : '') +
-    item('data-ledger', 'history', 'Historial') +
+    item('data-material', 'layers', canEdit() ? 'Abrir ficha (editar todo)' : 'Abrir ficha') +
+    (canEdit() && r.counted ? item('data-stock-set', 'refresh-cw', 'Ajustar al real') : '') +
     (canEdit()
       ? item(
           'data-inventory-archive',
@@ -302,8 +308,15 @@ function inventoryView() {
     count('uncounted') +
     '</b></div><div><span>Materiales</span><b class="num">' +
     items.length +
-    '</b></div></div><div class="toolbar">' +
+    '</b></div></div>' +
+    countReminder() +
+    '<div class="toolbar">' +
     searchBox('inventorySearch', 'Buscar material', S.inventorySearch) +
+    (canEdit()
+      ? '<button id="stockCount" class="btn btn-secondary" type="button">' +
+        icon('clipboard-check') +
+        '<span>Modo conteo</span></button>'
+      : '') +
     '<button id="reloadInventory" class="btn icon-btn" type="button" aria-label="Actualizar" title="Actualizar">' +
     icon('refresh-cw') +
     '</button></div>' +
@@ -327,6 +340,8 @@ function inventoryView() {
             return (
               '<div class="inv-row' +
               (!r.active ? ' archived' : '') +
+              '" data-material-row="' +
+              r.id +
               '"><div class="prod-cell inv-name"><span class="swatch" style="background:' +
               (/^#[0-9a-f]{6}$/i.test(r.color || '') ? r.color : '#303a4d') +
               '"></span><div><b>' +
@@ -334,7 +349,9 @@ function inventoryView() {
               '</b><span>' +
               (r.kind === 'filament' ? 'Filamento' : 'Insumo') +
               (r.material ? ' · ' + esc(r.material) : '') +
-              '</span></div></div><div class="inv-num inv-avail" data-label="Disponible"><b>' +
+              '</span>' +
+              (r.counted ? levelBar(r) : '') +
+              '</div></div><div class="inv-num inv-avail" data-label="Disponible"><b>' +
               qty(availableStock(r), r) +
               '</b></div><div class="inv-num inv-reserved" data-label="Reservado">' +
               qty(r.reserved_qty, r) +
@@ -378,11 +395,16 @@ function inventoryView() {
   qa('[data-stock]').forEach(
     b => (b.onclick = () => showStockMovement(S.resources.find(r => r.id === b.dataset.stock)))
   );
-  qa('[data-inventory-edit]').forEach(
-    b => (b.onclick = () => showInventoryForm(S.resources.find(r => r.id === b.dataset.inventoryEdit)))
-  );
-  qa('[data-ledger]').forEach(
-    b => (b.onclick = () => showInventoryLedger(S.resources.find(r => r.id === b.dataset.ledger)))
+  qa('[data-material]').forEach(b => (b.onclick = () => openMaterial(b.dataset.material)));
+  q('#stockCount')?.addEventListener('click', () => goMode('stockcount'));
+  q('#countReminder')?.addEventListener('click', () => goMode('stockcount'));
+  // Tapping a row (outside its buttons and menu) opens the material sheet.
+  qa('[data-material-row]').forEach(
+    row =>
+      (row.onclick = e => {
+        if (e.target.closest('button,summary,details,a,input')) return;
+        openMaterial(row.dataset.materialRow);
+      })
   );
   const byId = id => S.resources.find(r => r.id === id);
   qa('[data-stock-set]').forEach(b => (b.onclick = () => showStockMovement(byId(b.dataset.stockSet), 'set')));

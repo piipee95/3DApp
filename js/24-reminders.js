@@ -85,6 +85,19 @@ function reminders() {
       sub: 'Revisa el inventario y compra antes de quedarte sin stock',
       go: 'inventory'
     });
+  const uncounted = canEdit() ? countDue() : [];
+  if (uncounted.length)
+    list.push({
+      tone: 'warn',
+      icon: 'clipboard-check',
+      text: 'Conteo de inventario',
+      sub:
+        (uncounted.length === 1 ? '1 material lleva' : uncounted.length + ' materiales llevan') +
+        ' más de ' +
+        COUNT_EVERY_DAYS +
+        ' días sin conteo físico: usa el Modo conteo',
+      go: 'stockcount'
+    });
   return list;
 }
 // Unique orders/quotes/etc. so an order that is both late and ready counts once.

@@ -36,10 +36,16 @@ const PAGE_TITLES = {
   inventory: 'Inventario',
   files: 'Archivos del cliente',
   resources: 'Impresoras',
-  profile: 'Mi perfil'
+  profile: 'Mi perfil',
+  material: 'Material',
+  stockcount: 'Modo conteo'
 };
 function navActive(mode) {
-  return S.mode === mode || (mode === 'dashboard' && S.mode === 'product');
+  return (
+    S.mode === mode ||
+    (mode === 'dashboard' && S.mode === 'product') ||
+    (mode === 'inventory' && ['material', 'stockcount'].includes(S.mode))
+  );
 }
 function navCount(mode) {
   if (mode === 'files')

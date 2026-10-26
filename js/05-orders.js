@@ -59,7 +59,7 @@ async function goMode(mode) {
       await loadOrders();
       await loadResources();
     }
-    if (mode === 'resources' || mode === 'inventory' || mode === 'product') await loadResources();
+    if (['resources', 'inventory', 'product', 'material', 'stockcount'].includes(mode)) await loadResources();
     if (['resources', 'reports', 'finance'].includes(mode)) await loadFailures();
     if (mode === 'dashboard') await loadProducts();
     if (mode === 'quotes') await Promise.all([loadQuotes(), loadCustomers(), loadOrders()]);
