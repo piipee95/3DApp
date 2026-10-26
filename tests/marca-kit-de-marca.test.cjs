@@ -101,13 +101,36 @@ async function test(){
  assert.deepEqual(JSON.parse(run('JSON.stringify(storageCalls.find(c=>c[0]==="remove"))')),['remove','brand-assets',[W+'/brand/logo0.png']]);
  assert.ok(run('!!calls.find(c=>c.op==="delete"&&c.eq.some(e=>e[1]==="logo0"))'));
  assert.ok(run('!!calls.find(c=>c.op==="update"&&c.v.is_current===true&&c.eq.some(e=>e[1]==="logo1"))'));
- // App files: the official logo and icons are added byte for byte, marked official.
- run(`calls.length=0;storageCalls.length=0;S.brandAssets=[];window.fetch=async p=>({ok:true,blob:async()=>new Blob(['data-'+p])});importBrandAppFiles()`);await flush(80);
- const imp=JSON.parse(run('JSON.stringify(calls.filter(c=>c.op==="insert").map(c=>[c.v.original_name,c.v.category,c.v.background,c.v.official]))'));
- assert.equal(imp.length,9);assert.deepEqual(imp[0],['kultiverso-pop-logo.webp','logos','transparent',true]);assert.ok(imp.slice(1,6).every(r=>r[1]==='app_web'&&r[3]));
- // WhatsApp pieces (official logo placed on the icons' background) go to «Redes sociales», pending approval.
- assert.deepEqual(imp.slice(6).map(r=>[r[0],r[1],r[3]]),[['whatsapp-perfil-640.png','social',false],['whatsapp-portada-1920x1080.png','social',false],['whatsapp-estado-1080x1920.png','social',false]]);
- assert.match(run('JSON.stringify(calls.filter(c=>c.op==="insert")[6].v.usage)'),/640×640 px, el logo completo cabe en el recorte circular/);
+ // Brand files shipped with the app: added byte for byte, official only where approved, grouped as versions.
+ run(`calls.length=0;storageCalls.length=0;S.brandAssets=[];window.fetch=async p=>({ok:true,blob:async()=>new Blob(['data-'+p])});importBrandAppFiles()`);await flush(300);
+ const kit=JSON.parse(run('JSON.stringify(calls.filter(c=>c.op==="insert").map(c=>c.v))'));
+ const by=f=>kit.find(v=>v.original_name===f);
+ assert.equal(kit.length,run('BRAND_APP_FILES.length'));assert.equal(kit.length,58);
+ assert.equal(new Set(kit.map(v=>v.original_name)).size,58);
+ assert.deepEqual([by('03_LOGO_FONDO_BLANCO.png').background,by('02_LOGO_FONDO_NEGRO.png').background,by('01_LOGO_ORIGINAL_2048x682.png').background],['light','dark','transparent']);
+ assert.ok(by('03_LOGO_FONDO_BLANCO.png').official&&by('01_Tarjeta_presentacion_frente_REDONDEADA.png').official);
+ // The kit flags the reconstructed K, the interface mock-ups and the reference photo for review.
+ assert.ok(!by('01_K_PRINCIPAL_NEGRA_1024.png').official&&!by('01_MENU_LATERAL.png').official&&!by('REFERENCIA_APROBADA.jpg').official);
+ assert.equal(by('REFERENCIA_APROBADA.jpg').category,'other');
+ assert.match(by('02_Tarjeta_presentacion_reverso_REDONDEADA.png').usage,/QR .*no está validado/);
+ assert.equal(by('03_Tarjeta_agradecimiento_frente_REDONDEADA.png').category,'thanks');
+ assert.deepEqual(['whatsapp-perfil-640.png','whatsapp-portada-1920x1080.png','whatsapp-estado-1080x1920.png'].map(f=>[by(f).category,by(f).official]),[['social',false],['social',false],['social',false]]);
+ assert.deepEqual([by('instagram-perfil-1080.png').category,by('instagram-perfil-1080.png').official],['social',false]);
+ assert.match(by('whatsapp-perfil-640.png').usage,/640×640 px, el logo completo cabe en el recorte circular/);
+ // Label shapes and icon sizes are versions of one design: one shared group, the first listed is current.
+ const ctl=kit.filter(v=>/control_producto/.test(v.original_name));
+ assert.equal(ctl[0].group_id,ctl[1].group_id);assert.deepEqual(ctl.map(v=>[v.variant_label,v.is_current]),[['Esquinas redondeadas',true],['Rectangular',false]]);
+ const icons=kit.filter(v=>/^ICONO_K_/.test(v.original_name));
+ assert.equal(icons.length,9);assert.equal(new Set(icons.map(v=>v.group_id)).size,1);assert.deepEqual(icons.filter(v=>v.is_current).map(v=>v.variant_label),['512 px']);
+ assert.notEqual(ctl[0].group_id,icons[0].group_id);
+ assert.ok(!by('03_LOGO_FONDO_BLANCO.png').group_id);
+ // Every listed file exists in the repository, so the import never hits a missing path.
+ const fs=require('fs'),path=require('path');
+ for(const f of JSON.parse(run('JSON.stringify(BRAND_APP_FILES.map(f=>f.path))')))assert.ok(fs.existsSync(path.join(__dirname,'..',f)),f);
+ // A later import adds missing sizes to the design already in the kit, without changing its current version.
+ run(`calls.length=0;S.brandAssets=[{id:'k512',group_id:'gk',original_name:'ICONO_K_512.png',is_current:true}];BRAND_APP_FILES.splice(0,BRAND_APP_FILES.length,...BRAND_APP_FILES.filter(f=>f.group==='icon-k'));importBrandAppFiles()`);await flush(120);
+ const again=JSON.parse(run('JSON.stringify(calls.filter(c=>c.op==="insert").map(c=>c.v))'));
+ assert.equal(again.length,8);assert.ok(again.every(v=>v.group_id==='gk'&&v.is_current===false));
  // Viewers browse and download, but cannot upload, edit or delete.
  run(`S.workspace.role='viewer';S.brandAssets=rows;brandView()`);
  assert.ok(run('!q("#brandUpload")&&!q("#brandDrop")&&!q("#brandImport")&&!q("[data-brand-missing]")'));

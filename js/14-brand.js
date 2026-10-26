@@ -54,40 +54,427 @@ const BRAND_EXPECTED = [
   ['labels', 'Etiqueta o sticker', () => true, {}],
   ['app_web', 'Íconos de la app', () => true, {}]
 ];
-// Files already in the app: imported byte for byte, never redrawn. The official logo and icons are
-// marked official; the WhatsApp pieces (the official logo placed, unchanged, on the icons' dark
-// background in WhatsApp's formats) wait for the team's approval.
+// Brand files shipped with KultiApp (assets/ and the team's kit in assets/brand/kit/), imported byte
+// for byte, never redrawn. Pieces the kit itself flags for review (the reconstructed K, interface
+// mock-ups, the reference photo) and the WhatsApp compositions are not marked official.
+// Entries sharing a group become versions of one design; the first one is current.
+const BRAND_QR_NOTE =
+  'Antes de imprimir: el código QR de este arte no está validado; reemplázalo por un QR real y comprueba que se lea. Verifica medidas, sangrado y color con la imprenta.';
 const BRAND_APP_FILES = [
-  ['assets/kultiverso-pop-logo.webp', 'logos', 'Logo Kultiverso Pop', 'transparent', true],
-  ['favicon.svg', 'app_web', 'Ícono de la app (SVG)', null, true],
-  ['assets/icon-512.png', 'app_web', 'Ícono de la app 512 px', null, true],
-  ['assets/icon-192.png', 'app_web', 'Ícono de la app 192 px', null, true],
-  ['assets/icon-maskable-512.png', 'app_web', 'Ícono adaptable (maskable) 512 px', null, true],
-  ['assets/apple-touch-icon.png', 'app_web', 'Ícono para iPhone 180 px', null, true],
-  [
-    'assets/brand/whatsapp-perfil-640.png',
-    'social',
-    'Perfil WhatsApp (logo)',
-    null,
-    false,
-    'Foto de perfil de WhatsApp y WhatsApp Business: 640×640 px, el logo completo cabe en el recorte circular.'
-  ],
-  [
-    'assets/brand/whatsapp-portada-1920x1080.png',
-    'social',
-    'Portada WhatsApp',
-    null,
-    false,
-    'Portada de WhatsApp Business o imagen horizontal para compartir (1920×1080 px).'
-  ],
-  [
-    'assets/brand/whatsapp-estado-1080x1920.png',
-    'social',
-    'Estado WhatsApp',
-    null,
-    false,
-    'Estados de WhatsApp e historias (vertical 1080×1920 px).'
-  ]
+  {
+    path: 'assets/kultiverso-pop-logo.webp',
+    category: 'logos',
+    name: 'Logo Kultiverso Pop (app)',
+    background: 'transparent',
+    official: true
+  },
+  {
+    path: 'assets/brand/kit/01_LOGO_ORIGINAL_2048x682.png',
+    category: 'logos',
+    name: 'Logo Kultiverso Pop original',
+    background: 'transparent',
+    official: true,
+    usage: 'Logo proporcionado intacto, 2048×682 px con fondo transparente.'
+  },
+  {
+    path: 'assets/brand/kit/02_LOGO_FONDO_NEGRO.png',
+    category: 'logos',
+    name: 'Logo sobre fondo negro',
+    background: 'dark',
+    official: true
+  },
+  {
+    path: 'assets/brand/kit/03_LOGO_FONDO_BLANCO.png',
+    category: 'logos',
+    name: 'Logo sobre fondo blanco',
+    background: 'light',
+    official: true
+  },
+  {
+    path: 'assets/brand/kit/04_LOGO_BLANCO.png',
+    category: 'logos',
+    name: 'Logo monocromo blanco',
+    background: 'dark',
+    official: true,
+    usage: 'Una sola tinta (blanco) para fondos oscuros o fotos.'
+  },
+  {
+    path: 'assets/brand/kit/05_LOGO_NEGRO.png',
+    category: 'logos',
+    name: 'Logo monocromo negro',
+    background: 'light',
+    official: true,
+    usage: 'Una sola tinta (negro) para fondos claros, sellos o grabado.'
+  },
+  {
+    path: 'assets/brand/kit/00_K_MAESTRA_EDITABLE.svg',
+    category: 'logos',
+    name: 'Isotipo K maestro (SVG editable)',
+    background: 'transparent',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.'
+  },
+  {
+    path: 'assets/brand/kit/01_K_PRINCIPAL_NEGRA_1024.png',
+    category: 'logos',
+    name: 'Isotipo K principal',
+    background: 'dark',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.'
+  },
+  {
+    path: 'assets/brand/kit/02_K_OSCURA_1024.png',
+    category: 'logos',
+    name: 'Isotipo K oscura',
+    background: 'dark',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.'
+  },
+  {
+    path: 'assets/brand/kit/03_K_CLARA_1024.png',
+    category: 'logos',
+    name: 'Isotipo K clara',
+    background: 'light',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.'
+  },
+  {
+    path: 'assets/brand/kit/04_K_DEGRADADO_1024.png',
+    category: 'logos',
+    name: 'Isotipo K degradado',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.'
+  },
+  {
+    path: 'assets/brand/kit/05_K_CIRCULAR_1024.png',
+    category: 'logos',
+    name: 'Isotipo K circular',
+    background: 'dark',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.'
+  },
+  {
+    path: 'assets/brand/kit/06_K_OUTLINE_1024.png',
+    category: 'logos',
+    name: 'Isotipo K contorno',
+    background: 'dark',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.'
+  },
+  {
+    path: 'assets/brand/kit/07_K_MONOCROMO_1024.png',
+    category: 'logos',
+    name: 'Isotipo K monocromo',
+    background: 'dark',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.'
+  },
+  {
+    path: 'assets/brand/kit/08_K_TRANSPARENTE_1024.png',
+    category: 'logos',
+    name: 'Isotipo K transparente',
+    background: 'transparent',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.'
+  },
+  {
+    path: 'assets/brand/kit/01_Tarjeta_presentacion_frente_REDONDEADA.png',
+    category: 'business_cards',
+    name: 'Tarjeta de presentación (frente)',
+    official: true,
+    usage: 'Verifica medidas, sangrado y color con la imprenta.'
+  },
+  {
+    path: 'assets/brand/kit/02_Tarjeta_presentacion_reverso_REDONDEADA.png',
+    category: 'business_cards',
+    name: 'Tarjeta de presentación (reverso)',
+    official: true,
+    usage: BRAND_QR_NOTE
+  },
+  {
+    path: 'assets/brand/kit/03_Tarjeta_agradecimiento_frente_REDONDEADA.png',
+    category: 'thanks',
+    name: 'Tarjeta de agradecimiento (frente)',
+    official: true,
+    usage: 'Va dentro de cada pedido. Verifica medidas, sangrado y color con la imprenta.'
+  },
+  {
+    path: 'assets/brand/kit/04_Tarjeta_agradecimiento_reverso_REDONDEADA.png',
+    category: 'thanks',
+    name: 'Tarjeta de agradecimiento (reverso)',
+    official: true,
+    usage: BRAND_QR_NOTE
+  },
+  {
+    path: 'assets/brand/kit/05_Etiqueta_control_producto_REDONDEADA.png',
+    category: 'labels',
+    name: 'Etiqueta de control de producto',
+    official: true,
+    usage:
+      'Arte para completar a mano (no numera automáticamente). Verifica medidas, sangrado y color con la imprenta.',
+    group: 'control',
+    variant: 'Esquinas redondeadas'
+  },
+  {
+    path: 'assets/brand/kit/05_Etiqueta_control_producto_RECTANGULAR.png',
+    category: 'labels',
+    name: 'Etiqueta de control de producto',
+    official: true,
+    usage:
+      'Arte para completar a mano (no numera automáticamente). Verifica medidas, sangrado y color con la imprenta.',
+    group: 'control',
+    variant: 'Rectangular'
+  },
+  {
+    path: 'assets/brand/kit/06_Etiqueta_trazabilidad_REDONDEADA.png',
+    category: 'labels',
+    name: 'Etiqueta de trazabilidad',
+    official: true,
+    usage:
+      'Arte para completar a mano (no numera automáticamente). Verifica medidas, sangrado y color con la imprenta.',
+    group: 'trace',
+    variant: 'Esquinas redondeadas'
+  },
+  {
+    path: 'assets/brand/kit/06_Etiqueta_trazabilidad_RECTANGULAR.png',
+    category: 'labels',
+    name: 'Etiqueta de trazabilidad',
+    official: true,
+    usage:
+      'Arte para completar a mano (no numera automáticamente). Verifica medidas, sangrado y color con la imprenta.',
+    group: 'trace',
+    variant: 'Rectangular'
+  },
+  {
+    path: 'assets/brand/whatsapp-perfil-640.png',
+    category: 'social',
+    name: 'Perfil WhatsApp (logo)',
+    usage:
+      'Foto de perfil de WhatsApp y WhatsApp Business: 640×640 px, el logo completo cabe en el recorte circular.'
+  },
+  {
+    path: 'assets/brand/whatsapp-portada-1920x1080.png',
+    category: 'social',
+    name: 'Portada WhatsApp',
+    usage: 'Portada de WhatsApp Business o imagen horizontal para compartir (1920×1080 px).'
+  },
+  {
+    path: 'assets/brand/whatsapp-estado-1080x1920.png',
+    category: 'social',
+    name: 'Estado WhatsApp',
+    usage: 'Estados de WhatsApp e historias (vertical 1080×1920 px).'
+  },
+  {
+    path: 'assets/brand/instagram-perfil-1080.png',
+    category: 'social',
+    name: 'Perfil Instagram (logo)',
+    usage: 'Foto de perfil de Instagram: 1080×1080 px, el logo completo cabe en el recorte circular.'
+  },
+  { path: 'favicon.svg', category: 'app_web', name: 'Ícono de la app (SVG)', official: true },
+  { path: 'assets/icon-512.png', category: 'app_web', name: 'Ícono de la app 512 px', official: true },
+  { path: 'assets/icon-192.png', category: 'app_web', name: 'Ícono de la app 192 px', official: true },
+  {
+    path: 'assets/icon-maskable-512.png',
+    category: 'app_web',
+    name: 'Ícono adaptable (maskable) 512 px',
+    official: true
+  },
+  {
+    path: 'assets/apple-touch-icon.png',
+    category: 'app_web',
+    name: 'Ícono para iPhone 180 px',
+    official: true
+  },
+  {
+    path: 'assets/brand/kit/ICONO_K_512.png',
+    category: 'app_web',
+    name: 'Ícono K',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.',
+    group: 'icon-k',
+    variant: '512 px'
+  },
+  {
+    path: 'assets/brand/kit/ICONO_K_256.png',
+    category: 'app_web',
+    name: 'Ícono K',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.',
+    group: 'icon-k',
+    variant: '256 px'
+  },
+  {
+    path: 'assets/brand/kit/ICONO_K_192.png',
+    category: 'app_web',
+    name: 'Ícono K',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.',
+    group: 'icon-k',
+    variant: '192 px'
+  },
+  {
+    path: 'assets/brand/kit/ICONO_K_180.png',
+    category: 'app_web',
+    name: 'Ícono K',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.',
+    group: 'icon-k',
+    variant: '180 px'
+  },
+  {
+    path: 'assets/brand/kit/ICONO_K_128.png',
+    category: 'app_web',
+    name: 'Ícono K',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.',
+    group: 'icon-k',
+    variant: '128 px'
+  },
+  {
+    path: 'assets/brand/kit/ICONO_K_64.png',
+    category: 'app_web',
+    name: 'Ícono K',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.',
+    group: 'icon-k',
+    variant: '64 px'
+  },
+  {
+    path: 'assets/brand/kit/ICONO_K_48.png',
+    category: 'app_web',
+    name: 'Ícono K',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.',
+    group: 'icon-k',
+    variant: '48 px'
+  },
+  {
+    path: 'assets/brand/kit/ICONO_K_32.png',
+    category: 'app_web',
+    name: 'Ícono K',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.',
+    group: 'icon-k',
+    variant: '32 px'
+  },
+  {
+    path: 'assets/brand/kit/ICONO_K_16.png',
+    category: 'app_web',
+    name: 'Ícono K',
+    usage:
+      'Isotipo K reconstruido a partir de la referencia aprobada (no es copia exacta del panel). Revisarlo antes de adoptarlo como oficial.',
+    group: 'icon-k',
+    variant: '16 px'
+  },
+  {
+    path: 'assets/brand/kit/SPLASH_MOVIL.png',
+    category: 'app_web',
+    name: 'Pantalla de bienvenida móvil',
+    official: true,
+    usage: 'Vertical 1080×1920 px.'
+  },
+  {
+    path: 'assets/brand/kit/SPLASH_ESCRITORIO.png',
+    category: 'app_web',
+    name: 'Pantalla de bienvenida escritorio',
+    official: true,
+    usage: 'Horizontal 1920×1080 px.'
+  },
+  {
+    path: 'assets/brand/kit/01_HEADER_DESKTOP.png',
+    category: 'app_web',
+    name: 'Cabecera web escritorio',
+    official: true,
+    usage: '1800×360 px.'
+  },
+  {
+    path: 'assets/brand/kit/02_HEADER_MOBILE.png',
+    category: 'app_web',
+    name: 'Cabecera web móvil',
+    official: true,
+    usage: '900×360 px.'
+  },
+  {
+    path: 'assets/brand/kit/03_FOOTER.png',
+    category: 'app_web',
+    name: 'Pie de página web',
+    official: true,
+    usage: '1200×260 px.'
+  },
+  {
+    path: 'assets/brand/kit/04_BANNER_WEB.png',
+    category: 'app_web',
+    name: 'Banner web',
+    official: true,
+    usage: '1920×640 px.'
+  },
+  {
+    path: 'assets/brand/kit/05_OPEN_GRAPH.png',
+    category: 'app_web',
+    name: 'Imagen para compartir enlaces (Open Graph)',
+    official: true,
+    usage: '1200×630 px: la vista previa al compartir el sitio en WhatsApp, Facebook u otras redes.'
+  },
+  {
+    path: 'assets/brand/kit/01_MENU_LATERAL.png',
+    category: 'app_web',
+    name: 'Interfaz: menú lateral',
+    usage: 'Componente de interfaz reconstruido para la tienda: referencia visual, no captura exacta.'
+  },
+  {
+    path: 'assets/brand/kit/02_HEADER_BUSCADOR.png',
+    category: 'app_web',
+    name: 'Interfaz: cabecera con buscador',
+    usage: 'Componente de interfaz reconstruido para la tienda: referencia visual, no captura exacta.'
+  },
+  {
+    path: 'assets/brand/kit/03_BARRA_INFERIOR.png',
+    category: 'app_web',
+    name: 'Interfaz: barra inferior',
+    usage: 'Componente de interfaz reconstruido para la tienda: referencia visual, no captura exacta.'
+  },
+  {
+    path: 'assets/brand/kit/04_NOTIFICACION.png',
+    category: 'app_web',
+    name: 'Interfaz: notificación',
+    usage: 'Componente de interfaz reconstruido para la tienda: referencia visual, no captura exacta.'
+  },
+  {
+    path: 'assets/brand/kit/DESTACADO_NUEVOS.png',
+    category: 'app_web',
+    name: 'Destacado «Nuevos»',
+    usage: 'Componente de interfaz reconstruido para la tienda: referencia visual, no captura exacta.'
+  },
+  {
+    path: 'assets/brand/kit/DESTACADO_EXCLUSIVOS.png',
+    category: 'app_web',
+    name: 'Destacado «Exclusivos»',
+    usage: 'Componente de interfaz reconstruido para la tienda: referencia visual, no captura exacta.'
+  },
+  {
+    path: 'assets/brand/kit/DESTACADO_OFERTAS.png',
+    category: 'app_web',
+    name: 'Destacado «Ofertas»',
+    usage: 'Componente de interfaz reconstruido para la tienda: referencia visual, no captura exacta.'
+  },
+  {
+    path: 'assets/brand/kit/DESTACADO_OUTLET.png',
+    category: 'app_web',
+    name: 'Destacado «Outlet»',
+    usage: 'Componente de interfaz reconstruido para la tienda: referencia visual, no captura exacta.'
+  },
+  {
+    path: 'assets/brand/kit/DESTACADO_PREVENTA.png',
+    category: 'app_web',
+    name: 'Destacado «Preventa»',
+    usage: 'Componente de interfaz reconstruido para la tienda: referencia visual, no captura exacta.'
+  },
+  {
+    path: 'assets/brand/kit/REFERENCIA_APROBADA.jpg',
+    category: 'other',
+    name: 'Referencia aprobada del kit',
+    usage: 'Fotografía comparativa del panel aprobado: sirve de referencia, no es un recurso final.'
+  }
 ];
 
 const brandExt = a => BRAND_TYPES[a.mime_type] || '';
@@ -308,7 +695,7 @@ function brandView() {
         (edit && brandAppPending().length
           ? '<div class="brand-import"><span class="small muted">KultiApp ya tiene ' +
             brandAppPending().length +
-            ' archivos de la marca: logo, íconos y piezas para WhatsApp (foto de perfil, portada y estado). Agrégalos al kit tal cual.</span><button type="button" class="btn btn-secondary btn-sm" id="brandImport">' +
+            ' archivos de la marca listos: logos, isotipos, tarjetas, etiquetas, piezas web, íconos y WhatsApp. Agrégalos al kit tal cual, sin modificarlos.</span><button type="button" class="btn btn-secondary btn-sm" id="brandImport">' +
             icon('download') +
             'Agregar archivos de la app</button></div>'
           : '') +
@@ -655,30 +1042,45 @@ function showBrandUpload(files, preset = {}) {
   return dialog;
 }
 const brandAppPending = () =>
-  BRAND_APP_FILES.filter(
-    ([path]) => !(S.brandAssets || []).some(a => a.original_name === path.split('/').pop())
-  );
-// Adds the official logo and icons that ship with KultiApp, byte for byte.
+  BRAND_APP_FILES.filter(f => !(S.brandAssets || []).some(a => a.original_name === f.path.split('/').pop()));
+// Adds the brand files that ship with KultiApp, byte for byte.
 async function importBrandAppFiles() {
   if (!canEdit()) return;
-  const b = q('#brandImport');
+  const b = q('#brandImport'),
+    pending = brandAppPending(),
+    groups = {};
   if (b) b.disabled = true;
   let done = 0;
   const failed = [];
-  for (const [path, category, name, background, official, usage] of brandAppPending()) {
+  for (const [i, f] of pending.entries()) {
+    if (b) b.textContent = 'Agregando ' + (i + 1) + ' de ' + pending.length + '…';
+    const name = f.path.split('/').pop();
     try {
-      const res = await fetch(path, { cache: 'no-store' });
+      const res = await fetch(f.path, { cache: 'no-store' });
       if (!res.ok) throw Error('no disponible (' + res.status + ')');
       const blob = await res.blob(),
-        file = new File([blob], path.split('/').pop(), { type: BRAND_EXTENSIONS[path.split('.').pop()] });
-      await uploadBrandFile(file, { category, name, background, official, usage });
+        file = new File([blob], name, { type: BRAND_EXTENSIONS[name.split('.').pop()] });
+      const meta = { ...f, official: !!f.official };
+      if (f.group) {
+        // A design already in the kit keeps its current version; otherwise the first file listed is current.
+        const members = BRAND_APP_FILES.filter(x => x.group === f.group).map(x => x.path.split('/').pop()),
+          existing = (S.brandAssets || []).find(a => members.includes(a.original_name));
+        groups[f.group] ||= existing ? { id: existing.group_id, current: true } : { id: crypto.randomUUID() };
+        Object.assign(meta, {
+          group_id: groups[f.group].id,
+          variant_label: f.variant,
+          is_current: !groups[f.group].current
+        });
+      }
+      await uploadBrandFile(file, meta);
+      if (f.group) groups[f.group].current = true;
       done++;
     } catch (error) {
-      failed.push(name + ': ' + error.message);
+      failed.push(f.name + ': ' + error.message);
     }
   }
   await Promise.all([loadBrandAssets().catch(() => {}), loadBrandUsage()]);
-  if (done) toast(done + (done === 1 ? ' archivo oficial agregado.' : ' archivos oficiales agregados.'));
+  if (done) toast(done + (done === 1 ? ' archivo agregado al kit.' : ' archivos agregados al kit.'));
   if (failed.length) toast('No se pudo agregar ' + failed.join(' · '), 'error');
   if (S.mode === 'brand') render();
 }
@@ -739,7 +1141,10 @@ function showBrandAsset(a) {
       (a.official ? '<span class="chip c-ready">' + icon('badge-check') + 'Oficial</span>' : '') +
       (a.favorite ? '<span class="chip c-late">' + icon('heart') + 'Favorito</span>' : '') +
       (group.length > 1
-        ? '<span class="chip">' + (a.is_current ? 'Versión vigente' : 'Versión anterior') + '</span>'
+        ? '<span class="chip">' +
+          (a.variant_label ? esc(a.variant_label) + ' · ' : '') +
+          (a.is_current ? 'Versión vigente' : 'Otra versión') +
+          '</span>'
         : '') +
       (a.archived_at ? '<span class="chip c-cancel">Archivado</span>' : '') +
       '</div><dl class="facts"><div><dt>Categoría</dt><dd>' +
