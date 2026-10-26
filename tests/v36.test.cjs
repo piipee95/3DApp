@@ -14,9 +14,9 @@ async function test(){
    {id:'x',kind:'supply',name:'Borrado',unit:'un',unit_cost:1,counted:true,active:false,stock_qty:0,reserved_qty:0,min_stock:0,deleted_at:'2026-10-25T00:00:00Z'}];`);
  await dom.window.run('loadResources()');
  assert.equal(run('S.resources.map(r=>r.id).join()'),'a,b,f');
- // Rows: uncounted → «Contar stock»; counted → «Ingreso», plus change/take out/archive/delete in the menu.
+ // Rows: uncounted → «Contar stock»; counted → quick + (ingreso) and − (salida), plus adjust/archive/delete in the menu (V4.9).
  run(`S.mode='inventory';inventoryView()`);
- assert.equal(run('q("[data-stock=a]").textContent'),'Contar stock');assert.equal(run('q("[data-stock=b]").textContent'),'Ingreso');
+ assert.equal(run('q("[data-stock=a]").textContent'),'Contar stock');assert.equal(run('q("[data-stock=b]").getAttribute("title")'),'Ingreso');
  assert.ok(run('!!q("[data-stock-set=b]")&&!!q("[data-stock-out=b]")&&!!q("[data-inventory-archive=b]")&&!!q("[data-inventory-delete=b]")'));
  assert.equal(run('!!q("[data-stock-set=a]")'),false);
  // First count: quantity + price per unit (prefilled), note optional.

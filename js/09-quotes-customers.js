@@ -768,6 +768,8 @@ const VIEW_MODES = [
   'inventory',
   'resources',
   'profile',
+  'material',
+  'stockcount',
   'product',
   'files'
 ];
@@ -786,11 +788,14 @@ const VIEW_SLUGS = {
   resources: 'impresoras',
   profile: 'perfil',
   files: 'archivos',
-  product: 'producto'
+  product: 'producto',
+  material: 'material',
+  stockcount: 'conteo'
 };
 function viewHash() {
   const slug = VIEW_SLUGS[S.mode];
   if (!slug) return '';
+  if (S.mode === 'material') return S.materialId ? '#material/' + S.materialId : '';
   return '#' + slug + (S.mode === 'product' && S.product?.id ? '/' + S.product.id : '');
 }
 function viewFromHash() {
@@ -798,6 +803,7 @@ function viewFromHash() {
     mode = Object.keys(VIEW_SLUGS).find(k => VIEW_SLUGS[k] === slug);
   if (!mode) return null;
   if (mode === 'product') return /^[0-9a-f-]{36}$/.test(id || '') ? { mode, product: id } : null;
+  if (mode === 'material') return /^[0-9a-f-]{36}$/.test(id || '') ? { mode, material: id } : null;
   return { mode };
 }
 function syncViewUrl() {
@@ -815,6 +821,8 @@ addEventListener('popstate', () => {
       persistDraft();
       openProduct(v.product);
     }
+  } else if (v.mode === 'material') {
+    if (S.mode !== 'material' || S.materialId !== v.material) openMaterial(v.material);
   } else if (v.mode !== S.mode) goMode(v.mode);
 });
 function saveView() {
@@ -826,6 +834,7 @@ function saveView() {
       JSON.stringify({
         mode: S.mode,
         product: S.mode === 'product' ? S.product?.id || null : null,
+        material: S.mode === 'material' ? S.materialId || null : null,
         tab: S.editorTab
       })
     );
@@ -851,6 +860,10 @@ async function restoreView() {
       await openProduct(v.product, { restore: false });
       if (['details', 'prints', 'costs', 'summary'].includes(v.tab)) S.editorTab = v.tab;
       return true;
+    }
+    if (v.mode === 'material') {
+      if (!v.material || !S.resources.some(r => r.id === v.material)) return false;
+      S.materialId = v.material;
     }
     if (v.mode === 'files') await loadCustomerFileRequests();
     if (v.mode === 'quotes' || v.mode === 'customers') await Promise.all([loadQuotes(), loadCustomers()]);

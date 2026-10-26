@@ -59,6 +59,8 @@ function render() {
   if (S.mode === 'product') return product();
   if (S.mode === 'home') return homeView();
   if (S.mode === 'profile') return profileView();
+  if (S.mode === 'material') return materialView();
+  if (S.mode === 'stockcount') return stockCountView();
   dashboard();
 }
 function enhanceFields() {

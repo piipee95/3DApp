@@ -5186,3 +5186,311 @@ button.sheet-user > svg {
     padding: 0;
   }
 }
+/* V4.9: material sheet, count mode, inventory list */
+.inv-row[data-material-row] {
+  cursor: pointer;
+}
+.inv-row[data-material-row]:hover {
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.inv-name > div {
+  min-width: 0;
+}
+.btn.icon-only {
+  width: 32px;
+  padding: 0;
+  justify-content: center;
+}
+.level {
+  position: relative;
+  display: block;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--raised);
+  max-width: 220px;
+}
+.level i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+}
+.level.low i {
+  background: var(--yellow);
+}
+.level.empty i {
+  background: var(--red);
+}
+.level b {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 10px;
+  background: var(--muted);
+  border-radius: 1px;
+}
+.material-page {
+  display: grid;
+  gap: 14px;
+}
+.mat-hero {
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+.mat-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.mat-title > div {
+  flex: 1;
+  min-width: 160px;
+  display: grid;
+  gap: 2px;
+}
+.mat-title h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.swatch.big {
+  width: 34px;
+  height: 34px;
+}
+.mat-nums {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.mat-num {
+  background: var(--raised);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 2px;
+}
+.mat-num span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.mat-num b {
+  font-size: 18px;
+}
+.mat-hero .level {
+  max-width: none;
+  height: 8px;
+}
+.mat-value {
+  margin: 0;
+}
+.mat-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mat-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.mat-col {
+  display: grid;
+  gap: 14px;
+}
+.mat-card .panel-h h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mat-card .panel-h svg {
+  width: 17px;
+  height: 17px;
+  color: var(--muted);
+}
+.mat-body {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.mat-body .btn[type='submit'] {
+  justify-self: start;
+}
+.mat-price {
+  display: grid;
+  gap: 2px;
+}
+.mat-price b {
+  font-size: 22px;
+}
+.price-row,
+.use-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.use-row {
+  width: 100%;
+  background: none;
+  border-width: 0 0 1px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.use-row:hover span {
+  color: var(--action);
+}
+.use-sub {
+  margin-top: 8px;
+}
+.mov-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.mov-sign {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  background: var(--raised);
+}
+.mov-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.mov-end {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  text-align: right;
+}
+.mat-danger {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.stock-helper details {
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.stock-helper summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.stock-helper summary svg {
+  width: 18px;
+  height: 18px;
+}
+.stock-helper details[open] summary {
+  margin-bottom: 10px;
+}
+.count-page {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 90px;
+}
+.count-list {
+  padding: 4px 16px 12px;
+}
+.count-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.count-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.count-name > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.count-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.count-input input {
+  width: 110px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: right;
+}
+.count-unit {
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 18px;
+}
+.count-diff {
+  grid-column: 1 / -1;
+  text-align: right;
+}
+.count-diff:empty {
+  display: none;
+}
+.count-bar {
+  position: sticky;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 18%, transparent);
+}
+.count-bar #countSummary {
+  flex: 1;
+}
+@media (max-width: 760px) {
+  .mat-nums {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mat-actions .btn {
+    flex: 1 1 auto;
+  }
+  .count-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .count-input {
+    justify-content: flex-end;
+  }
+  .count-bar {
+    bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+  #stockCount > span {
+    display: none;
+  }
+}

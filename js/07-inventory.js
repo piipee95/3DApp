@@ -287,8 +287,8 @@ function showStockMovement(r, mode = 'in') {
     titles = {
       first: 'Stock inicial',
       in: 'Ingreso',
-      set: 'Cambiar cantidad',
-      out: 'Sacar del stock'
+      set: 'Ajustar al real',
+      out: 'Salida'
     },
     unitName = INVENTORY_UNITS[r.unit] || r.unit,
     priced = mode === 'first' || mode === 'in';
@@ -358,6 +358,7 @@ function showStockMovement(r, mode = 'in') {
   };
   q('#stockQuantity').oninput = preview;
   q('#stockPrice')?.addEventListener('input', preview);
+  mountStockHelpers(r, mode);
   preview();
   q('#stockForm').onsubmit = async e => {
     e.preventDefault();
@@ -403,55 +404,6 @@ function showStockMovement(r, mode = 'in') {
   };
   enhanceFields();
   return dialog;
-}
-async function showInventoryLedger(r) {
-  const dialog = showDialog(
-    'ledgerDialog',
-    '<div class="section-title"><h2>Historial · ' +
-      esc(r.name) +
-      '</h2><button class="btn btn-ghost" data-close>Volver</button></div><div id="ledgerBody" role="status">Cargando movimientos…</div>'
-  );
-  try {
-    const { data, error } = await supabase
-      .from('inventory_movements')
-      .select('*')
-      .eq('workspace_id', S.workspace.id)
-      .eq('resource_id', r.id)
-      .order('created_at', { ascending: false })
-      .limit(100);
-    if (error) throw error;
-    if (!dialog.isConnected) return;
-    const kinds = {
-      opening: 'Stock inicial',
-      purchase: 'Ingreso',
-      adjustment: 'Cambio de cantidad',
-      loss: 'Salida',
-      consumption: 'Usado en pedido'
-    };
-    q('#ledgerBody').innerHTML =
-      (data || [])
-        .map(
-          m =>
-            '<div class="resource-row"><div><b>' +
-            kinds[m.kind] +
-            ' · ' +
-            stockNumber(m.quantity) +
-            ' ' +
-            esc(r.unit) +
-            '</b><div class="small muted">' +
-            esc(new Date(m.created_at).toLocaleString('es-CL')) +
-            ' · ' +
-            preciseCost(m.unit_cost) +
-            ' / ' +
-            esc(r.unit) +
-            '</div><p class="small">' +
-            esc(m.note) +
-            '</p></div></div>'
-        )
-        .join('') || 'Sin movimientos. El stock aún no ha sido contado.';
-  } catch (error) {
-    if (dialog.isConnected) q('#ledgerBody').textContent = error.message;
-  }
 }
 function collectMaterials() {
   if (!S.product || !q('#materialRecipe')) return;

@@ -34,7 +34,7 @@ async function test(){
  run(`S.workspace.role='viewer';S.mode='inventory';inventoryView()`);
  assert.equal(run('q("#addInventory")'),null);
  assert.equal(run('qa("[data-stock]").length'),0);
- assert.equal(run('qa("[data-ledger]").length'),2);
+ assert.equal(run('qa("[data-material]").length'),2);
  console.log('PASS V1.4: recipe cost/quantities, linked colors, duplication, shortages, proportional order reservations, explicit price refresh, durable drafts, movement preview, actual-consumption RPC and viewer controls.');
  dom.window.close();
 }
