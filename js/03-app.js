@@ -132,6 +132,8 @@ function render() {
   if (S.mode === 'home') return homeView();
   if (S.mode === 'profile') return profileView();
   if (S.mode === 'material') return materialView();
+  if (S.mode === 'order') return orderView();
+  if (S.mode === 'customer') return customerView();
   if (S.mode === 'stockcount') return stockCountView();
   dashboard();
 }
@@ -176,6 +178,8 @@ const VIEW_MODES = [
   'profile',
   'material',
   'stockcount',
+  'order',
+  'customer',
   'product',
   'files'
 ];
@@ -196,21 +200,42 @@ const VIEW_SLUGS = {
   files: 'archivos',
   product: 'producto',
   material: 'material',
-  stockcount: 'conteo'
+  stockcount: 'conteo',
+  order: 'pedido',
+  customer: 'cliente'
 };
+// 5.0: «fichas» with their own page and link: which state field holds the open record.
+const ID_PAGES = { material: 'materialId', order: 'orderId', customer: 'customerId' };
+const isId = id => /^[0-9a-f-]{36}$/.test(id || '');
 function viewHash() {
   const slug = VIEW_SLUGS[S.mode];
   if (!slug) return '';
-  if (S.mode === 'material') return S.materialId ? '#material/' + S.materialId : '';
+  if (ID_PAGES[S.mode]) return S[ID_PAGES[S.mode]] ? '#' + slug + '/' + S[ID_PAGES[S.mode]] : '';
   return '#' + slug + (S.mode === 'product' && S.product?.id ? '/' + S.product.id : '');
 }
 function viewFromHash() {
   const [slug, id] = decodeURIComponent(location.hash.slice(1)).split('/'),
     mode = Object.keys(VIEW_SLUGS).find(k => VIEW_SLUGS[k] === slug);
   if (!mode) return null;
-  if (mode === 'product') return /^[0-9a-f-]{36}$/.test(id || '') ? { mode, product: id } : null;
-  if (mode === 'material') return /^[0-9a-f-]{36}$/.test(id || '') ? { mode, material: id } : null;
+  if (mode === 'product') return isId(id) ? { mode, product: id } : null;
+  if (ID_PAGES[mode]) return isId(id) ? { mode, id } : null;
   return { mode };
+}
+// Opens a «ficha» by id; false when the record is not loaded (deleted or from another team).
+function openIdPage(mode, id) {
+  if (mode === 'material') {
+    if (!S.resources.some(r => r.id === id)) return false;
+    openMaterial(id);
+  } else if (mode === 'order') {
+    const o = S.orders.find(x => x.id === id);
+    if (!o) return false;
+    showOrder(o);
+  } else if (mode === 'customer') {
+    const c = S.customers.find(x => x.id === id);
+    if (!c) return false;
+    showCustomer(c);
+  }
+  return true;
 }
 function syncViewUrl() {
   const h = viewHash();
@@ -227,8 +252,8 @@ addEventListener('popstate', () => {
       persistDraft();
       openProduct(v.product);
     }
-  } else if (v.mode === 'material') {
-    if (S.mode !== 'material' || S.materialId !== v.material) openMaterial(v.material);
+  } else if (ID_PAGES[v.mode]) {
+    if (S.mode !== v.mode || S[ID_PAGES[v.mode]] !== v.id) openIdPage(v.mode, v.id);
   } else if (v.mode !== S.mode) goMode(v.mode);
 });
 function saveView() {
@@ -240,7 +265,7 @@ function saveView() {
       JSON.stringify({
         mode: S.mode,
         product: S.mode === 'product' ? S.product?.id || null : null,
-        material: S.mode === 'material' ? S.materialId || null : null,
+        id: ID_PAGES[S.mode] ? S[ID_PAGES[S.mode]] || null : null,
         tab: S.editorTab
       })
     );
@@ -267,9 +292,17 @@ async function restoreView() {
       if (['details', 'prints', 'costs', 'summary'].includes(v.tab)) S.editorTab = v.tab;
       return true;
     }
-    if (v.mode === 'material') {
-      if (!v.material || !S.resources.some(r => r.id === v.material)) return false;
-      S.materialId = v.material;
+    if (ID_PAGES[v.mode]) {
+      if (v.mode === 'customer') await loadCustomers();
+      const id = v.id || v.material,
+        found =
+          v.mode === 'material'
+            ? S.resources.some(r => r.id === id)
+            : v.mode === 'order'
+              ? S.orders.some(o => o.id === id)
+              : S.customers.some(c => c.id === id);
+      if (!found) return false;
+      S[ID_PAGES[v.mode]] = id;
     }
     if (v.mode === 'files') await loadCustomerFileRequests();
     if (v.mode === 'quotes' || v.mode === 'customers') await Promise.all([loadQuotes(), loadCustomers()]);
@@ -558,13 +591,17 @@ const PAGE_TITLES = {
   resources: 'Impresoras',
   profile: 'Mi perfil',
   material: 'Material',
+  order: 'Pedido',
+  customer: 'Cliente',
   stockcount: 'Modo conteo'
 };
 function navActive(mode) {
   return (
     S.mode === mode ||
     (mode === 'dashboard' && S.mode === 'product') ||
-    (mode === 'inventory' && ['material', 'stockcount'].includes(S.mode))
+    (mode === 'inventory' && ['material', 'stockcount'].includes(S.mode)) ||
+    (mode === 'production' && S.mode === 'order') ||
+    (mode === 'customers' && S.mode === 'customer')
   );
 }
 function navCount(mode) {

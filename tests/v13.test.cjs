@@ -44,7 +44,7 @@ async function test(){
  run(`showOrder(S.orders[0]);q('#orderQuote').click()`);
  assert(run('q("#quoteSheet").textContent.includes("$4.990")'));
  assert(!/Costo|Utilidad|Margen/.test(run('q("#quoteSheet").textContent')));
- run(`q('#closeQuote').click();q('#orderDialog [data-close]').click()`);
+ run(`q('#closeQuote').click();q('#orderDialog').close()`);
  assert(Math.abs(run('orderNumbers(S.orders[0]).actualProfit')-(14970/1.19-7500))<1e-8);
  run(`S.mode='inventory';inventoryView();showInventoryForm(S.resources.find(r=>r.id==='f1'));q('#invCost').value=25000;q('#inventoryForm').dispatchEvent(new SubmitEvent('submit',{bubbles:true,cancelable:true,submitter:q('#inventoryForm button[type=submit]')}))`);
  await flush();
@@ -57,7 +57,7 @@ async function test(){
  run(`S.workspace.role='viewer';S.mode='production';productionView();q('[data-order]').click()`);
  assert.equal(run('q("#actualCost").disabled'),true);
  assert.equal(run('q("#orderForm button[type=submit]")'),null);
- run(`q('#orderDialog [data-close]').click();S.mode='resources';resourcesView()`);
+ run(`q('#orderDialog').close();S.mode='resources';resourcesView()`);
  assert.equal(run('qa("[data-add-resource]").length'),0);
  assert.equal(run('qa(".app-nav button").length'),10);
  console.log('PASS V1.3: catalog selection, resource snapshots, printer electricity, manual price/quote/margins, saved bundle, order creation and actuals, filters and viewer restrictions.');

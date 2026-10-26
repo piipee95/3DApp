@@ -440,3 +440,14 @@ document.addEventListener('click', e => {
   if (b) setTheme(b.dataset.themeSet);
 });
 window.matchMedia?.('(prefers-color-scheme: light)').addEventListener?.('change', () => applyTheme());
+// 5.0: a «ficha» shown as a page section instead of a dialog. Code written for dialogs may call
+// close() on it: on a page there is nothing to close, the page stays.
+function pageSheet(id, body) {
+  const host = document.createElement('section');
+  host.id = id;
+  host.className = 'panel page-sheet';
+  host.innerHTML = body;
+  host.close = () => {};
+  (q('main') || root).append(host);
+  return host;
+}

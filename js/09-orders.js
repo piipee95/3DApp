@@ -223,13 +223,35 @@ function showNewOrder(kind = 'customer') {
   };
   return dialog;
 }
+// 5.0: the order is a page of its own (#pedido/<id>), like products and materials.
 function showOrder(order) {
+  if (!order) return;
+  if (S.mode === 'product') persistDraft();
+  S.orderId = order.id;
+  // The order passed in is shown once (it may carry changes not reloaded yet); later renders use S.orders.
+  S.orderShown = order;
+  S.mode = 'order';
+  render();
+  scrollTo(0, 0);
+}
+function orderView() {
+  const order = S.orderShown?.id === S.orderId ? S.orderShown : S.orders.find(o => o.id === S.orderId);
+  S.orderShown = null;
+  if (!order) {
+    S.mode = 'production';
+    return render();
+  }
+  root.innerHTML =
+    header('PED-' + order.order_no, '', { back: true }) + '<main class="shell narrow order-page"></main>';
+  common();
+  q('#back').onclick = () => (history.length > 1 && location.hash ? history.back() : goMode('production'));
+  orderSheet(order);
+}
+function orderSheet(order) {
   const t = orderNumbers(order);
-  const dialog = showDialog(
+  const dialog = pageSheet(
     'orderDialog',
-    '<div class="section-title"><h2>Pedido PED-' +
-      order.order_no +
-      '</h2><button class="btn btn-ghost" data-close>Volver</button></div><div class="order-head"><div><b>' +
+    '<div class="order-head"><div><b>' +
       esc(order.title) +
       '</b>' +
       orderChip(order) +
@@ -437,7 +459,7 @@ function showOrder(order) {
       if (!isFinished(order.status) && isFinished(newStatus)) await addOrderPrinterHours(order);
       await loadOrders();
       await loadResources();
-      dialog.close();
+      toast('PED-' + order.order_no + ' guardado.');
       render();
       // A new state is news for the customer: offer the WhatsApp message.
       if (newStatus !== order.status)

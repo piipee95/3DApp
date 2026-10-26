@@ -1063,126 +1063,149 @@ function customersView() {
     b => (b.onclick = () => showCustomer(S.customers.find(c => c.id === b.dataset.customer)))
   );
 }
+// 5.0: a saved customer opens as a page (#cliente/<id>); a new one is still a quick dialog.
 function showCustomer(c) {
+  if (!c) return;
+  if (!c.id) return customerSheet(c);
+  if (S.mode === 'product') persistDraft();
+  S.customerId = c.id;
+  S.mode = 'customer';
+  render();
+  scrollTo(0, 0);
+}
+function customerView() {
+  const c = S.customers.find(x => x.id === S.customerId);
+  if (!c) {
+    S.mode = 'customers';
+    return render();
+  }
+  root.innerHTML = header(c.name, '', { back: true }) + '<main class="shell narrow customer-page"></main>';
+  common();
+  q('#back').onclick = () => (history.length > 1 && location.hash ? history.back() : goMode('customers'));
+  customerSheet(c);
+}
+function customerSheet(c) {
   const h = c.id ? customerHistory(c) : { quotes: [], orders: [], sold: 0 },
     edit = canEdit(),
     wa = whatsappLink(c.phone);
-  const dialog = showDialog(
-    'customerDialog',
-    '<div class="section-title"><h2>' +
-      (c.id ? esc(c.name) : 'Nuevo cliente') +
-      '</h2><button class="btn btn-ghost" data-close>Cerrar</button></div>' +
-      (c.id
-        ? '<dl class="facts"><div><dt>Cotizaciones</dt><dd>' +
-          h.quotes.length +
-          '</dd></div><div><dt>Pedidos</dt><dd>' +
-          h.orders.length +
-          '</dd></div><div><dt>Vendido</dt><dd>' +
-          clp(h.sold) +
-          '</dd></div><div><dt>Por cobrar</dt><dd class="' +
-          (h.due > 0 ? 'warn' : '') +
-          '">' +
-          clp(h.due) +
-          '</dd></div></dl>'
-        : '') +
-      (wa
-        ? '<a class="btn btn-secondary" href="' +
-          esc(wa) +
-          '" target="_blank" rel="noopener">' +
-          icon('share-2') +
-          'Escribir por WhatsApp</a>'
-        : '') +
-      (edit && c.id
-        ? '<div class="customer-quick"><button type="button" class="btn btn-secondary btn-sm" data-customer-new="quote">' +
-          icon('file-text') +
-          'Cotizar</button><button type="button" class="btn btn-secondary btn-sm" data-customer-new="order">' +
-          icon('clipboard-list') +
-          'Nuevo pedido</button></div>'
-        : '') +
-      '<form id="customerForm" class="grid">' +
-      fieldHtml(
-        'Nombre o empresa',
-        'cuName',
-        c.name || '',
-        'text',
-        'required maxlength="120"' + (edit ? '' : ' readonly')
-      ) +
-      '<div class="grid grid-2">' +
-      fieldHtml(
-        'Teléfono / WhatsApp',
-        'cuPhone',
-        c.phone || '',
-        'tel',
-        'maxlength="40" placeholder="+56 9 …"' + (edit ? '' : ' readonly')
-      ) +
-      fieldHtml(
-        'Instagram',
-        'cuInstagram',
-        c.instagram || '',
-        'text',
-        'maxlength="80" placeholder="@usuario"' + (edit ? '' : ' readonly')
-      ) +
-      '</div>' +
-      fieldHtml('Correo', 'cuEmail', c.email || '', 'email', 'maxlength="160"' + (edit ? '' : ' readonly')) +
-      '<div class="field"><label for="cuNotes">Notas</label><textarea id="cuNotes" maxlength="1000"' +
-      (edit ? '' : ' readonly') +
-      '>' +
-      esc(c.notes || '') +
-      '</textarea></div><div id="cuFeedback" class="small" role="status"></div>' +
-      (edit
-        ? '<div class="dialog-actions">' +
-          (c.id
-            ? '<button type="button" class="btn btn-ghost danger-text" id="deleteCustomer">' +
-              icon('trash-2') +
-              'Eliminar</button>'
-            : '') +
-          '<button class="btn btn-primary" type="submit">Guardar cliente</button></div>'
-        : '') +
-      '</form>' +
-      (h.quotes.length || h.orders.length
-        ? '<h3 class="form-section">Historial</h3><div class="history-list">' +
-          [
-            ...h.quotes.map(qt => ({
-              at: qt.created_at,
-              html:
-                '<button type="button" class="list-row" data-history-quote="' +
-                qt.id +
-                '"><span class="lr-main"><b>' +
-                quoteFolioNo(qt.quote_no) +
-                ' · ' +
-                esc(qt.title) +
-                '</b><span>' +
-                new Date(qt.created_at).toLocaleDateString('es-CL') +
-                '</span></span><span class="lr-end"><b class="num">' +
-                clp(quoteSums(qt).total) +
-                '</b>' +
-                quoteChip(qt) +
-                '</span></button>'
-            })),
-            ...h.orders.map(o => ({
-              at: o.created_at,
-              html:
-                '<button type="button" class="list-row" data-history-order="' +
-                o.id +
-                '"><span class="lr-main"><b>PED-' +
-                o.order_no +
-                ' · ' +
-                esc(o.title) +
-                '</b><span>' +
-                new Date(o.created_at).toLocaleDateString('es-CL') +
-                '</span></span><span class="lr-end"><b class="num">' +
-                clp(orderNumbers(o).sales) +
-                '</b>' +
-                orderChip(o) +
-                '</span></button>'
-            }))
-          ]
-            .sort((a, b) => String(b.at).localeCompare(String(a.at)))
-            .map(x => x.html)
-            .join('') +
-          '</div>'
-        : '')
-  );
+  const body =
+    (c.id
+      ? '<dl class="facts"><div><dt>Cotizaciones</dt><dd>' +
+        h.quotes.length +
+        '</dd></div><div><dt>Pedidos</dt><dd>' +
+        h.orders.length +
+        '</dd></div><div><dt>Vendido</dt><dd>' +
+        clp(h.sold) +
+        '</dd></div><div><dt>Por cobrar</dt><dd class="' +
+        (h.due > 0 ? 'warn' : '') +
+        '">' +
+        clp(h.due) +
+        '</dd></div></dl>'
+      : '') +
+    (wa
+      ? '<a class="btn btn-secondary" href="' +
+        esc(wa) +
+        '" target="_blank" rel="noopener">' +
+        icon('share-2') +
+        'Escribir por WhatsApp</a>'
+      : '') +
+    (edit && c.id
+      ? '<div class="customer-quick"><button type="button" class="btn btn-secondary btn-sm" data-customer-new="quote">' +
+        icon('file-text') +
+        'Cotizar</button><button type="button" class="btn btn-secondary btn-sm" data-customer-new="order">' +
+        icon('clipboard-list') +
+        'Nuevo pedido</button></div>'
+      : '') +
+    '<form id="customerForm" class="grid">' +
+    fieldHtml(
+      'Nombre o empresa',
+      'cuName',
+      c.name || '',
+      'text',
+      'required maxlength="120"' + (edit ? '' : ' readonly')
+    ) +
+    '<div class="grid grid-2">' +
+    fieldHtml(
+      'Teléfono / WhatsApp',
+      'cuPhone',
+      c.phone || '',
+      'tel',
+      'maxlength="40" placeholder="+56 9 …"' + (edit ? '' : ' readonly')
+    ) +
+    fieldHtml(
+      'Instagram',
+      'cuInstagram',
+      c.instagram || '',
+      'text',
+      'maxlength="80" placeholder="@usuario"' + (edit ? '' : ' readonly')
+    ) +
+    '</div>' +
+    fieldHtml('Correo', 'cuEmail', c.email || '', 'email', 'maxlength="160"' + (edit ? '' : ' readonly')) +
+    '<div class="field"><label for="cuNotes">Notas</label><textarea id="cuNotes" maxlength="1000"' +
+    (edit ? '' : ' readonly') +
+    '>' +
+    esc(c.notes || '') +
+    '</textarea></div><div id="cuFeedback" class="small" role="status"></div>' +
+    (edit
+      ? '<div class="dialog-actions">' +
+        (c.id
+          ? '<button type="button" class="btn btn-ghost danger-text" id="deleteCustomer">' +
+            icon('trash-2') +
+            'Eliminar</button>'
+          : '') +
+        '<button class="btn btn-primary" type="submit">Guardar cliente</button></div>'
+      : '') +
+    '</form>' +
+    (h.quotes.length || h.orders.length
+      ? '<h3 class="form-section">Historial</h3><div class="history-list">' +
+        [
+          ...h.quotes.map(qt => ({
+            at: qt.created_at,
+            html:
+              '<button type="button" class="list-row" data-history-quote="' +
+              qt.id +
+              '"><span class="lr-main"><b>' +
+              quoteFolioNo(qt.quote_no) +
+              ' · ' +
+              esc(qt.title) +
+              '</b><span>' +
+              new Date(qt.created_at).toLocaleDateString('es-CL') +
+              '</span></span><span class="lr-end"><b class="num">' +
+              clp(quoteSums(qt).total) +
+              '</b>' +
+              quoteChip(qt) +
+              '</span></button>'
+          })),
+          ...h.orders.map(o => ({
+            at: o.created_at,
+            html:
+              '<button type="button" class="list-row" data-history-order="' +
+              o.id +
+              '"><span class="lr-main"><b>PED-' +
+              o.order_no +
+              ' · ' +
+              esc(o.title) +
+              '</b><span>' +
+              new Date(o.created_at).toLocaleDateString('es-CL') +
+              '</span></span><span class="lr-end"><b class="num">' +
+              clp(orderNumbers(o).sales) +
+              '</b>' +
+              orderChip(o) +
+              '</span></button>'
+          }))
+        ]
+          .sort((a, b) => String(b.at).localeCompare(String(a.at)))
+          .map(x => x.html)
+          .join('') +
+        '</div>'
+      : '');
+  const dialog = c.id
+    ? pageSheet('customerDialog', body)
+    : showDialog(
+        'customerDialog',
+        '<div class="section-title"><h2>Nuevo cliente</h2><button class="btn btn-ghost" data-close>Cerrar</button></div>' +
+          body
+      );
   dialog.querySelectorAll('[data-history-quote]').forEach(
     b =>
       (b.onclick = () => {
