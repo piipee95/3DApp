@@ -99,8 +99,8 @@ stickers, recursos de la app y otros.
   cambian de tamaño. Al subir se elige la categoría, el fondo y si es una nueva versión de un diseño.
 - **Versiones**: un diseño puede tener varias; la **vigente** es la que se usa. Se cambia desde la ficha.
 - **Oficial** y **Favorito**, **Editar**, **Archivar** (se restaura desde el filtro Archivados) y **Eliminar**.
-- **Lo que falta** lista las piezas esperadas que aún no se han subido. **Agregar archivos de la app** suma el
-  logo, los íconos y las piezas para WhatsApp que ya tiene KultiApp.
+- **Lo que falta** lista las piezas esperadas que aún no se han subido. **Agregar archivos de la app** suma los
+  archivos de la marca que ya tiene KultiApp; la primera vez que un editor abre el kit vacío se cargan solos.
 - Arriba se ve el espacio usado frente al límite gratuito (1 GB para todo el proyecto).
 - Los visores pueden ver y descargar; propietarios y editores administran.
 

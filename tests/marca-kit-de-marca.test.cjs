@@ -131,6 +131,18 @@ async function test(){
  run(`calls.length=0;S.brandAssets=[{id:'k512',group_id:'gk',original_name:'ICONO_K_512.png',is_current:true}];BRAND_APP_FILES.splice(0,BRAND_APP_FILES.length,...BRAND_APP_FILES.filter(f=>f.group==='icon-k'));importBrandAppFiles()`);await flush(120);
  const again=JSON.parse(run('JSON.stringify(calls.filter(c=>c.op==="insert").map(c=>c.v))'));
  assert.equal(again.length,8);assert.ok(again.every(v=>v.group_id==='gk'&&v.is_current===false));
+ // An empty kit fills itself once for editors, with a progress panel instead of the missing list.
+ run(`BRAND_APP_FILES.splice(0,BRAND_APP_FILES.length,{path:'assets/brand/kit/03_LOGO_FONDO_BLANCO.png',category:'logos',name:'Logo sobre fondo blanco',background:'light',official:true},{path:'assets/brand/kit/04_LOGO_BLANCO.png',category:'logos',name:'Logo monocromo blanco',background:'dark',official:true});
+  calls.length=0;S.brandAutoImported=null;S.brandAssets=[];S.mode='brand';window.fetch=async p=>({ok:true,blob:async()=>new Blob(['x'])});
+  let slow;window.fetch=p=>new Promise(r=>{slow=()=>r({ok:true,blob:async()=>new Blob(['x'])})});window.release=()=>slow&&slow();brandView()`);await flush();
+ assert.ok(run('!!q(".brand-importing")&&!q(".brand-missing")'));assert.match(run('q("#brandImportText").textContent'),/Agregando 1 de 2 archivos/);
+ run(`window.fetch=async p=>({ok:true,blob:async()=>new Blob(['x'])});release()`);await flush(60);
+ assert.equal(run('calls.filter(c=>c.op==="insert").length'),2);assert.ok(run('S.brandImport===null'));
+ run(`calls.length=0;S.brandAssets=[];brandView()`);await flush(20);
+ assert.equal(run('calls.filter(c=>c.op==="insert").length'),0,'only once per workspace');
+ run(`S.brandAutoImported=null;S.brandAssets=rows;brandView()`);await flush(20);
+ assert.equal(run('calls.filter(c=>c.op==="insert").length'),0,'not when the kit has files');
+ assert.equal(run('brandBytes(0)'),'0 KB');
  // Viewers browse and download, but cannot upload, edit or delete.
  run(`S.workspace.role='viewer';S.brandAssets=rows;brandView()`);
  assert.ok(run('!q("#brandUpload")&&!q("#brandDrop")&&!q("#brandImport")&&!q("[data-brand-missing]")'));
