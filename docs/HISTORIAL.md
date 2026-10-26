@@ -2,6 +2,13 @@
 
 Resumen de cada versión, de la más reciente a la más antigua. El detalle completo de cada una está en `docs/versiones/`.
 
+## 5.1 · Kit de marca
+
+- Sección **Kit de marca**: logos, tarjetas, redes sociales, etiquetas y recursos de la app, con búsqueda y filtros.
+- Vista previa segura, descarga del original sin cambios, copiar textos, oficial y favorito, versiones vigentes.
+- Subida por botón o arrastre (PNG, JPG, WebP, SVG, PDF, ZIP hasta 50 MB) y límites reales del plan.
+- Logo, íconos y piezas para WhatsApp (perfil, portada y estado) listos para agregar al kit.
+
 ## 5.0 · Consolidación
 
 - Identidad «KultiApp — El taller bajo control».

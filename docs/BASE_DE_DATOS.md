@@ -1,4 +1,4 @@
-# Base de datos de KultiApp (estado a la versión 5.0)
+# Base de datos de KultiApp (estado a la versión 5.1)
 
 Supabase: Postgres con RLS en todas las tablas, Auth y Storage privado. Esta es la foto del esquema vigente;
 el SQL de cada cambio aplicado está en `docs/migraciones/` (referencia, no se vuelve a ejecutar).
@@ -28,6 +28,7 @@ el SQL de cada cambio aplicado está en `docs/migraciones/` (referencia, no se v
 | `print_failures` | Fallas de impresión | motivo, gramos, minutos, costo, descontado |
 | `expenses` | Gastos | categoría, monto, IVA, quién pagó |
 | `partner_transfers` | Transferencias entre socios | de, a, monto |
+| `brand_assets` | Kit de marca (5.1) | categoría, nombre, descripción, uso, texto, fondo, archivo original (ruta, nombre, tipo, bytes, medidas), oficial, favorito, diseño (`group_id`), versión, vigente (una por diseño), archivado |
 | `app_errors` | Errores de la app para diagnóstico | mensaje, pantalla, versión |
 
 ## Funciones
@@ -41,6 +42,7 @@ permisos del taller) y se llaman desde un envoltorio en `public`:
   stock terminado de pedidos.
 - Pedidos: `link_order_product`, `order_tracking_link`, `printer_hours`.
 - Taller: `bootstrap_workspace`, `create_workspace_invite`, `accept_workspace_invite`.
+- Kit de marca: `brand_storage_usage` (espacio usado por el kit y por el proyecto, solo totales).
 - Público (sin cuenta, por token): `order_tracking`, `public_catalog`, `customer_upload`.
 - Las versiones antiguas `save_product_bundle` a `_v4` se conservan sin permiso de ejecución (5.0).
 
@@ -48,6 +50,8 @@ permisos del taller) y se llaman desde un envoltorio en `public`:
 
 - `product-photos` (privado): fotos de productos, del perfil y de los trabajos, bajo `<workspace_id>/…`.
 - `customer-originals` (privado): fotos originales que suben los clientes.
+- `brand-assets` (privado, 5.1): originales del Kit de marca bajo `<workspace_id>/brand/…`, hasta 50 MB, solo PNG,
+  JPG, WebP, SVG, PDF y ZIP. Miembros leen; propietarios y editores suben y borran.
 
 ## Revisión 5.0
 

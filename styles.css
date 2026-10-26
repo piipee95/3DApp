@@ -5542,3 +5542,317 @@ button.sheet-user > svg {
     padding: 12px 16px;
   }
 }
+/* 5.1: Kit de marca */
+.brand-page {
+  display: grid;
+  gap: 14px;
+}
+.brand-limits {
+  padding: 14px 16px;
+  display: grid;
+  gap: 8px;
+}
+.brand-limits > div {
+  display: grid;
+  gap: 4px;
+}
+.brand-limits .level {
+  max-width: none;
+}
+.brand-missing .panel-h h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-missing .panel-h svg {
+  width: 17px;
+  height: 17px;
+  color: var(--yellow);
+}
+.brand-missing-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.brand-missing-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.brand-missing-row > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.brand-import {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+}
+.brand-drop {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1.5px dashed var(--line2);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.brand-drop > svg {
+  width: 26px;
+  height: 26px;
+  color: var(--action);
+  flex: none;
+}
+.brand-drop > span {
+  display: grid;
+  gap: 2px;
+}
+.brand-drop:hover,
+.brand-drop.drag-over {
+  border-color: var(--action);
+  background: color-mix(in srgb, var(--action) 6%, var(--surface));
+}
+.brand-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+}
+.brand-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    border-color 0.15s;
+}
+.brand-card:hover {
+  border-color: var(--line2);
+  transform: translateY(-2px);
+}
+.brand-thumb {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+  overflow: hidden;
+}
+.brand-thumb img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+/* Transparent files show over a checkerboard; logos «para fondo …» over that background. */
+.checker {
+  background-color: #f4f5f8;
+  background-image:
+    linear-gradient(45deg, #e3e5ec 25%, transparent 25%),
+    linear-gradient(-45deg, #e3e5ec 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e3e5ec 75%),
+    linear-gradient(-45deg, transparent 75%, #e3e5ec 75%);
+  background-size: 16px 16px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+}
+.on-dark {
+  background: #11131a;
+}
+.on-light {
+  background: #ffffff;
+}
+.brand-thumb.file {
+  background: var(--raised);
+}
+.brand-file {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.brand-file svg {
+  width: 34px;
+  height: 34px;
+}
+.brand-file b {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+.brand-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.brand-card .brand-badges {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+.brand-badges .chip svg {
+  width: 13px;
+  height: 13px;
+  margin-right: 3px;
+}
+.brand-info {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px 12px;
+  min-width: 0;
+}
+.brand-info b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#brandDialog {
+  width: min(720px, calc(100vw - 32px));
+}
+.brand-preview {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  max-height: 60vh;
+  margin-bottom: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.brand-preview img {
+  max-width: 100%;
+  max-height: calc(60vh - 32px);
+  object-fit: contain;
+}
+.brand-preview object {
+  width: 100%;
+  height: 56vh;
+  border: 0;
+}
+.brand-preview .brand-thumb {
+  border: 0;
+  width: 100%;
+}
+.brand-filename {
+  word-break: break-all;
+}
+.brand-main-actions {
+  margin: 12px 0;
+}
+.brand-copy {
+  margin-top: 12px;
+}
+.brand-versions {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+.brand-version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.brand-version.on {
+  border-color: var(--action);
+}
+.brand-version-open {
+  display: grid;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.brand-up-row {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.brand-up-row.bad {
+  border-color: color-mix(in srgb, var(--red) 40%, transparent);
+}
+.brand-up-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.brand-up-head b {
+  word-break: break-all;
+}
+@media (max-width: 599px) {
+  .brand-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .brand-card .brand-badges .chip {
+    font-size: 10.5px;
+  }
+  #brandUpload > span {
+    display: none;
+  }
+  #brandUpload {
+    width: 40px;
+    padding: 0;
+  }
+  #brandDialog {
+    width: 100%;
+  }
+}
+.brand-card .brand-badges .chip {
+  background: var(--surface);
+  box-shadow: 0 1px 4px color-mix(in srgb, #000 22%, transparent);
+}
+.brand-missing > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.brand-missing > summary::-webkit-details-marker {
+  display: none;
+}
+.brand-missing > summary .small {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.brand-missing > summary .small svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.15s;
+}
+.brand-missing[open] > summary .small svg {
+  transform: rotate(180deg);
+}
+.brand-missing:not([open]) > summary {
+  border-bottom: 0;
+}

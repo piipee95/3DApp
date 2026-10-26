@@ -86,6 +86,24 @@ cotizaciones por vencer, mantenciones y el conteo de inventario cuando toca.
 - **Archivos de clientes**: enlace de 48 horas para que el cliente suba sus fotos originales (sin
   compresión); se revisan, archivan o eliminan.
 
+## Kit de marca
+
+Los recursos gráficos oficiales del equipo: logotipos (fondo claro, oscuro o transparente), tarjetas de
+presentación y de agradecimiento, redes sociales (WhatsApp, Instagram, portadas, publicaciones), etiquetas y
+stickers, recursos de la app y otros.
+
+- **Buscar y filtrar** por categoría, favoritos, oficiales o archivados. Cada tarjeta muestra el formato, el
+  tamaño y las medidas.
+- **Abrir** un recurso para verlo, **descargar el original** (el mismo archivo que se subió) o **copiar** su texto.
+- **Subir**: botón o arrastrar archivos (PNG, JPG, WebP, SVG, PDF o ZIP, hasta 50 MB). No se comprimen ni se
+  cambian de tamaño. Al subir se elige la categoría, el fondo y si es una nueva versión de un diseño.
+- **Versiones**: un diseño puede tener varias; la **vigente** es la que se usa. Se cambia desde la ficha.
+- **Oficial** y **Favorito**, **Editar**, **Archivar** (se restaura desde el filtro Archivados) y **Eliminar**.
+- **Lo que falta** lista las piezas esperadas que aún no se han subido. **Agregar archivos de la app** suma el
+  logo, los íconos y las piezas para WhatsApp que ya tiene KultiApp.
+- Arriba se ve el espacio usado frente al límite gratuito (1 GB para todo el proyecto).
+- Los visores pueden ver y descargar; propietarios y editores administran.
+
 ## Impresoras
 
 Consumo eléctrico, horas de uso (suman al terminar pedidos), aviso de mantención y registro de **fallas**
