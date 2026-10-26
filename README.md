@@ -30,5 +30,5 @@ npm test
 GitHub Actions ejecuta `npm test` en cada push y pull request.
 
 ## Publicación
-Sitio estático (GitHub Pages desde `main`, raíz del repositorio). Las migraciones
+Sitio estático publicado con Vercel desde `main` (`https://kultiapp.vercel.app`); cada rama y PR genera una vista previa. Las migraciones
 de base de datos se aplican en Supabase antes de publicar el cliente que las usa.

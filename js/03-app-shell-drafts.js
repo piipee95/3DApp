@@ -6,9 +6,8 @@ function common() {
   enhanceFields();
   flashMessages();
   if (S.mode === 'dashboard' || S.mode === 'home') showDraftResume();
-  q('#logout')?.addEventListener('click', () => supabase.auth.signOut());
   q('#invite')?.addEventListener('click', invite);
-  q('#changePassword')?.addEventListener('click', showPasswordDialog);
+  q('#editProfile')?.addEventListener('click', showProfile);
 }
 async function invite() {
   if (!isOwner()) return toast('Solo el propietario puede invitar.', 'error');
@@ -59,6 +58,7 @@ function render() {
   if (S.mode === 'production') return productionView();
   if (S.mode === 'product') return product();
   if (S.mode === 'home') return homeView();
+  if (S.mode === 'profile') return profileView();
   dashboard();
 }
 function enhanceFields() {

@@ -173,6 +173,7 @@ function financeView() {
     ) +
     '<main class="shell">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
+    valuationPanel() +
     '<div class="month-nav"><button type="button" class="btn icon-btn" id="finPrev" aria-label="Mes anterior">' +
     icon('arrow-left') +
     '</button><b>' +
@@ -593,4 +594,87 @@ function showTransfer(prefill = {}) {
     render();
   };
   return dialog;
+}
+// V3.8: what the business has today in money: raw materials, finished goods and what is expected to come in.
+function stockValuation() {
+  const items = (S.resources || []).filter(r => r.kind !== 'printer' && r.counted && !r.deleted_at),
+    worth = list => list.reduce((s, r) => s + n(r.stock_qty) * n(r.unit_cost), 0),
+    filament = worth(items.filter(r => r.kind === 'filament')),
+    supplies = worth(items.filter(r => r.kind !== 'filament')),
+    goods = (S.products || [])
+      .filter(p => p.status !== 'archived' && productStock(p).qty > 0)
+      .map(p => {
+        const t = productNumbers(p),
+          qty = productStock(p).qty;
+        return {
+          p,
+          qty,
+          cost: qty * t.unit,
+          sale: qty * t.price,
+          net: qty * (p.iva_enabled ? t.price / (1 + n(p.iva_rate)) : t.price)
+        };
+      }),
+    goodsCost = goods.reduce((s, g) => s + g.cost, 0),
+    goodsSale = goods.reduce((s, g) => s + g.sale, 0),
+    goodsNet = goods.reduce((s, g) => s + g.net, 0),
+    due = receivables().reduce((s, o) => s + orderBalance(o).due, 0);
+  return {
+    filament,
+    supplies,
+    materials: filament + supplies,
+    goods,
+    units: goods.reduce((s, g) => s + g.qty, 0),
+    goodsCost,
+    goodsSale,
+    goodsProfit: goodsNet - goodsCost,
+    due,
+    invested: filament + supplies + goodsCost,
+    expected: goodsSale + due
+  };
+}
+function valuationPanel() {
+  const v = stockValuation(),
+    line = (k, val, cls = '') =>
+      '<div class="fin-line ' + cls + '"><span>' + k + '</span><b class="num">' + val + '</b></div>';
+  return (
+    '<section class="panel report-panel valuation"><div class="panel-h"><h2>Tu dinero hoy</h2><span class="small muted">Al costo de compra y fabricación</span></div><div class="value-tiles"><div><span>Materias primas</span><b class="num">' +
+    clp(v.materials) +
+    '</b><small>Filamento ' +
+    clp(v.filament) +
+    ' · Insumos ' +
+    clp(v.supplies) +
+    '</small></div><div><span>Productos fabricados</span><b class="num">' +
+    clp(v.goodsCost) +
+    '</b><small>' +
+    v.units +
+    (v.units === 1 ? ' unidad en stock' : ' unidades en stock') +
+    '</small></div><div class="total"><span>Invertido en stock</span><b class="num">' +
+    clp(v.invested) +
+    '</b><small>Materias primas + fabricados</small></div></div><div class="fin-lines">' +
+    line('Si vendes lo fabricado (precio de venta)', clp(v.goodsSale)) +
+    line('Utilidad proyectada de lo fabricado', clp(v.goodsProfit), v.goodsProfit < 0 ? 'down' : 'up') +
+    line('Por cobrar de pedidos', clp(v.due)) +
+    line('= Ingreso proyectado', clp(v.expected), 'total up') +
+    '</div>' +
+    (v.goods.length
+      ? '<details class="value-detail"><summary>Ver productos en stock</summary>' +
+        v.goods
+          .sort((a, b) => b.sale - a.sale)
+          .map(
+            g =>
+              '<div class="fin-line"><span>' +
+              esc(g.p.name) +
+              ' · ' +
+              g.qty +
+              ' un.</span><b class="num">' +
+              clp(g.cost) +
+              ' → ' +
+              clp(g.sale) +
+              '</b></div>'
+          )
+          .join('') +
+        '</details>'
+      : '') +
+    '<p class="small muted fin-note">Las materias primas se valoran al costo promedio de compra; los productos, a su costo de fabricación. El ingreso proyectado no descuenta gastos ni IVA.</p></section>'
+  );
 }

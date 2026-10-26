@@ -35,7 +35,8 @@ const PAGE_TITLES = {
   finance: 'Finanzas',
   inventory: 'Inventario',
   files: 'Archivos del cliente',
-  resources: 'Impresoras'
+  resources: 'Impresoras',
+  profile: 'Mi perfil'
 };
 function navActive(mode) {
   return S.mode === mode || (mode === 'dashboard' && S.mode === 'product');
@@ -51,12 +52,11 @@ function navCount(mode) {
   if (mode === 'quotes') return S.quotes.filter(qt => quoteState(qt) === 'open').length;
   return 0;
 }
+// V4.3: the name chosen in «Mi perfil» (Supabase user metadata); the email until there is one.
+const displayName = () => String(S.session?.user?.user_metadata?.name || '').trim();
 function userInitials() {
   const email = S.session?.user?.email || '';
-  const name = email
-    .split('@')[0]
-    .replace(/[^a-zA-ZÀ-ÿ]+/g, ' ')
-    .trim();
+  const name = (displayName() || email.split('@')[0]).replace(/[^a-zA-ZÀ-ÿ]+/g, ' ').trim();
   const parts = name.split(' ').filter(Boolean);
   return ((parts[0]?.[0] || 'K') + (parts[1]?.[0] || '')).toUpperCase();
 }
@@ -92,13 +92,9 @@ function accountMenuItems() {
     (isOwner()
       ? '<button type="button" class="menu-item" id="invite">' + icon('user-plus') + 'Invitar socio</button>'
       : '') +
-    '<button type="button" class="menu-item" id="backupData">' +
-    icon('database') +
-    'Respaldo de datos</button><button type="button" class="menu-item" id="changePassword">' +
-    icon('key-round') +
-    'Cambiar contraseña</button><button type="button" class="menu-item danger" id="logout">' +
-    icon('log-out') +
-    'Cerrar sesión</button>'
+    '<button type="button" class="menu-item" id="editProfile">' +
+    icon('user') +
+    'Mi perfil</button>'
   );
 }
 function mountShell() {
@@ -142,17 +138,17 @@ function mountShell() {
     }).join('') +
     '</nav><div class="side-user"><div class="account-menu" id="accountMenu" hidden>' +
     accountMenuItems() +
-    themeSwitch() +
-    '</div><button type="button" class="user-chip" id="accountButton" aria-haspopup="menu" aria-expanded="false"><span class="avatar">' +
-    esc(userInitials()) +
-    '</span><span class="user-text"><b>' +
-    esc(S.session?.user?.email || '') +
+    '</div><button type="button" class="user-chip" id="accountButton" aria-haspopup="menu" aria-expanded="false">' +
+    userAvatar() +
+    '<span class="user-text"><b>' +
+    esc(displayName() || S.session?.user?.email || '') +
     '</b><span>' +
     roleName() +
     '</span></span>' +
     icon('ellipsis-vertical') +
     '</button><p class="powered">Powered by <b>ELARA</b></p></div>';
   root.prepend(side);
+  loadAvatarUrl();
   const tabs = document.createElement('nav');
   tabs.className = 'tabbar';
   tabs.setAttribute('aria-label', 'Navegación');
@@ -191,7 +187,6 @@ function mountShell() {
   qa('[data-open-search]').forEach(b => (b.onclick = showSearch));
   qa('[data-open-create]').forEach(b => (b.onclick = showCreateMenu));
   q('#installApp')?.addEventListener('click', installApp);
-  q('#backupData')?.addEventListener('click', showBackup);
 }
 // Close the account menu and any open ⋯ menu when clicking anywhere else.
 document.addEventListener('click', e => {
@@ -204,18 +199,60 @@ document.addEventListener('click', e => {
     q('#accountButton')?.setAttribute('aria-expanded', 'false');
   }
 });
+// ⋯ menus float above lists and cards (which clip overflow): placed on screen next to their
+// button, opening upwards when there is no room below. Scrolling closes them.
+function placeMenu(d) {
+  const pop = d.querySelector(':scope > .menu-pop');
+  if (!pop) return;
+  if (!d.open) return pop.classList.remove('floating');
+  const r = d.querySelector('summary').getBoundingClientRect();
+  pop.classList.add('floating');
+  Object.assign(pop.style, { top: '0px', left: '0px', bottom: 'auto', right: 'auto', maxHeight: '' });
+  // An animated (transformed) ancestor moves the origin of fixed elements: measure and compensate.
+  const origin = pop.getBoundingClientRect(),
+    w = pop.offsetWidth,
+    below = innerHeight - r.bottom - 12,
+    up = pop.offsetHeight > below && r.top > below,
+    room = Math.max(160, up ? r.top - 12 : below),
+    h = Math.min(pop.offsetHeight, room),
+    top = up ? r.top - 6 - h : r.bottom + 6,
+    left = Math.min(Math.max(8, r.right - w), innerWidth - w - 8);
+  Object.assign(pop.style, {
+    top: top - origin.top + 'px',
+    left: left - origin.left + 'px',
+    maxHeight: room + 'px'
+  });
+}
+document.addEventListener(
+  'toggle',
+  e => {
+    if (e.target.matches?.('details.row-menu')) placeMenu(e.target);
+  },
+  true
+);
+const closeFloatingMenus = e => {
+  if (e?.target?.closest?.('.menu-pop')) return;
+  qa('details.row-menu[open]').forEach(d => {
+    if (d.querySelector('.menu-pop.floating')) d.open = false;
+  });
+};
+addEventListener('scroll', closeFloatingMenus, { passive: true, capture: true });
+addEventListener('resize', closeFloatingMenus);
 function showMoreSheet() {
   const dialog = showDialog(
     'moreSheet',
-    '<div class="section-title"><h2>Más</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><div class="sheet-user"><span class="avatar">' +
-      esc(userInitials()) +
-      '</span><div><b>' +
-      esc(S.session?.user?.email || '') +
+    '<div class="section-title"><h2>Más</h2><button class="btn btn-ghost" data-close>Cerrar</button></div><button type="button" class="sheet-user" data-more="profile">' +
+      userAvatar() +
+      '<div><b>' +
+      esc(displayName() || S.session?.user?.email || '') +
       '</b><span>' +
+      (userName() ? '@' + esc(userName()) + ' · ' : '') +
       roleName() +
       ' · ' +
       esc(S.workspace?.name || 'Kultiverso Pop') +
-      '</span></div></div><div class="menu-list"><button type="button" class="menu-item" data-more="quotes">' +
+      '</span></div>' +
+      icon('chevron-right') +
+      '</button><div class="menu-list"><button type="button" class="menu-item" data-more="quotes">' +
       icon('file-text') +
       'Cotizaciones</button><button type="button" class="menu-item" data-more="customers">' +
       icon('users') +
@@ -238,14 +275,7 @@ function showMoreSheet() {
           icon('download') +
           'Instalar app</button>'
         : '') +
-      '<button type="button" class="menu-item" data-more="backup">' +
-      icon('database') +
-      'Respaldo de datos</button><button type="button" class="menu-item" data-more="password">' +
-      icon('key-round') +
-      'Cambiar contraseña</button><button type="button" class="menu-item danger" data-more="logout">' +
-      icon('log-out') +
-      'Cerrar sesión</button></div>' +
-      themeSwitch() +
+      '</div>' +
       '<p class="powered">Kultiverso Pop · Powered by <b>ELARA</b> · ' +
       APP_VERSION +
       '</p>'
@@ -253,14 +283,12 @@ function showMoreSheet() {
   dialog.classList.add('sheet');
   const actions = {
     invite: () => invite(),
-    password: () => showPasswordDialog(),
-    logout: () => supabase.auth.signOut(),
+    profile: () => showProfile(),
     resources: () => goMode('resources'),
     quotes: () => goMode('quotes'),
     install: () => installApp(),
     reports: () => goMode('reports'),
     finance: () => goMode('finance'),
-    backup: () => showBackup(),
     files: () => goMode('files'),
     customers: () => goMode('customers')
   };

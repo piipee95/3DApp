@@ -7,7 +7,8 @@ async function loadResources() {
     .eq('workspace_id', S.workspace.id)
     .order('name');
   if (error) throw error;
-  S.resources = data || [];
+  // Deleted materials and printers stay in the database for past history only.
+  S.resources = (data || []).filter(r => !r.deleted_at);
 }
 // Startup loads the last 12 months plus anything still open; Reportes fetches older months on demand.
 const HISTORY_MONTHS = 12;
@@ -64,7 +65,8 @@ async function goMode(mode) {
     if (mode === 'quotes') await Promise.all([loadQuotes(), loadCustomers(), loadOrders()]);
     if (mode === 'customers') await Promise.all([loadCustomers(), loadQuotes(), loadOrders()]);
     if (mode === 'reports') await Promise.all([loadQuotes(), loadOrders()]);
-    if (mode === 'finance') await Promise.all([loadOrders(), loadExpenses(), loadTransfers()]);
+    if (mode === 'finance')
+      await Promise.all([loadOrders(), loadExpenses(), loadTransfers(), loadResources(), loadProducts()]);
     if (mode === 'home') await Promise.all([loadProducts(), loadOrders(), loadResources(), loadQuotes()]);
     render();
   } catch (e) {
@@ -193,7 +195,15 @@ function setupV13() {
         (st.reserved === 1 ? ' reservada' : ' reservadas') +
         ' para pedidos</span>'
       : '') +
-    '</div></div><div class="row"><button type="button" class="btn btn-secondary" id="makeStock"' +
+    '</div></div><div class="row">' +
+    (st.available > 0
+      ? '<button type="button" class="btn btn-primary" id="sellStock"' +
+        (canEdit() ? '' : ' disabled') +
+        '>' +
+        icon('wallet') +
+        'Vender</button>'
+      : '') +
+    '<button type="button" class="btn btn-secondary" id="makeStock"' +
     (canEdit() ? '' : ' disabled') +
     '>' +
     icon('plus') +
@@ -233,6 +243,9 @@ function bindV13() {
     if (S.product.id && !S.dirty) showNewOrder('stock');
   };
   q('#adjustStock').onclick = () => showStockAdjust(S.product);
+  q('#sellStock')?.addEventListener('click', () =>
+    showSell(S.products.find(p => p.id === S.product.id) || S.product)
+  );
   if (!canEdit()) return;
   qa('.filamentSelect').forEach(
     select =>
@@ -291,7 +304,14 @@ function showDialog(id, html) {
     b.innerHTML = icon('x');
   });
   document.body.append(dialog);
-  dialog.onclose = () => dialog.remove();
+  dialog.onclose = () => {
+    dialog.remove();
+    // Closing returns focus to the row that opened it; on phones that draws a focus line across the list.
+    setTimeout(() => {
+      const el = document.activeElement;
+      if (el?.matches?.('.list-row, [data-open], tr')) el.blur();
+    });
+  };
   // Forms only close with their buttons or Esc so a stray tap never loses what was typed.
   if (!dialog.querySelector('form')) closeOnBackdrop(dialog);
   dialog.showModal();
@@ -451,7 +471,15 @@ function showNewOrder(kind = 'customer') {
             '',
             'text',
             'list="customerList" autocomplete="off"'
-          ) + customerOptions()) +
+          ) +
+          customerOptions() +
+          fieldHtml(
+            'WhatsApp del cliente (opcional)',
+            'orderPhone',
+            '',
+            'tel',
+            'maxlength="30" inputmode="tel" autocomplete="off" placeholder="+56 9 1234 5678"'
+          )) +
       '<div class="grid grid-2">' +
       fieldHtml('Cantidad', 'orderQty', forStock ? 1 : t.qty, 'number', 'min="1" step="1" required') +
       (forStock
@@ -513,6 +541,7 @@ function showNewOrder(kind = 'customer') {
     q('#newOrderStock').closest('.notice').hidden = fromStock();
     q('#orderQty').max = fromStock() ? stock.available : '';
   });
+  bindCustomerPhone('#orderCustomer', '#orderPhone');
   q('#newOrderForm').onsubmit = async e => {
     e.preventDefault();
     const b = e.submitter || e.target.querySelector('button[type=submit]');
@@ -521,7 +550,9 @@ function showNewOrder(kind = 'customer') {
     const qty = Math.max(1, Math.floor(n(q('#orderQty').value))),
       made = forStock && q('#orderAlreadyMade').checked;
     try {
-      const customer_id = forStock ? null : await ensureCustomer(q('#orderCustomer').value);
+      const customer_id = forStock
+        ? null
+        : await ensureCustomer(q('#orderCustomer').value, q('#orderPhone')?.value);
       const { data, error } = await supabase
         .from('production_orders')
         .insert({
@@ -556,8 +587,12 @@ function showNewOrder(kind = 'customer') {
       }
       dialog.close();
       await Promise.all([loadResources(), refreshProductStock(p.id)]);
-      S.orderFilter = made ? 'all' : 'open';
-      await goMode('production');
+      S.orderFilter = forStock ? 'stock' : 'open';
+      if (made) {
+        S.showArchived = false;
+        S.showStock = true;
+      }
+      await goMode(made ? 'dashboard' : 'production');
       S.msg = made
         ? qty +
           (qty === 1 ? ' unidad sumada' : ' unidades sumadas') +
@@ -570,6 +605,7 @@ function showNewOrder(kind = 'customer') {
       render();
     } catch (error) {
       q('#orderFeedback').textContent = error.message;
+      offerStockCount(error, () => q('#newOrderForm')?.requestSubmit());
     } finally {
       b.disabled = false;
     }
@@ -641,7 +677,10 @@ function showOrder(order) {
         .join('') +
       '</select></div>' +
       fieldHtml('Entrega', 'actualDue', order.due_date, 'date') +
-      '<h3 class="form-section">Costos reales del lote</h3><p class="small muted">Déjalos vacíos mientras estén pendientes. Las fallas se suman aparte.</p><div class="grid grid-2">' +
+      // Real costs are optional: folded unless already filled, so the dialog stays short.
+      '<details class="real-costs"' +
+      (order.actual_cost != null || n(order.failures_cost) > 0 ? ' open' : '') +
+      '><summary>Costos reales (opcional)</summary><p class="small muted">Déjalos vacíos mientras estén pendientes. Las fallas se suman aparte.</p><div class="grid grid-2">' +
       fieldHtml(
         'Costo real base del lote CLP',
         'actualCost',
@@ -664,11 +703,13 @@ function showOrder(order) {
         'number',
         'min="0" step="0.01"'
       ) +
-      '</div><div id="actualResult" class="notice small" role="status"></div><div class="field"><label for="actualNotes">Notas</label><textarea id="actualNotes">' +
+      '</div><div id="actualResult" class="notice small" role="status"></div></details><div class="field"><label for="actualNotes">Notas</label><textarea id="actualNotes">' +
       esc(order.notes) +
       '</textarea></div><div id="actualFeedback" class="small" role="status"></div>' +
       (canEdit()
-        ? '<div class="dialog-actions"><button class="btn btn-ghost" type="button" id="orderFailure">' +
+        ? '<div class="dialog-actions"><button class="btn btn-ghost danger-text" type="button" id="orderDelete">' +
+          icon('trash-2') +
+          'Eliminar</button><button class="btn btn-ghost" type="button" id="orderFailure">' +
           icon('triangle-alert') +
           'Registrar falla</button><button class="btn btn-primary" type="submit">Guardar avance</button></div>'
         : '') +
@@ -736,10 +777,16 @@ function showOrder(order) {
   refreshActual();
   mountOrderInventory(order);
   mountOrderPayments(order, dialog);
+  mountCustomerNotify(order, dialog);
+  mountOrderCostNotice(order, dialog);
   mountOrderPhotos(order, dialog);
   q('#orderFailure')?.addEventListener('click', () => {
     dialog.close();
     showFailure(order);
+  });
+  q('#orderDelete')?.addEventListener('click', () => {
+    dialog.close();
+    deleteOrder(order);
   });
   q('#jobToProduct')?.addEventListener('click', () => {
     dialog.close();
@@ -775,11 +822,15 @@ function showOrder(order) {
         .single();
       if (error) throw error;
       // Finishing the order adds its print time to the printers' usage counters.
-      if (!isFinished(order.status) && isFinished(q('#orderStatus').value)) await addOrderPrinterHours(order);
+      const newStatus = q('#orderStatus').value;
+      if (!isFinished(order.status) && isFinished(newStatus)) await addOrderPrinterHours(order);
       await loadOrders();
       await loadResources();
       dialog.close();
       render();
+      // A new state is news for the customer: offer the WhatsApp message.
+      if (newStatus !== order.status)
+        offerStatusMessage(S.orders.find(o => o.id === order.id) || { ...order, status: newStatus });
     } catch (error) {
       q('#actualFeedback').textContent = error.message;
     } finally {
@@ -897,5 +948,52 @@ async function optimizePhoto(file) {
     throw Error('No se pudo optimizar la foto. Prueba una imagen más simple.');
   } finally {
     URL.revokeObjectURL(url);
+  }
+}
+
+// V3.7: remove an order. Reserved materials or units are released first by cancelling it,
+// so inventory never keeps a reservation for an order that no longer exists.
+async function deleteOrder(order) {
+  if (!canEdit()) return;
+  const reserved = order.inventory_state === 'reserved' || order.stock_state === 'reserved',
+    paid = orderPayments(order).reduce((s, p) => s + n(p.amount), 0),
+    product = S.products.find(p => p.id === order.product_id);
+  const ok = await confirmDialog({
+    title: 'Eliminar PED-' + order.order_no,
+    body:
+      '«' +
+      order.title +
+      '» se eliminará para todo el equipo.' +
+      (order.kind === 'stock' && order.stock_state === 'added'
+        ? ' Las unidades que ya sumó al stock' + (product ? ' de ' + product.name : '') + ' se mantienen.'
+        : '') +
+      (reserved ? ' Primero se cancela para devolver al stock lo que tenía reservado.' : '') +
+      (paid > 0 ? ' También se borran sus pagos registrados (' + clp(paid) + ').' : '') +
+      ' Esta acción no se puede deshacer.',
+    confirmLabel: 'Eliminar',
+    danger: true
+  });
+  if (!ok) return;
+  try {
+    if (reserved) {
+      const { error } = await supabase
+        .from('production_orders')
+        .update({ status: 'canceled', updated_at: new Date().toISOString() })
+        .eq('id', order.id);
+      if (error) throw error;
+    }
+    const { data, error } = await supabase.from('production_orders').delete().eq('id', order.id).select('id');
+    if (error) throw error;
+    if (!data?.length) throw Error('No se pudo eliminar: el pedido todavía tiene materiales reservados.');
+    await Promise.all([
+      loadOrders(),
+      loadResources(),
+      order.product_id ? refreshProductStock(order.product_id) : null
+    ]);
+    toast('PED-' + order.order_no + ' eliminado.');
+    render();
+  } catch (error) {
+    toast(error.message, 'error');
+    logError('handled', 'Eliminar pedido: ' + error.message);
   }
 }

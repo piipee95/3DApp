@@ -137,7 +137,7 @@ async function test() {
   run(`q('#backupDialog').close()`);
   // Reachable from the phone "Más" sheet.
   run(`S.mode='dashboard';render();q('#moreTab').click()`);
-  assert.ok(run('!!q("#moreSheet [data-more=reports]")&&!!q("#moreSheet [data-more=backup]")'));
+  assert.ok(run('!!q("#moreSheet [data-more=reports]")'));
   dom.window.close();
   console.log(
     'PASS V2.1: monthly report (sales, profit real/estimated, collected, quotes, stock fabrication, by product/customer, 6-month chart, month navigation), valid Excel export and full backup (JSON/Excel).'

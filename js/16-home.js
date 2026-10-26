@@ -24,7 +24,9 @@ const ORDER_CHIP = {
   delivered: 'c-done',
   canceled: 'c-cancel'
 };
+// A fabrication for stock is done once it is «Listo»: its units are already in the product's stock.
 function orderIsOpen(o) {
+  if (o.kind === 'stock') return !['ready', 'delivered', 'canceled'].includes(o.status);
   return !['delivered', 'canceled'].includes(o.status);
 }
 function orderIsLate(o) {
@@ -211,12 +213,7 @@ function homeView() {
     ) +
     '<main class="shell home">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
-    '<p class="home-date">' +
-    weekday.charAt(0).toUpperCase() +
-    weekday.slice(1) +
-    ' · Resumen de ' +
-    MONTHS[now.getMonth()] +
-    '</p>' +
+    homeHero(weekday, open, late, dueTotal) +
     remindersPanel() +
     '<div class="kpis">' +
     kpi(
@@ -265,6 +262,30 @@ function homeView() {
         : '<span class="muted">Stock en orden</span>'
     ) +
     kpi(
+      'Productos en stock',
+      'package',
+      '<span class="full">' +
+        clp(stockValuation().goodsCost) +
+        '</span><span class="short">' +
+        clpShort(stockValuation().goodsCost) +
+        '</span>',
+      '<button type="button" class="link-btn" id="homeValue">' +
+        stockValuation().units +
+        ' un. · se venden en ' +
+        clpShort(stockValuation().goodsSale) +
+        '</button>'
+    ) +
+    kpi(
+      'Materia prima',
+      'boxes',
+      '<span class="full">' +
+        clp(stockValuation().materials) +
+        '</span><span class="short">' +
+        clpShort(stockValuation().materials) +
+        '</span>',
+      '<button type="button" class="link-btn" id="homeMaterials">Filamento e insumos</button>'
+    ) +
+    kpi(
       'Por cobrar',
       'wallet',
       '<span class="full">' + clp(dueTotal) + '</span><span class="short">' + clpShort(dueTotal) + '</span>',
@@ -282,6 +303,22 @@ function homeView() {
     '</section></div></main>';
   common();
   q('#homeNew')?.addEventListener('click', showCreateMenu);
+  qa('[data-quick-action]').forEach(
+    b =>
+      (b.onclick = () =>
+        ({
+          sell: showSellPicker,
+          order: () => showQuickJob('order'),
+          stock: showStockProductPicker,
+          quote: () => showQuickJob('quote')
+        })[b.dataset.quickAction]())
+  );
+  q('#homeValue')?.addEventListener('click', () => {
+    S.showArchived = false;
+    S.showStock = true;
+    goMode('dashboard');
+  });
+  q('#homeMaterials')?.addEventListener('click', () => goMode('inventory'));
   q('#homeDue')?.addEventListener('click', () => {
     S.orderFilter = 'unpaid';
     goMode('production');
@@ -292,4 +329,68 @@ function homeView() {
   );
   qa('[data-home-stock]').forEach(el => (el.onclick = () => goMode('inventory')));
   bindReminders();
+}
+
+// V4.2: personal greeting, the day in one sentence and big shortcuts to the daily actions.
+function userFirstName() {
+  const meta = S.session?.user?.user_metadata || {},
+    raw = meta.first_name || meta.name || String(S.session?.user?.email || '').split('@')[0];
+  const first = String(raw).split(/[\s._-]+/)[0] || '';
+  return first ? first.charAt(0).toUpperCase() + first.slice(1).toLowerCase() : '';
+}
+function homeHero(weekday, open, late, dueTotal) {
+  const h = new Date().getHours(),
+    hello = h < 12 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches',
+    name = userFirstName(),
+    today = open.filter(o => o.due_date === localToday()).length,
+    parts = [
+      open.length
+        ? open.length + (open.length === 1 ? ' pedido en curso' : ' pedidos en curso')
+        : 'ningún pedido en curso',
+      today ? today + (today === 1 ? ' para entregar hoy' : ' para entregar hoy') : '',
+      late.length ? late.length + (late.length === 1 ? ' atrasado' : ' atrasados') : '',
+      dueTotal > 0 ? clp(dueTotal) + ' por cobrar' : ''
+    ].filter(Boolean),
+    sentence =
+      'Tienes ' + parts.slice(0, -1).join(', ') + (parts.length > 1 ? ' y ' : '') + parts.at(-1) + '.',
+    actions = [
+      ['sell', 'wallet', 'Vender', 'Desde el stock'],
+      ['order', 'clipboard-list', 'Nuevo pedido', 'Para un cliente'],
+      ['stock', 'boxes', 'Fabricar', 'Para stock'],
+      ['quote', 'file-text', 'Cotizar', 'Enviar precio']
+    ];
+  return (
+    '<section class="home-hero"><p class="home-date">' +
+    weekday.charAt(0).toUpperCase() +
+    weekday.slice(1) +
+    '</p><h2 class="home-hello">' +
+    hello +
+    (name ? ', ' + esc(name) : '') +
+    ' ' +
+    icon('sparkles') +
+    '</h2><p class="home-sentence">' +
+    sentence +
+    '</p>' +
+    (canEdit()
+      ? '<div class="quick-actions">' +
+        actions
+          .map(
+            ([k, ic, t, d]) =>
+              '<button type="button" class="quick-action qa-' +
+              k +
+              '" data-quick-action="' +
+              k +
+              '"><span class="qa-ic">' +
+              icon(ic) +
+              '</span><b>' +
+              t +
+              '</b><span>' +
+              d +
+              '</span></button>'
+          )
+          .join('') +
+        '</div>'
+      : '') +
+    '</section>'
+  );
 }

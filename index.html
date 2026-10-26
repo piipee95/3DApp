@@ -1,56 +1,79 @@
 <!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0B0B10" />
-  <meta name="description" content="KultiApp — Costos y producción 3D para Kultiverso Pop. Powered by ELARA." />
-  <title>KultiApp — Costos y producción 3D</title>
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="KultiApp" />
-  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" />
-  <link rel="stylesheet" href="styles.css" />
-  <script>
-    // Saved theme before the first paint (see js/23-theme.js).
-    try {
-      var t = localStorage.getItem('kultiapp_theme');
-      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
-    } catch (e) {}
-  </script>
-</head>
-<body>
-  <div id="app"></div>
-  <!-- The SDK module runs first; the app files below share one global scope and run in order. -->
-  <script type="module" src="js/supabase-client.js"></script>
-  <script defer src="js/01-core.js"></script>
-  <script defer src="js/02-products.js"></script>
-  <script defer src="js/03-app-shell-drafts.js"></script>
-  <script defer src="js/04-photos-filaments.js"></script>
-  <script defer src="js/05-orders.js"></script>
-  <script defer src="js/06-quote-document.js"></script>
-  <script defer src="js/07-inventory.js"></script>
-  <script defer src="js/08-product-stock.js"></script>
-  <script defer src="js/09-quotes-customers.js"></script>
-  <script defer src="js/10-search-install.js"></script>
-  <script defer src="js/11-payments-whatsapp.js"></script>
-  <script defer src="js/12-reports-backup.js"></script>
-  <script defer src="js/13-loading-editor.js"></script>
-  <script defer src="js/14-quick-create.js"></script>
-  <script defer src="js/15-shell-navigation.js"></script>
-  <script defer src="js/16-home.js"></script>
-  <script defer src="js/17-lists.js"></script>
-  <script defer src="js/18-customer-files.js"></script>
-  <script defer src="js/19-finance.js"></script>
-  <script defer src="js/20-price-lists.js"></script>
-  <script defer src="js/21-production.js"></script>
-  <script defer src="js/22-public-pages.js"></script>
-  <script defer src="js/23-theme.js"></script>
-  <script defer src="js/24-reminders.js"></script>
-  <script defer src="js/99-start.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B0B10" />
+    <meta
+      name="description"
+      content="KultiApp — Costos y producción 3D para Kultiverso Pop. Powered by ELARA."
+    />
+    <title>KultiApp — Costos y producción 3D</title>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="KultiApp" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script>
+      // Saved theme before the first paint (see js/23-theme.js).
+      try {
+        var t = localStorage.getItem('kultiapp_theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Splash while the app loads; the first render replaces it. -->
+      <div class="splash" role="status" aria-label="Cargando KultiApp">
+        <img
+          class="splash-logo"
+          src="assets/kultiverso-pop-logo.webp"
+          alt="Kultiverso Pop"
+          width="260"
+          height="120"
+        />
+        <div class="splash-bar"><i></i></div>
+        <p class="splash-text">Cargando tu taller…</p>
+      </div>
+    </div>
+    <!-- The SDK module runs first; the app files below share one global scope and run in order. -->
+    <script type="module" src="js/supabase-client.js"></script>
+    <script defer src="js/01-core.js"></script>
+    <script defer src="js/02-products.js"></script>
+    <script defer src="js/03-app-shell-drafts.js"></script>
+    <script defer src="js/04-photos-filaments.js"></script>
+    <script defer src="js/05-orders.js"></script>
+    <script defer src="js/06-quote-document.js"></script>
+    <script defer src="js/07-inventory.js"></script>
+    <script defer src="js/08-product-stock.js"></script>
+    <script defer src="js/09-quotes-customers.js"></script>
+    <script defer src="js/10-search-install.js"></script>
+    <script defer src="js/11-payments-whatsapp.js"></script>
+    <script defer src="js/12-reports-backup.js"></script>
+    <script defer src="js/13-loading-editor.js"></script>
+    <script defer src="js/14-quick-create.js"></script>
+    <script defer src="js/15-shell-navigation.js"></script>
+    <script defer src="js/16-home.js"></script>
+    <script defer src="js/17-lists.js"></script>
+    <script defer src="js/18-customer-files.js"></script>
+    <script defer src="js/19-finance.js"></script>
+    <script defer src="js/20-price-lists.js"></script>
+    <script defer src="js/21-production.js"></script>
+    <script defer src="js/22-public-pages.js"></script>
+    <script defer src="js/23-theme.js"></script>
+    <script defer src="js/24-reminders.js"></script>
+    <script defer src="js/25-notify.js"></script>
+    <script defer src="js/26-sell.js"></script>
+    <script defer src="js/27-order-costs.js"></script>
+    <script defer src="js/28-profile.js"></script>
+    <script defer src="js/99-start.js"></script>
+  </body>
 </html>

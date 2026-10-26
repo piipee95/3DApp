@@ -4401,3 +4401,704 @@ dialog[open]::backdrop {
 .reminders .lr-main span {
   white-space: normal;
 }
+/* V3.7: folded real costs in the order dialog */
+.real-costs {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 4px 14px;
+}
+.real-costs > summary {
+  padding: 10px 0;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--label);
+}
+.real-costs[open] {
+  padding-bottom: 14px;
+}
+.real-costs .grid-2 {
+  margin-top: 10px;
+}
+#orderDialog {
+  width: min(680px, calc(100vw - 32px));
+}
+/* Save / delete stay in reach at the bottom of long dialogs. */
+#orderDialog .dialog-actions {
+  position: sticky;
+  bottom: -20px;
+  margin: 18px -20px -20px;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  z-index: 2;
+}
+@media (max-width: 599px) {
+  #orderDialog {
+    width: 100%;
+  }
+  #orderDialog .dialog-actions {
+    bottom: calc(-18px - env(safe-area-inset-bottom));
+    margin: 18px -16px calc(-18px - env(safe-area-inset-bottom));
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+  }
+}
+/* V3.8: money in stock */
+.valuation {
+  margin-bottom: 16px;
+}
+.value-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.value-tiles > div {
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+  background: var(--surface);
+}
+.value-tiles span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.value-tiles b {
+  font-size: 20px;
+}
+.value-tiles small {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+.value-tiles .total b {
+  color: var(--action);
+}
+.value-detail {
+  padding: 0 16px 8px;
+}
+.value-detail > summary {
+  padding: 10px 0;
+  cursor: pointer;
+  color: var(--cyan);
+  font-weight: 600;
+  font-size: 13px;
+}
+@media (max-width: 599px) {
+  .value-tiles {
+    grid-template-columns: 1fr 1fr;
+  }
+  .value-tiles .total {
+    grid-column: 1 / -1;
+  }
+}
+/* ⋯ menus float above clipping cards and lists */
+.menu-pop.floating {
+  position: fixed;
+  z-index: 60;
+  overflow-y: auto;
+}
+.menu-pop.floating {
+  width: max-content;
+  max-width: calc(100vw - 16px);
+}
+/* V4.0: customer updates */
+.notify-preview {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  white-space: pre-line;
+  font-size: 13px;
+  background: color-mix(in srgb, var(--green) 9%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--green) 25%, transparent);
+  border-radius: 10px 10px 10px 2px;
+}
+.notify-phone {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.notify-phone input {
+  flex: 1;
+  min-width: 0;
+}
+.notify-preview {
+  overflow-wrap: anywhere;
+}
+/* V4.1: sell from stock */
+.sell-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+.sell-summary > div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--raised);
+  border-radius: var(--r);
+}
+.sell-summary span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.sell-summary b {
+  font-size: 17px;
+}
+.product-row .sell-btn {
+  flex: none;
+}
+td.row-actions {
+  white-space: nowrap;
+}
+td.row-actions .sell-btn {
+  margin-right: 6px;
+}
+@media (max-width: 599px) {
+  .product-row {
+    flex-wrap: wrap;
+  }
+  .product-row .sell-btn {
+    order: 5;
+    flex: 1 0 calc(100% - 60px);
+    margin-left: 60px;
+    justify-content: center;
+  }
+}
+/* Rows only show a focus ring for keyboard use, never after a tap. */
+.list-row:focus:not(:focus-visible),
+[data-open]:focus:not(:focus-visible) {
+  outline: none;
+}
+/* V4.2: product gallery */
+.view-toggle {
+  flex: none;
+}
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  padding: 14px;
+}
+.product-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    border-color 0.15s;
+}
+.product-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--line2);
+  box-shadow: var(--shadow);
+}
+.product-card.archived {
+  opacity: 0.6;
+}
+.pc-photo {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--raised);
+}
+.pc-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pc-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+}
+.pc-empty .i {
+  width: 40px;
+  height: 40px;
+}
+.pc-stock {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  padding: 4px 9px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+  background: color-mix(in srgb, var(--green) 88%, #000);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px #0003;
+}
+.pc-body {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+.pc-name {
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pc-price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.pc-price > b {
+  font-size: 17px;
+}
+.pc-cost {
+  font-size: 12px;
+  color: var(--muted);
+}
+.pc-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.pc-actions .sell-btn {
+  flex: 1;
+  justify-content: center;
+}
+.pc-actions .row-menu {
+  margin-left: auto;
+}
+@media (max-width: 599px) {
+  .product-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+  }
+  .pc-body {
+    padding: 10px;
+  }
+  .pc-price > b {
+    font-size: 15px;
+  }
+  .pc-actions .sell-btn {
+    padding-inline: 8px;
+  }
+}
+/* V4.2: personal Inicio */
+.home-hero {
+  margin-bottom: 18px;
+}
+.home-hero .home-date {
+  margin-bottom: 4px;
+}
+.home-hello {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.home-hello .i {
+  width: 22px;
+  height: 22px;
+  color: var(--yellow);
+}
+.home-sentence {
+  margin: 4px 0 16px;
+  color: var(--label);
+  font-size: 14.5px;
+}
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.quick-action {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  padding: 14px;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.quick-action:hover {
+  transform: translateY(-2px);
+  border-color: var(--line2);
+  box-shadow: var(--shadow);
+}
+.quick-action:active {
+  transform: scale(0.97);
+}
+.quick-action b {
+  font-size: 14px;
+}
+.quick-action > span:last-child {
+  font-size: 12px;
+  color: var(--muted);
+}
+.qa-ic {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 8px;
+  border-radius: 11px;
+  color: #fff;
+}
+.qa-sell .qa-ic {
+  background: linear-gradient(135deg, var(--action), color-mix(in srgb, var(--action) 65%, var(--yellow)));
+}
+.qa-order .qa-ic {
+  background: linear-gradient(135deg, var(--cyan), color-mix(in srgb, var(--cyan) 60%, var(--violet)));
+}
+.qa-stock .qa-ic {
+  background: linear-gradient(135deg, var(--green), color-mix(in srgb, var(--green) 60%, var(--cyan)));
+}
+.qa-quote .qa-ic {
+  background: linear-gradient(135deg, var(--violet), color-mix(in srgb, var(--violet) 60%, var(--action)));
+}
+@media (max-width: 599px) {
+  .home-hello {
+    font-size: 21px;
+  }
+  .quick-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .quick-action {
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 10px;
+    align-items: center;
+    padding: 12px;
+  }
+  .qa-ic {
+    grid-row: span 2;
+    margin: 0;
+    width: 36px;
+    height: 36px;
+  }
+}
+/* V4.2: gentle motion — cards rise in sequence, toasts and confirmations pop. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes check-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.quick-action,
+.kpis > .kpi,
+.product-card,
+.reminders > .reminder,
+.value-tiles > div {
+  animation: rise-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.quick-action:nth-child(2),
+.kpis > .kpi:nth-child(2),
+.product-card:nth-child(2),
+.reminders > .reminder:nth-child(3),
+.value-tiles > div:nth-child(2) {
+  animation-delay: 0.04s;
+}
+.quick-action:nth-child(3),
+.kpis > .kpi:nth-child(3),
+.product-card:nth-child(3),
+.reminders > .reminder:nth-child(4),
+.value-tiles > div:nth-child(3) {
+  animation-delay: 0.08s;
+}
+.quick-action:nth-child(4),
+.kpis > .kpi:nth-child(4),
+.product-card:nth-child(4),
+.reminders > .reminder:nth-child(5) {
+  animation-delay: 0.12s;
+}
+.kpis > .kpi:nth-child(n + 5),
+.product-card:nth-child(n + 5),
+.reminders > .reminder:nth-child(n + 6) {
+  animation-delay: 0.16s;
+}
+.toast .i:first-child {
+  animation: check-pop 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.kpi,
+.panel,
+.list-row {
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.product-grid .product-card {
+  padding: 0;
+  margin: 0;
+}
+.product-panel:has(.product-grid) {
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+.product-panel .product-grid {
+  padding: 0;
+}
+/* V4.3: splash with the Kultiverso Pop logo while the app loads */
+.splash {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 22px;
+  background:
+    radial-gradient(60% 50% at 50% 40%, color-mix(in srgb, var(--action) 14%, transparent), transparent 70%),
+    var(--bg);
+  animation: fade-in 0.3s ease-out both;
+}
+.splash-logo {
+  width: min(260px, 64vw);
+  height: auto;
+  filter: drop-shadow(0 10px 28px color-mix(in srgb, var(--action) 35%, transparent));
+  animation: splash-float 2.4s ease-in-out infinite;
+}
+.splash-bar {
+  position: relative;
+  width: 160px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+.splash-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 45%;
+  border-radius: inherit;
+  background: var(--stripe);
+  animation: splash-slide 1.1s ease-in-out infinite;
+}
+.splash-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+@keyframes splash-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.02);
+  }
+}
+@keyframes splash-slide {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(240%);
+  }
+}
+/* Skeleton screens carry the brand stripe while a section loads. */
+.skeleton::before {
+  content: '';
+  display: block;
+  height: 3px;
+  margin: -1px 0 14px;
+  border-radius: 999px;
+  background: var(--stripe);
+  background-size: 200% 100%;
+  animation: sk-shine 1.2s linear infinite;
+}
+.avatar-lg {
+  width: 52px;
+  height: 52px;
+  font-size: 18px;
+}
+.profile-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.profile-head > div {
+  display: grid;
+  gap: 2px;
+}
+.cost-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+:root[data-theme='light'] .splash {
+  background:
+    radial-gradient(50% 35% at 50% 45%, color-mix(in srgb, var(--action) 7%, transparent), transparent 70%),
+    var(--bg);
+}
+:root[data-theme='light'] .splash-logo {
+  filter: drop-shadow(0 8px 18px color-mix(in srgb, var(--action) 18%, transparent));
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .splash {
+    background:
+      radial-gradient(50% 35% at 50% 45%, color-mix(in srgb, var(--action) 7%, transparent), transparent 70%),
+      var(--bg);
+  }
+  :root:not([data-theme='dark']) .splash-logo {
+    filter: drop-shadow(0 8px 18px color-mix(in srgb, var(--action) 18%, transparent));
+  }
+}
+/* V4.4: «Mi perfil» page */
+.avatar.has-photo {
+  background: var(--raised);
+  overflow: hidden;
+}
+.avatar.has-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.avatar-xl {
+  width: 76px;
+  height: 76px;
+  font-size: 26px;
+}
+button.sheet-user {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+button.sheet-user > div {
+  flex: 1;
+  min-width: 0;
+}
+button.sheet-user > svg {
+  color: var(--muted);
+}
+.profile-page {
+  display: grid;
+  gap: 14px;
+}
+.profile-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background:
+    radial-gradient(90% 140% at 0% 0%, color-mix(in srgb, var(--action) 12%, transparent), transparent 60%),
+    var(--surface);
+}
+.profile-id {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 200px;
+}
+.profile-id h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.profile-id .badge {
+  justify-self: start;
+}
+.profile-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.profile-section .panel-h h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.profile-section .panel-h svg {
+  width: 17px;
+  height: 17px;
+  color: var(--muted);
+}
+.profile-body {
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+.profile-body .btn[type='submit'] {
+  justify-self: start;
+}
+.profile-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.profile-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.profile-facts dt {
+  color: var(--muted);
+}
+.profile-facts dd {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .profile-card {
+    padding: 16px;
+  }
+}
+.sheet-user .avatar {
+  color: #fff;
+  font-size: 12px;
+}
+#syncOrderMaterials {
+  margin-top: 10px;
+}

@@ -35,14 +35,22 @@ const sameName = (a, b) =>
     .trim()
     .toLocaleLowerCase('es');
 // Links a typed client name to a customer, creating it the first time it is used.
-async function ensureCustomer(name) {
+// Finds or creates the customer by name; a WhatsApp typed in the form is saved on it.
+async function ensureCustomer(name, phone = '') {
   name = String(name || '').trim();
+  phone = String(phone || '').trim();
   if (!name || !canEdit()) return null;
   const found = S.customers.find(c => sameName(c.name, name));
-  if (found) return found.id;
+  if (found) {
+    if (phone && phone !== found.phone) {
+      const { error } = await supabase.from('customers').update({ phone }).eq('id', found.id);
+      if (!error) found.phone = phone;
+    }
+    return found.id;
+  }
   const { data, error } = await supabase
     .from('customers')
-    .insert({ workspace_id: S.workspace.id, name: name.slice(0, 120) })
+    .insert({ workspace_id: S.workspace.id, name: name.slice(0, 120), ...(phone ? { phone } : {}) })
     .select()
     .single();
   if (error) {
@@ -52,6 +60,20 @@ async function ensureCustomer(name) {
   }
   S.customers.push(data);
   return data.id;
+}
+// Choosing a known customer fills their WhatsApp if the field is still empty.
+function bindCustomerPhone(nameSel, phoneSel) {
+  const name = q(nameSel),
+    phone = q(phoneSel);
+  if (!name || !phone) return;
+  let auto = '';
+  const fill = () => {
+    const c = S.customers.find(x => sameName(x.name, name.value));
+    if (c?.phone && (!phone.value || phone.value === auto)) phone.value = auto = c.phone;
+  };
+  name.addEventListener('input', fill);
+  name.addEventListener('change', fill);
+  fill();
 }
 function customerOptions() {
   return (
@@ -745,12 +767,59 @@ const VIEW_MODES = [
   'finance',
   'inventory',
   'resources',
+  'profile',
   'product',
   'files'
 ];
 const viewKey = () => 'kultiapp_view_' + (S.session?.user?.id || '');
+// V4.5: each section has its own link (#pedidos, #producto/<id>…), so the back button and
+// shared links work. Supabase login links also use the hash: those are left alone.
+const VIEW_SLUGS = {
+  home: 'inicio',
+  dashboard: 'productos',
+  quotes: 'cotizaciones',
+  production: 'pedidos',
+  customers: 'clientes',
+  reports: 'reportes',
+  finance: 'finanzas',
+  inventory: 'inventario',
+  resources: 'impresoras',
+  profile: 'perfil',
+  files: 'archivos',
+  product: 'producto'
+};
+function viewHash() {
+  const slug = VIEW_SLUGS[S.mode];
+  if (!slug) return '';
+  return '#' + slug + (S.mode === 'product' && S.product?.id ? '/' + S.product.id : '');
+}
+function viewFromHash() {
+  const [slug, id] = decodeURIComponent(location.hash.slice(1)).split('/'),
+    mode = Object.keys(VIEW_SLUGS).find(k => VIEW_SLUGS[k] === slug);
+  if (!mode) return null;
+  if (mode === 'product') return /^[0-9a-f-]{36}$/.test(id || '') ? { mode, product: id } : null;
+  return { mode };
+}
+function syncViewUrl() {
+  const h = viewHash();
+  if (!h || location.hash === h || /access_token|error_description|type=/.test(location.hash)) return;
+  // A fresh product (no id yet) or the first screen replaces; moving between sections adds history.
+  if (!location.hash || !viewFromHash()) history.replaceState(null, '', h);
+  else history.pushState(null, '', h);
+}
+addEventListener('popstate', () => {
+  const v = viewFromHash();
+  if (!v || !S.workspace || !S.session) return;
+  if (v.mode === 'product') {
+    if (S.mode !== 'product' || S.product?.id !== v.product) {
+      persistDraft();
+      openProduct(v.product);
+    }
+  } else if (v.mode !== S.mode) goMode(v.mode);
+});
 function saveView() {
   if (!S.workspace || !VIEW_MODES.includes(S.mode)) return;
+  syncViewUrl();
   try {
     localStorage.setItem(
       viewKey(),
@@ -767,6 +836,8 @@ async function restoreView() {
   try {
     v = JSON.parse(localStorage.getItem(viewKey()) || 'null');
   } catch {}
+  // A section link (#pedidos…) wins over the last screen used.
+  v = viewFromHash() || v;
   // Home-screen shortcuts open a section with ?view=…
   const asked = new URLSearchParams(location.search).get('view');
   if (asked) {

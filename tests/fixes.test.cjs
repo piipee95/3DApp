@@ -93,15 +93,15 @@ async function test(){
  run(`pwnedCount=async()=>0;S.err='';render();q('[data-mode=signup]').click();q('#email').value='a@b.cl';q('#password').value='kultiverso2026';q('#authForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
  await flush();await flush();
  assert.equal(run('signups.length'),1);
- // Changing the password from the header validates first and then calls updateUser.
- run(`window.updates=[];supabase.auth.updateUser=async a=>{updates.push(a);return{error:null}};S.session={user:{id:'owner'}};S.workspace={id:'workspace',role:'editor'};S.mode='dashboard';S.products=[];render();q('#changePassword').click();
-  q('#newPassword').value='kultiverso2026';q('#repeatPassword').value='otra';q('#passwordForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
+ // Changing the password (Mi perfil) validates first and then calls updateUser.
+ run(`window.updates=[];supabase.auth.updateUser=async a=>{updates.push(a);return{error:null}};S.session={user:{id:'owner'}};S.workspace={id:'workspace',role:'editor'};S.products=[];S.mode='profile';render();
+  q('#profileNewPassword').value='kultiverso2026';q('#profileRepeatPassword').value='otra';q('#profilePasswordForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
  await flush();
- assert.match(run('q("#passwordFeedback").textContent'),/no coinciden/);assert.equal(run('updates.length'),0);
- run(`q('#repeatPassword').value='kultiverso2026';q('#passwordForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
+ assert.match(run('q("#profilePasswordFeedback").textContent'),/no coinciden/);assert.equal(run('updates.length'),0);
+ run(`q('#profileRepeatPassword').value='kultiverso2026';q('#profilePasswordForm').dispatchEvent(new Event('submit',{cancelable:true}))`);
  await flush();await flush();
  assert.equal(run('JSON.stringify(updates)'),JSON.stringify([{password:'kultiverso2026'}]));
- assert.equal(run('S.msg'),'Contraseña actualizada.');
+ assert.match(run('[...qa(".toast")].map(t=>t.textContent).join()'),/Contraseña actualizada/);
  dom.window.close();
  console.log('PASS fixes: password rules, HIBP k-anonymity check (fail-open), sign-up guard and change-password dialog;');
  console.log('PASS fixes: escaped dialog labels, settings saved only when edited, legacy drafts keep cloud settings, invites with active session and invite errors.');

@@ -42,6 +42,7 @@ function mountInventoryAlert() {
 }
 function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
   if (!canEdit()) return;
+  const priceLabel = kind => (kind === 'filament' ? 'Precio por kg CLP' : 'Precio por unidad CLP');
   const dialog = showDialog(
     'inventoryFormDialog',
     '<div class="section-title"><h2>' +
@@ -51,7 +52,7 @@ function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
       '><option value="supply">Material / insumo</option><option value="filament">Filamento</option></select></div>' +
       fieldHtml('Nombre', 'invName', r.name, 'text', 'required maxlength="160"') +
       fieldHtml('Marca / material / referencia', 'invMaterial', r.material) +
-      '<div class="grid grid-2"><div class="field"><label for="invUnit">Unidad de control</label><select id="invUnit" ' +
+      '<div class="grid grid-2"><div class="field"><label for="invUnit">Se cuenta en</label><select id="invUnit" ' +
       (r.counted ? 'disabled' : '') +
       '>' +
       Object.entries(INVENTORY_UNITS)
@@ -60,46 +61,76 @@ function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
       '</select></div>' +
       fieldHtml('Color', 'invColor', r.color || '#303030', 'color') +
       fieldHtml(
-        r.kind === 'filament' ? 'Precio por kg CLP' : 'Costo por unidad de control CLP',
+        priceLabel(r.kind),
         'invCost',
         r.kind === 'filament' ? Math.round(n(r.price_per_kg) * 100) / 100 : (r.unit_cost ?? 0),
         'number',
-        'min="0" max="1000000000" step="0.001" required'
+        'min="0" max="1000000000" step="any" required inputmode="decimal"'
       ) +
       fieldHtml(
-        'Stock mínimo de alerta',
+        'Cantidad que tienes',
+        'invQty',
+        r.counted ? Math.round(n(r.stock_qty) * 1000) / 1000 : '',
+        'number',
+        'min="0" max="1000000000" step="any" inputmode="decimal" placeholder="' +
+          (r.counted ? '' : 'Ej. 10') +
+          '"'
+      ) +
+      fieldHtml(
+        'Avisarme cuando queden',
         'invMin',
         r.min_stock ?? 0,
         'number',
-        'min="0" max="1000000000" step="0.001" required'
+        'min="0" max="1000000000" step="any" required inputmode="decimal"'
       ) +
       '</div><p class="small muted">' +
       (r.counted
-        ? 'Las compras promedian el costo automáticamente; aquí puedes corregirlo. Los productos toman el nuevo precio al usar «Actualizar precios». Para corregir una existencia utiliza Movimiento.'
-        : 'Después de guardar podrás registrar la cantidad inicial contada y su costo.') +
+        ? 'Si cambias la cantidad se guarda como corrección en el historial. Para registrar una compra usa «+ Ingreso», que además promedia el precio. Los productos toman el precio nuevo al tocar «Actualizar precios».'
+        : 'Escribe cuánto tienes ahora para empezar a controlar el stock. Puedes dejarlo vacío y hacerlo después.') +
       '</p><label class="small"><input id="invActive" type="checkbox" ' +
       (r.active ? 'checked' : '') +
-      '> Disponible para nuevos productos y pedidos</label><div id="invFeedback" role="status" class="small"></div><button class="btn btn-primary" type="submit">Guardar material</button></form>'
+      '> Disponible para nuevos productos y pedidos</label><div id="invFeedback" role="status" class="small"></div><div class="dialog-actions">' +
+      (r.id
+        ? '<button type="button" class="btn btn-ghost" id="invArchive">' +
+          icon(r.active ? 'archive' : 'archive-restore') +
+          (r.active ? 'Archivar' : 'Restaurar') +
+          '</button><button type="button" class="btn btn-ghost danger-text" id="invDelete">' +
+          icon('trash-2') +
+          'Eliminar</button>'
+        : '') +
+      '<button class="btn btn-primary" type="submit">Guardar</button></div></form>'
   );
   q('#invKind').value = r.kind;
   q('#invUnit').value = r.unit || 'un';
   const updateKind = () => {
-    q('label[for=invCost]').textContent =
-      q('#invKind').value === 'filament' ? 'Precio por kg CLP' : 'Costo por unidad de control CLP';
+    q('label[for=invCost]').textContent = priceLabel(q('#invKind').value);
     if (q('#invKind').value === 'filament') {
       q('#invUnit').value = 'g';
       q('#invUnit').disabled = true;
     } else q('#invUnit').disabled = !!r.counted;
+    q('label[for=invQty]').textContent = 'Cantidad que tienes (' + INVENTORY_UNITS[q('#invUnit').value] + ')';
   };
   updateKind();
   q('#invKind').onchange = updateKind;
+  q('#invUnit').onchange = updateKind;
+  q('#invArchive')?.addEventListener('click', async () => {
+    dialog.close();
+    await archiveResource(r, !r.active);
+  });
+  q('#invDelete')?.addEventListener('click', async () => {
+    dialog.close();
+    await deleteResource(r);
+  });
   q('#inventoryForm').onsubmit = async e => {
     e.preventDefault();
     const b = e.submitter || e.target.querySelector('button[type=submit]');
+    if (b.disabled) return;
     b.disabled = true;
     try {
       const kind = q('#invKind').value,
         cost = n(q('#invCost').value),
+        unitCost = kind === 'filament' ? cost / 1000 : cost,
+        qtyText = q('#invQty').value.trim(),
         v = {
           name: q('#invName').value.trim(),
           material: q('#invMaterial').value.trim(),
@@ -107,7 +138,7 @@ function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
           color: q('#invColor').value,
           min_stock: n(q('#invMin').value),
           active: q('#invActive').checked,
-          unit_cost: kind === 'filament' ? cost / 1000 : cost,
+          unit_cost: unitCost,
           price_per_kg: kind === 'filament' ? cost : 0
         };
       const query = r.id
@@ -115,10 +146,34 @@ function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
         : supabase.from('workspace_resources').insert({ ...v, kind, workspace_id: S.workspace.id });
       const { data, error } = await query.select().single();
       if (error) throw error;
+      // The quantity typed here becomes the first count, or a correction of the current one.
+      if (qtyText !== '') {
+        const qty = Math.max(0, n(qtyText)),
+          id = r.id || data.id,
+          change = r.counted ? qty - n(r.stock_qty) : qty;
+        if (r.counted && qty < n(r.reserved_qty))
+          throw Error(
+            'No puedes quedar con menos de ' +
+              stockNumber(r.reserved_qty) +
+              ': están reservadas para pedidos.'
+          );
+        if (!r.counted || change !== 0) {
+          const { error: me } = await supabase.from('inventory_movements').insert({
+            workspace_id: S.workspace.id,
+            resource_id: id,
+            kind: r.counted ? 'adjustment' : 'opening',
+            quantity: change,
+            unit_cost: unitCost,
+            note: r.counted ? 'Cantidad corregida' : 'Stock inicial',
+            request_key: crypto.randomUUID()
+          });
+          if (me) throw me;
+        }
+      }
       await loadResources();
       dialog.close();
+      toast('Material guardado.');
       inventoryView();
-      if (!r.id) showStockMovement(S.resources.find(x => x.id === data.id));
     } catch (error) {
       q('#invFeedback').textContent = error.message;
     } finally {
@@ -127,91 +182,219 @@ function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
   };
   enhanceFields();
 }
-function showStockMovement(r) {
+async function archiveResource(r, active) {
+  const { error } = await supabase
+    .from('workspace_resources')
+    .update({ active })
+    .eq('id', r.id)
+    .eq('workspace_id', S.workspace.id);
+  if (error) return toast(error.message, 'error');
+  await loadResources();
+  toast(
+    active
+      ? '«' + r.name + '» vuelve a estar disponible.'
+      : '«' + r.name + '» archivado: ya no aparece al crear productos.'
+  );
+  if (S.mode === 'inventory') inventoryView();
+  else render();
+}
+// What still depends on a material: orders that reserved or used it and product recipes or prints.
+async function resourceUsage(r) {
+  const [lines, products, prints] = await Promise.all([
+    supabase
+      .from('inventory_order_lines')
+      .select('order_id')
+      .eq('workspace_id', S.workspace.id)
+      .eq('resource_id', r.id)
+      .limit(1),
+    supabase
+      .from('products')
+      .select('name')
+      .eq('workspace_id', S.workspace.id)
+      .contains('materials', JSON.stringify([{ resource_id: r.id }])),
+    supabase
+      .from('print_jobs')
+      .select('product_id')
+      .contains('filaments', JSON.stringify([{ resource_id: r.id }]))
+  ]);
+  for (const x of [lines, products, prints]) if (x.error) throw x.error;
+  const names = new Set((products.data || []).map(p => p.name));
+  for (const j of prints.data || []) {
+    const p = S.products.find(x => x.id === j.product_id);
+    if (p) names.add(p.name);
+  }
+  return { orders: (lines.data || []).length > 0, products: [...names] };
+}
+// Deleting hides the material for good (its history stays for past orders); used ones must be archived.
+async function deleteResource(r) {
+  let usage;
+  try {
+    usage = await resourceUsage(r);
+  } catch (error) {
+    return toast(error.message, 'error');
+  }
+  if (usage.orders || usage.products.length) {
+    const archive = await confirmDialog({
+      title: 'No se puede eliminar',
+      body:
+        (usage.products.length
+          ? '«' +
+            r.name +
+            '» lo usan estos productos: ' +
+            usage.products.join(', ') +
+            '. Quítalo de ellos primero. '
+          : '«' + r.name + '» ya se usó en pedidos. ') +
+        'Puedes archivarlo: deja de aparecer al crear productos y se conserva el historial.',
+      confirmLabel: r.active ? 'Archivar' : 'Entendido'
+    });
+    if (archive && r.active) await archiveResource(r, false);
+    return;
+  }
+  if (
+    !(await confirmDialog({
+      title: 'Eliminar ' + r.name,
+      body: 'Desaparece del inventario y de las listas. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      danger: true
+    }))
+  )
+    return;
+  const { error } = await supabase
+    .from('workspace_resources')
+    .update({ deleted_at: new Date().toISOString(), active: false })
+    .eq('id', r.id)
+    .eq('workspace_id', S.workspace.id);
+  if (error) return toast(error.message, 'error');
+  await loadResources();
+  toast('«' + r.name + '» eliminado.');
+  if (S.mode === 'inventory') inventoryView();
+  else render();
+}
+// V3.6: plain-language stock changes. mode: 'in' (purchase), 'set' (fix the count), 'out' (use, loss, gift).
+// A material that was never counted always starts with its first count.
+const STOCK_OUT_REASONS = ['Usado en un trabajo', 'Se dañó o se perdió', 'Regalo o muestra', 'Otro motivo'];
+function stockPriceLabel(r) {
+  const one = { un: 'unidad', hoja: 'hoja', m: 'metro', g: 'gramo', kg: 'kilo', l: 'litro' };
+  return r.kind === 'filament' ? 'Precio por kg' : 'Precio por ' + (one[r.unit] || r.unit);
+}
+const shownPrice = r =>
+  r.kind === 'filament' ? Math.round(n(r.unit_cost) * 1000) : Math.round(n(r.unit_cost) * 1000) / 1000;
+const priceToUnitCost = (r, price) => (r.kind === 'filament' ? n(price) / 1000 : n(price));
+function showStockMovement(r, mode = 'in') {
   if (!canEdit()) return;
-  const key = crypto.randomUUID();
+  if (!r.counted) mode = 'first';
+  const key = crypto.randomUUID(),
+    titles = {
+      first: 'Stock inicial',
+      in: 'Ingreso',
+      set: 'Cambiar cantidad',
+      out: 'Sacar del stock'
+    },
+    unitName = INVENTORY_UNITS[r.unit] || r.unit,
+    priced = mode === 'first' || mode === 'in';
   const dialog = showDialog(
     'stockDialog',
     '<div class="section-title"><h2>' +
+      titles[mode] +
+      ' · ' +
       esc(r.name) +
-      '</h2><button class="btn btn-ghost" data-close>Volver</button></div><p class="small muted">Físico ' +
-      stockNumber(r.stock_qty) +
-      ' · Reservado ' +
-      stockNumber(r.reserved_qty) +
-      ' ' +
-      esc(r.unit) +
-      '</p><form id="stockForm" class="grid"><div class="field"><label for="stockKind">Movimiento</label><select id="stockKind">' +
-      (!r.counted
-        ? '<option value="opening">Conteo inicial</option>'
-        : '<option value="purchase">Compra / entrada</option><option value="loss">Pérdida / merma</option><option value="adjustment">Reconteo físico</option>') +
-      '</select></div><div class="grid grid-2">' +
-      fieldHtml(
-        'Cantidad en ' + r.unit,
-        'stockQuantity',
-        '',
-        'number',
-        'min="0" max="1000000000" step="0.001" required'
-      ) +
-      fieldHtml(
-        'Costo total de la entrada CLP',
-        'stockPrice',
-        '',
-        'number',
-        'min="0" max="1000000000000" step="0.01" required'
-      ) +
-      '</div><div id="stockPreview" class="notice small" role="status"></div><div class="field"><label for="stockNote">Motivo / proveedor / referencia</label><textarea id="stockNote" required maxlength="1000"></textarea></div><div id="stockFeedback" class="small" role="status"></div><button class="btn btn-primary" type="submit">Registrar movimiento</button></form>'
-  );
-  const preview = () => {
-    const kind = q('#stockKind').value,
-      qty = n(q('#stockQuantity').value),
-      costed = ['opening', 'purchase'].includes(kind);
-    q('#stockPrice').closest('.field').hidden = !costed;
-    q('#stockPrice').required = costed;
-    q('#stockPreview').textContent =
-      kind === 'adjustment'
-        ? 'Ingresa el stock físico contado. Se registrará la diferencia: ' +
-          stockNumber(qty - n(r.stock_qty)) +
+      '</h2><button class="btn btn-ghost" data-close>Volver</button></div><p class="small muted">' +
+      (r.counted
+        ? 'Tienes ' +
+          stockNumber(r.stock_qty) +
           ' ' +
-          r.unit +
+          esc(unitName) +
+          (n(r.reserved_qty) ? ' (' + stockNumber(r.reserved_qty) + ' reservadas para pedidos)' : '') +
           '.'
-        : kind === 'loss'
-          ? 'Se descontarán ' + stockNumber(qty) + ' ' + r.unit + ' del stock disponible.'
-          : 'Cantidad en ' +
-            r.unit +
-            '; costo unitario: ' +
-            preciseCost(qty > 0 ? n(q('#stockPrice').value) / qty : n(r.unit_cost)) +
-            ' / ' +
-            r.unit +
-            '.';
+        : 'Aún no registras cuánto tienes. Escribe la cantidad actual para empezar a controlarlo.') +
+      '</p><form id="stockForm" class="grid"><input type="hidden" id="stockKind" value="' +
+      { first: 'opening', in: 'purchase', set: 'adjustment', out: 'loss' }[mode] +
+      '">' +
+      fieldHtml(
+        mode === 'set' || mode === 'first'
+          ? 'Cantidad que tienes ahora (' + unitName + ')'
+          : mode === 'in'
+            ? 'Cantidad que entra (' + unitName + ')'
+            : 'Cantidad que sale (' + unitName + ')',
+        'stockQuantity',
+        mode === 'set' ? String(Math.round(n(r.stock_qty) * 1000) / 1000) : '',
+        'number',
+        'min="0" max="1000000000" step="any" required inputmode="decimal"'
+      ) +
+      (priced
+        ? fieldHtml(
+            stockPriceLabel(r) + ' (CLP)',
+            'stockPrice',
+            shownPrice(r) || '',
+            'number',
+            'min="0" max="1000000000" step="any" required inputmode="decimal"'
+          )
+        : '') +
+      (mode === 'out'
+        ? '<div class="field"><label for="stockReason">Motivo</label><select id="stockReason">' +
+          STOCK_OUT_REASONS.map(x => '<option>' + x + '</option>').join('') +
+          '</select></div>'
+        : '') +
+      '<div id="stockPreview" class="notice small" role="status"></div><div class="field"><label for="stockNote">Nota (opcional)</label><input id="stockNote" maxlength="500" placeholder="' +
+      (mode === 'in' ? 'Proveedor o boleta' : 'Detalle') +
+      '"></div><div id="stockFeedback" class="small" role="status"></div><button class="btn btn-primary" type="submit">Guardar</button></form>'
+  );
+  const values = () => {
+    const qty = Math.max(0, n(q('#stockQuantity').value)),
+      quantity = mode === 'set' ? qty - n(r.stock_qty) : mode === 'out' ? -qty : qty,
+      unitCost = priced ? priceToUnitCost(r, q('#stockPrice').value) : n(r.unit_cost);
+    return { qty, quantity, unitCost };
   };
-  q('#stockKind').onchange = preview;
+  const preview = () => {
+    const { qty, quantity, unitCost } = values(),
+      after = mode === 'first' ? qty : n(r.stock_qty) + quantity;
+    q('#stockPreview').textContent =
+      (priced && qty > 0
+        ? 'Total: ' + clp(qty * unitCost) + ' · ' + preciseCost(unitCost) + ' por ' + r.unit + '. '
+        : '') +
+      (qty > 0 || mode === 'set'
+        ? 'Quedarás con ' + stockNumber(Math.max(0, after)) + ' ' + unitName + '.'
+        : '');
+  };
   q('#stockQuantity').oninput = preview;
-  q('#stockPrice').oninput = preview;
+  q('#stockPrice')?.addEventListener('input', preview);
   preview();
   q('#stockForm').onsubmit = async e => {
     e.preventDefault();
-    const b = e.submitter;
+    const b = e.submitter || e.target.querySelector('button[type=submit]');
+    if (b.disabled) return;
     b.disabled = true;
     try {
-      const kind = q('#stockKind').value,
-        qty = n(q('#stockQuantity').value),
-        quantity = kind === 'adjustment' ? qty - n(r.stock_qty) : kind === 'loss' ? -qty : qty;
-      if (kind !== 'opening' && quantity === 0) throw Error('La cantidad no produce un movimiento.');
-      const cost =
-        ['opening', 'purchase'].includes(kind) && qty > 0 ? n(q('#stockPrice').value) / qty : n(r.unit_cost);
+      const { quantity, unitCost } = values();
+      if (mode !== 'first' && quantity === 0)
+        throw Error('La cantidad es la misma: no hay nada que cambiar.');
+      if (mode !== 'first' && n(r.stock_qty) + quantity < n(r.reserved_qty))
+        throw Error(
+          'No puedes quedar con menos de ' +
+            stockNumber(r.reserved_qty) +
+            ' ' +
+            unitName +
+            ': están reservadas para pedidos.'
+        );
+      const note = [mode === 'out' ? q('#stockReason').value : '', q('#stockNote').value.trim()]
+        .filter(Boolean)
+        .join(' · ');
       const { error } = await supabase.from('inventory_movements').insert({
         workspace_id: S.workspace.id,
         resource_id: r.id,
-        kind,
+        kind: q('#stockKind').value,
         quantity,
-        unit_cost: cost,
-        note: q('#stockNote').value.trim(),
+        unit_cost: unitCost,
+        note,
         request_key: key
       });
       if (error && error.code !== '23505') throw error;
       await loadResources();
       dialog.close();
-      inventoryView();
+      toast('Stock de ' + r.name + ' actualizado.');
+      if (S.mode === 'inventory') inventoryView();
+      else render();
+      dialog.dispatchEvent(new CustomEvent('stocksaved'));
     } catch (error) {
       q('#stockFeedback').textContent = error.message;
     } finally {
@@ -219,6 +402,7 @@ function showStockMovement(r) {
     }
   };
   enhanceFields();
+  return dialog;
 }
 async function showInventoryLedger(r) {
   const dialog = showDialog(
@@ -238,11 +422,11 @@ async function showInventoryLedger(r) {
     if (error) throw error;
     if (!dialog.isConnected) return;
     const kinds = {
-      opening: 'Conteo inicial',
-      purchase: 'Compra',
-      adjustment: 'Reconteo',
-      loss: 'Merma',
-      consumption: 'Producción'
+      opening: 'Stock inicial',
+      purchase: 'Ingreso',
+      adjustment: 'Cambio de cantidad',
+      loss: 'Salida',
+      consumption: 'Usado en pedido'
     };
     q('#ledgerBody').innerHTML =
       (data || [])
@@ -519,8 +703,28 @@ async function mountOrderInventory(order) {
         ? '<button id="consumeOrder" class="btn btn-secondary" type="button">Confirmar consumo real</button><p class="small muted">Puedes ajustar las cantidades incluyendo mermas. Marcar Listo o Entregado consume la reserva automáticamente si aún no se confirmó.</p>'
         : order.inventory_state === 'none'
           ? '<p class="small muted">Pedido anterior o producto sin materiales vinculados. No descuenta stock automáticamente.</p>'
-          : '');
+          : '') +
+      // V4.7: take the product's current recipe even when the cost did not change.
+      (canEdit() && order.product_id && !order.from_stock && order.status !== 'canceled'
+        ? '<button id="syncOrderMaterials" class="btn btn-ghost btn-sm" type="button">' +
+          icon('refresh-cw') +
+          'Usar materiales actuales del producto</button>'
+        : '');
     box.querySelector('#consumeOrder')?.addEventListener('click', () => showOrderConsumption(order, lines));
+    box.querySelector('#syncOrderMaterials')?.addEventListener('click', async e => {
+      const b = e.currentTarget;
+      b.disabled = true;
+      try {
+        await updateOrderCosts([order], productUnitCost(order.product_id));
+        toast('Materiales del pedido actualizados según el producto.');
+        dialog.close();
+        render();
+        showOrder(S.orders.find(o => o.id === order.id) || order);
+      } catch (error) {
+        toast(error.message, 'error');
+        b.disabled = false;
+      }
+    });
   } catch (error) {
     if (dialog.isConnected) box.textContent = 'No se pudo cargar el inventario: ' + error.message;
   }
@@ -843,55 +1047,4 @@ async function checkNewPassword(pw) {
   }
   return '';
 }
-function showPasswordDialog() {
-  const dialog = showDialog(
-    'passwordDialog',
-    '<div class="section-title"><h2>Cambiar contraseña</h2><button class="btn btn-ghost" data-close>Volver</button></div><form id="passwordForm" class="grid"><p class="small muted">' +
-      esc(PASSWORD_HINT) +
-      '</p>' +
-      fieldHtml(
-        'Nueva contraseña',
-        'newPassword',
-        '',
-        'password',
-        'required autocomplete="new-password" minlength="' + PASSWORD_MIN + '"'
-      ) +
-      fieldHtml(
-        'Repite la contraseña',
-        'repeatPassword',
-        '',
-        'password',
-        'required autocomplete="new-password"'
-      ) +
-      '<div id="passwordFeedback" role="status" class="small"></div><button class="btn btn-primary" type="submit">Guardar contraseña</button></form>'
-  );
-  enhanceFields();
-  q('#passwordForm').onsubmit = async e => {
-    e.preventDefault();
-    const b = e.submitter || e.target.querySelector('button[type=submit]'),
-      feedback = q('#passwordFeedback'),
-      pw = q('#newPassword').value;
-    if (b.disabled) return;
-    if (pw !== q('#repeatPassword').value) {
-      feedback.textContent = 'Las contraseñas no coinciden.';
-      return;
-    }
-    b.disabled = true;
-    feedback.textContent = 'Revisando…';
-    try {
-      const problem = await checkNewPassword(pw);
-      if (problem) throw Error(problem);
-      const { error } = await supabase.auth.updateUser({ password: pw });
-      if (error) throw error;
-      dialog.close();
-      S.msg = 'Contraseña actualizada.';
-      render();
-    } catch (error) {
-      feedback.textContent = error.message;
-    } finally {
-      b.disabled = false;
-    }
-  };
-}
-
 // Lucide icons (ISC license), inlined so the app needs no icon CDN.
