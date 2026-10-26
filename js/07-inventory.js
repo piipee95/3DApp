@@ -36,8 +36,8 @@ function mountInventoryAlert() {
     (uncounted.length
       ? uncounted.length + (uncounted.length === 1 ? ' pendiente' : ' pendientes') + ' de conteo inicial. '
       : '') +
-    'Revisar inventario →';
-  el.onclick = () => goMode('inventory');
+    (low.length ? 'Ver lista de compras →' : 'Revisar inventario →');
+  el.onclick = () => (low.length ? showShoppingList() : goMode('inventory'));
   q('main')?.prepend(el);
 }
 function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {

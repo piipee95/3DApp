@@ -5102,3 +5102,87 @@ button.sheet-user > svg {
 #syncOrderMaterials {
   margin-top: 10px;
 }
+/* V4.8: order review and shopping list */
+.review-alert {
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.review-alert svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+.review-list {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+}
+.review-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+.review-item.fixed {
+  opacity: 0.6;
+}
+.review-head {
+  display: grid;
+  gap: 2px;
+}
+.review-item ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 2px;
+}
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.review-error {
+  color: var(--red);
+}
+.shop-group {
+  margin: 16px 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.shop-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.shop-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 220px;
+}
+.shop-end {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  text-align: right;
+}
+.shop-end {
+  margin-left: auto;
+}
+@media (max-width: 599px) {
+  #shoppingList > span {
+    display: none;
+  }
+  #shoppingList {
+    width: 40px;
+    padding: 0;
+  }
+}
