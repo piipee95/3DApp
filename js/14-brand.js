@@ -672,6 +672,14 @@ function brandView() {
         brandImportPct() +
         '%"></i></span></section>'
       : '') +
+    (edit && !S.brandImport && brandAppPending().length
+      ? '<section class="panel brand-import"><span class="small muted">Faltan ' +
+        brandAppPending().length +
+        (brandAppPending().length === 1 ? ' archivo' : ' archivos') +
+        ' de la marca que trae KultiApp (logos, tarjetas, etiquetas, piezas web, íconos y redes). Se agregan tal cual, cada uno en su categoría.</span><button type="button" class="btn btn-secondary btn-sm" id="brandImport">' +
+        icon('download') +
+        'Agregar ahora</button></section>'
+      : '') +
     (missing.length && filter !== 'archived' && !S.brandImport
       ? '<details class="panel brand-missing"' +
         (live.length < 4 ? ' open' : '') +
@@ -701,13 +709,6 @@ function brandView() {
           )
           .join('') +
         '</div>' +
-        (edit && brandAppPending().length
-          ? '<div class="brand-import"><span class="small muted">KultiApp ya tiene ' +
-            brandAppPending().length +
-            ' archivos de la marca listos: logos, isotipos, tarjetas, etiquetas, piezas web, íconos y WhatsApp. Agrégalos al kit tal cual, sin modificarlos.</span><button type="button" class="btn btn-secondary btn-sm" id="brandImport">' +
-            icon('download') +
-            'Agregar archivos de la app</button></div>'
-          : '') +
         '</details>'
       : '') +
     (edit
@@ -788,8 +789,14 @@ function brandView() {
       })
   );
   q('#brandImport')?.addEventListener('click', importBrandAppFiles);
-  // An empty kit is filled once with the team's files, so editors find it ordered without a click.
-  if (edit && Array.isArray(S.brandAssets) && !S.brandAssets.length && !S.brandImport) {
+  // An empty kit is filled once with the team's files, so editors find it ordered without a click;
+  // an import cut short (page closed or reloaded) resumes on the next visit from this device.
+  if (
+    edit &&
+    Array.isArray(S.brandAssets) &&
+    !S.brandImport &&
+    (!S.brandAssets.length || (brandImportMark() && brandAppPending().length))
+  ) {
     S.brandAutoImported ??= new Set();
     if (!S.brandAutoImported.has(S.workspace.id)) {
       S.brandAutoImported.add(S.workspace.id);
@@ -1065,7 +1072,21 @@ const brandImportText = () =>
   S.brandImport.step +
   ' de ' +
   S.brandImport.total +
-  ' archivos, tal cual, cada uno en su categoría…';
+  ' archivos, tal cual, cada uno en su categoría. No cierres esta página hasta que termine.';
+const brandImportKey = () => 'kultiapp_brand_import_' + S.workspace.id;
+function brandImportMark(on) {
+  try {
+    if (on === undefined) return localStorage.getItem(brandImportKey()) === '1';
+    if (on) localStorage.setItem(brandImportKey(), '1');
+    else localStorage.removeItem(brandImportKey());
+  } catch {}
+  return false;
+}
+// Leaving mid-import asks first; whatever was left is resumed on the next visit.
+const brandImportLeave = e => {
+  e.preventDefault();
+  e.returnValue = '';
+};
 const brandImportPct = () => Math.max(2, Math.round((S.brandImport.step / S.brandImport.total) * 100));
 // Adds the brand files that ship with KultiApp, byte for byte.
 async function importBrandAppFiles() {
@@ -1074,6 +1095,8 @@ async function importBrandAppFiles() {
     groups = {};
   if (!pending.length) return;
   S.brandImport = { step: 0, total: pending.length };
+  brandImportMark(true);
+  addEventListener('beforeunload', brandImportLeave);
   if (S.mode === 'brand') render();
   let done = 0;
   const failed = [];
@@ -1107,6 +1130,8 @@ async function importBrandAppFiles() {
     }
   }
   S.brandImport = null;
+  removeEventListener('beforeunload', brandImportLeave);
+  if (!failed.length) brandImportMark(false);
   await Promise.all([loadBrandAssets().catch(() => {}), loadBrandUsage()]);
   if (done) toast(done + (done === 1 ? ' archivo agregado al kit.' : ' archivos agregados al kit.'));
   if (failed.length) toast('No se pudo agregar ' + failed.join(' · '), 'error');

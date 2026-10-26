@@ -143,6 +143,13 @@ async function test(){
  run(`S.brandAutoImported=null;S.brandAssets=rows;brandView()`);await flush(20);
  assert.equal(run('calls.filter(c=>c.op==="insert").length'),0,'not when the kit has files');
  assert.equal(run('brandBytes(0)'),'0 KB');
+ // Files still pending show a visible prompt (outside the collapsed missing list); an interrupted import resumes.
+ run(`calls.length=0;S.brandAssets=[{...rows[0],original_name:'03_LOGO_FONDO_BLANCO.png'}];brandView()`);await flush(20);
+ assert.ok(run('!!q("section.brand-import #brandImport")&&!q(".brand-missing #brandImport")'));assert.match(run('q("section.brand-import").textContent'),/Faltan 1 archivo de la marca/);
+ assert.equal(run('calls.filter(c=>c.op==="insert").length'),0);
+ run(`localStorage.setItem('kultiapp_brand_import_'+S.workspace.id,'1');brandView()`);await flush(60);
+ assert.deepEqual(JSON.parse(run('JSON.stringify(calls.filter(c=>c.op==="insert").map(c=>c.v.original_name))')),['04_LOGO_BLANCO.png']);
+ assert.equal(run("localStorage.getItem('kultiapp_brand_import_'+S.workspace.id)"),null);
  // Viewers browse and download, but cannot upload, edit or delete.
  run(`S.workspace.role='viewer';S.brandAssets=rows;brandView()`);
  assert.ok(run('!q("#brandUpload")&&!q("#brandDrop")&&!q("#brandImport")&&!q("[data-brand-missing]")'));

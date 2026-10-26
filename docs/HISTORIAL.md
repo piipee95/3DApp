@@ -2,6 +2,12 @@
 
 Resumen de cada versión, de la más reciente a la más antigua. El detalle completo de cada una está en `docs/versiones/`.
 
+## 5.1.3 · Carga del kit sin cortes
+
+- Si la carga del kit se interrumpe (página cerrada o recargada), se retoma sola al volver a abrirlo; salir a
+  mitad de la carga pide confirmación.
+- Los archivos de la marca pendientes se muestran en un aviso visible con «Agregar ahora».
+
 ## 5.1.2 · El kit se ordena solo
 
 - La primera vez que un propietario o editor abre un Kit de marca vacío, se cargan solos todos los archivos de
