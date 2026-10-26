@@ -1447,7 +1447,7 @@ function customerFilesView() {
   };
   root.innerHTML =
     header(
-      'Archivos del cliente',
+      'Archivos de clientes',
       canEdit()
         ? '<button class="btn btn-primary" id="newFileRequest" type="button">' +
             icon('plus') +

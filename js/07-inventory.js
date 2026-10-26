@@ -59,7 +59,7 @@ function showInventoryForm(r = { kind: 'supply', active: true, unit: 'un' }) {
       (r.id ? 'Editar material' : 'Nuevo material') +
       '</h2><button class="btn btn-ghost" data-close>Volver</button></div><form id="inventoryForm" class="grid"><div class="field"><label for="invKind">Tipo</label><select id="invKind" ' +
       (r.id ? 'disabled' : '') +
-      '><option value="supply">Material / insumo</option><option value="filament">Filamento</option></select></div>' +
+      '><option value="supply">Insumo</option><option value="filament">Filamento</option></select></div>' +
       fieldHtml('Nombre', 'invName', r.name, 'text', 'required maxlength="160"') +
       fieldHtml('Marca / material / referencia', 'invMaterial', r.material) +
       '<div class="grid grid-2"><div class="field"><label for="invUnit">Se cuenta en</label><select id="invUnit" ' +

@@ -587,7 +587,7 @@ const PAGE_TITLES = {
   reports: 'Reportes',
   finance: 'Finanzas',
   inventory: 'Inventario',
-  files: 'Archivos del cliente',
+  files: 'Archivos de clientes',
   resources: 'Impresoras',
   profile: 'Mi perfil',
   material: 'Material',
@@ -772,15 +772,15 @@ function showMoreSheet() {
       icon('file-text') +
       'Cotizaciones</button><button type="button" class="menu-item" data-more="customers">' +
       icon('users') +
-      'Clientes</button><button type="button" class="menu-item" data-more="reports">' +
+      'Clientes</button><button type="button" class="menu-item" data-more="files">' +
+      icon('image') +
+      'Archivos de clientes</button><button type="button" class="menu-item" data-more="reports">' +
       icon('chart-column') +
       'Reportes</button><button type="button" class="menu-item" data-more="finance">' +
       icon('wallet') +
       'Finanzas</button><button type="button" class="menu-item" data-more="resources">' +
       icon('printer') +
-      'Impresoras</button><button type="button" class="menu-item" data-more="files">' +
-      icon('image') +
-      'Archivos de clientes</button>' +
+      'Impresoras</button>' +
       (isOwner()
         ? '<button type="button" class="menu-item" data-more="invite">' +
           icon('user-plus') +
