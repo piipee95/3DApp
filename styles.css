@@ -5515,3 +5515,30 @@ button.sheet-user > svg {
 .count-name .warn {
   color: var(--yellow);
 }
+/* 5.0: «fichas» as pages (pedido, cliente) */
+.page-sheet {
+  padding: 20px;
+  overflow: visible;
+}
+.page-sheet#orderDialog {
+  width: auto;
+}
+.page-sheet#orderDialog .dialog-actions {
+  bottom: 0;
+  margin: 18px -20px -20px;
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+}
+.order-page .order-head,
+.customer-page .facts {
+  margin-top: 0;
+}
+@media (max-width: 599px) {
+  .page-sheet {
+    padding: 16px;
+  }
+  .page-sheet#orderDialog .dialog-actions {
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    margin: 18px -16px -16px;
+    padding: 12px 16px;
+  }
+}

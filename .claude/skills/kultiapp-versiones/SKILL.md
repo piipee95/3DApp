@@ -1,6 +1,6 @@
 ---
 name: kultiapp-versiones
-description: Versionado, notas de versión, ramas y publicación de KultiApp (sitio estático en Vercel: main publica producción, las demás ramas generan vistas previas). Usar al cerrar un cambio, subir la versión, escribir docs/VX_Y.md o preparar commit, rama y PR.
+description: Versionado, notas de versión, ramas y publicación de KultiApp (sitio estático en Vercel: main publica producción, las demás ramas generan vistas previas). Usar al cerrar un cambio, subir la versión, escribir docs/versiones/VX_Y.md o preparar commit, rama y PR.
 ---
 
 # Skill: versiones y publicación de KultiApp
@@ -14,8 +14,13 @@ description: Versionado, notas de versión, ramas y publicación de KultiApp (si
 ## Al cerrar una versión
 
 1. Si cambia la app, subir juntos `APP_VERSION` en `js/01-core.js` (versión visible en pantallas y login) y `CACHE` en `sw.js` (`kultiapp-vNN`), para que los celulares reciban la versión nueva. Un cambio solo de herramientas o CI no los cambia.
-2. Escribir `docs/VX_Y.md` en español sencillo: qué cambia para quien usa la app y cualquier paso que deba hacer el dueño.
-3. Si hay esquema nuevo: `docs/SCHEMA_VXY.sql`.
+2. Escribir `docs/versiones/VX_Y.md` en español sencillo (qué cambia para quien usa la app y cualquier paso que deba hacer el dueño) y su resumen al inicio de `docs/HISTORIAL.md`.
+3. Si hay esquema nuevo: `docs/migraciones/SCHEMA_VXY.sql` y actualizar `docs/BASE_DE_DATOS.md`.
+4. Si cambia cómo se usa algo, actualizar `docs/MANUAL.md`.
+
+## Versiones redondas (5.0, 6.0, 7.0…)
+
+Son de **consolidación**: casi sin funciones nuevas, se sigue la lista de `docs/CONSOLIDACION.md` (recorrido completo, datos reales, coherencia, código por tema, pruebas, base de datos, documentación e identidad). Se trabaja en una rama aparte, se revisa en la vista previa y se publica completa.
 
 ## Git
 

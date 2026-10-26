@@ -1,4 +1,5 @@
 'use strict';
+// Núcleo: conexión a Supabase, estado (S), utilidades de formato y registro de errores.
 // Supabase client factory comes from js/supabase-client.js (an ES module loaded first).
 const createClient = window.createSupabaseClient;
 const SUPABASE_URL = 'https://fczmkdkhyalksmczeyda.supabase.co',
@@ -62,133 +63,6 @@ const q = s => document.querySelector(s),
     if (x < v) x += st;
     return x;
   };
-let workspaceLoad = null;
-async function init() {
-  registerServiceWorker();
-  const inv = new URLSearchParams(location.search).get('invite');
-  if (inv) localStorage.setItem('kultiapp_invite', inv);
-  const {
-    data: { session }
-  } = await supabase.auth.getSession();
-  S.session = session;
-  supabase.auth.onAuthStateChange((_, s) => {
-    const previousUser = S.session?.user?.id;
-    S.session = s;
-    if (!s) {
-      S.workspace = null;
-      S.product = null;
-      S.mode = 'auth';
-      render();
-      return;
-    }
-    if (previousUser !== s.user?.id) {
-      S.workspace = null;
-      S.product = null;
-      S.mode = 'auth';
-    }
-    if (!S.workspace || S.mode === 'auth') setTimeout(() => ensureWorkspace().catch(e => fail(e.message)), 0);
-  });
-  if (session) await ensureWorkspace();
-  else render();
-}
-function ensureWorkspace() {
-  if (!workspaceLoad)
-    workspaceLoad = loadWorkspace().finally(() => {
-      workspaceLoad = null;
-    });
-  return workspaceLoad;
-}
-async function loadWorkspace() {
-  S.err = '';
-  if (!S.workspace && S.session) skeletonView('home');
-  let inviteError = '';
-  const inv = localStorage.getItem('kultiapp_invite');
-  if (inv) {
-    const { error: ie } = await supabase.rpc('accept_workspace_invite', { invite_token: inv });
-    localStorage.removeItem('kultiapp_invite');
-    history.replaceState({}, '', location.pathname);
-    if (ie) inviteError = 'No se pudo aceptar la invitación: ' + ie.message;
-  }
-  let { data, error } = await supabase
-    .from('workspace_members')
-    .select('workspace_id,role,workspaces(id,name)')
-    .order('created_at');
-  if (error) return fail(error.message);
-  if (!data?.length) {
-    let { data: wid, error: e } = await supabase.rpc('bootstrap_workspace', {
-      workspace_name: 'Kultiverso Pop'
-    });
-    if (e) return fail(e.message);
-    S.workspace = { id: wid, role: 'owner', name: 'Kultiverso Pop' };
-  } else {
-    const m = data[data.length - 1];
-    S.workspace = { id: m.workspace_id, role: m.role, name: m.workspaces?.name || 'Kultiverso Pop' };
-  }
-  await loadSettings();
-  await loadResources();
-  await loadProducts();
-  // Orders, quotes and customers feed Inicio and forms; the app still opens if they fail to load.
-  await Promise.all(
-    [loadOrders, loadQuotes, loadCustomers, loadCustomerFileRequests, loadPriceLists].map(load =>
-      load().catch(e => console.warn('No se pudieron cargar los datos', e))
-    )
-  );
-  S.mode = 'home';
-  if (!restoreActiveDraft()) await restoreView();
-  if (inviteError) S.err = inviteError;
-  render();
-}
-async function loadSettings() {
-  let { data, error } = await supabase
-    .from('workspace_settings')
-    .select('*')
-    .eq('workspace_id', S.workspace.id)
-    .maybeSingle();
-  if (error) return fail(error.message);
-  if (!data) {
-    let { data: d, error: e } = await supabase
-      .from('workspace_settings')
-      .insert({ workspace_id: S.workspace.id })
-      .select()
-      .single();
-    if (e) return fail(e.message);
-    data = d;
-  }
-  S.settings = { ...S.settings, ...data };
-  S.settingsDirty = false;
-}
-async function saveSettings() {
-  const v = {
-    workspace_id: S.workspace.id,
-    filament_price_per_kg: n(q('#cfgFilament')?.value ?? S.settings.filament_price_per_kg),
-    electricity_rate_clp_kwh: n(q('#cfgElec')?.value ?? S.settings.electricity_rate_clp_kwh),
-    printer_power_kw: n(q('#cfgPower')?.value ?? S.settings.printer_power_kw),
-    updated_at: new Date().toISOString()
-  };
-  let { error } = await supabase.from('workspace_settings').upsert(v, { onConflict: 'workspace_id' });
-  if (error) throw error;
-  S.settings = { ...S.settings, ...v };
-}
-const PRODUCT_LIST_COLUMNS =
-  'id,workspace_id,name,description,quantity,iva_enabled,iva_rate,target_margin,round_to,status,sale_price,photo_path,stock_qty,stock_reserved,catalog_visible,catalog_price,created_at,updated_at';
-async function loadProducts() {
-  let { data, error } = await supabase
-    .from('products')
-    .select(PRODUCT_LIST_COLUMNS)
-    .eq('workspace_id', S.workspace.id)
-    .order('updated_at', { ascending: false });
-  if (error) return fail(error.message);
-  S.products = data || [];
-  let { data: sums, error: se } = await supabase
-    .from('product_cost_summary')
-    .select('product_id,total_cost')
-    .eq('workspace_id', S.workspace.id);
-  if (se) S.err = 'No se pudieron cargar los costos: ' + se.message;
-  S.summaries = new Map((sums || []).map(x => [x.product_id, x]));
-  await loadLegacyPhotos();
-  await loadPhotoUrls(S.products);
-  migrateLegacyPhotos();
-}
 function fail(m) {
   S.err = m;
   logError('handled', m);
@@ -196,7 +70,10 @@ function fail(m) {
 }
 // Error log: what any team member hits is stored (max 20 different errors per session) for review.
 // Shown in every screen header and stored with errors; keep it in step with CACHE in sw.js.
-const APP_VERSION = 'v4.9';
+const APP_VERSION = 'v5.0';
+// 5.0: what KultiApp is, shown under the name (login, title, installed app). Change it here and in
+// index.html <title>/description and manifest.webmanifest.
+const APP_TAGLINE = 'El taller bajo control';
 const loggedErrors = new Set();
 function logError(kind, message, stack = '') {
   try {
@@ -225,50 +102,79 @@ window.addEventListener('error', e => logError('error', e.message, e.error?.stac
 window.addEventListener('unhandledrejection', e =>
   logError('rejection', e.reason?.message || String(e.reason), e.reason?.stack)
 );
-function authView() {
-  root.innerHTML =
-    '<div class="shell"><div class="auth card"><img class="auth-logo" src="' +
-    LOGO_SRC +
-    '" alt="Kultiverso Pop"><h1>KultiApp <span class="app-version">' +
-    APP_VERSION +
-    '</span></h1><p class="muted">Costos y producción 3D</p><p class="small muted">Kultiverso Pop · Powered by ELARA</p>' +
-    (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
-    (S.msg ? '<div class="success">' + esc(S.msg) + '</div>' : '') +
-    '<div class="login-tabs"><button class="btn tab active" data-mode="login">Ingresar</button><button class="btn tab" data-mode="signup">Crear cuenta</button></div><form id="authForm" class="grid"><div class="field"><label>Email</label><input id="email" type="email" required></div><div class="field"><label>Contraseña</label><input id="password" type="password" minlength="6" required><span id="passwordHint" class="small muted" hidden>' +
-    PASSWORD_HINT +
-    '</span></div><button class="btn btn-primary" type="submit">Ingresar</button></form></div></div>';
-  let mode = 'login';
-  qa('[data-mode]').forEach(
-    b =>
-      (b.onclick = () => {
-        mode = b.dataset.mode;
-        qa('[data-mode]').forEach(x => x.classList.toggle('active', x === b));
-        q('#authForm button[type=submit]').textContent = mode === 'login' ? 'Ingresar' : 'Crear cuenta';
-        q('#password').minLength = mode === 'login' ? 6 : PASSWORD_MIN;
-        q('#password').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
-        q('#passwordHint').hidden = mode === 'login';
-      })
+function relativeDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso),
+    today = new Date(),
+    day = 864e5,
+    start = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(),
+    diff = Math.round((start(today) - start(d)) / day);
+  if (diff === 0) return 'hoy, ' + d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+  if (diff === 1) return 'ayer';
+  return shortDate(
+    d.getFullYear() +
+      '-' +
+      String(d.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(d.getDate()).padStart(2, '0')
   );
-  q('#authForm').onsubmit = async e => {
-    e.preventDefault();
-    const email = q('#email').value.trim(),
-      password = q('#password').value;
-    if (mode === 'login') {
-      let { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) fail(error.message);
-    } else {
-      const problem = await checkNewPassword(password);
-      if (problem) return fail(problem);
-      let { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: location.origin + location.pathname }
-      });
-      if (error) fail(error.message);
-      else {
-        S.msg = 'Cuenta creada. Revisa tu correo si se solicita verificación.';
-        render();
-      }
-    }
-  };
+}
+function localToday() {
+  const d = new Date();
+  return (
+    d.getFullYear() +
+    '-' +
+    String(d.getMonth() + 1).padStart(2, '0') +
+    '-' +
+    String(d.getDate()).padStart(2, '0')
+  );
+}
+// V1.5: one quotation model drives the dialog, the print/PDF view and the shared PNG.
+const LOGO_SRC = 'assets/kultiverso-pop-logo.webp';
+const longDate = d => d.toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
+const stockNumber = v => new Intl.NumberFormat('es-CL', { maximumFractionDigits: 3 }).format(n(v));
+const preciseCost = v =>
+  new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 3 }).format(
+    n(v)
+  );
+// ---------------------------------------------------------------------------
+// V1.9: global search (Ctrl/⌘ K) and installable app.
+// ---------------------------------------------------------------------------
+const fold = s =>
+  String(s ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLocaleLowerCase('es');
+// ---------------------------------------------------------------------------
+// Inicio: month indicators, upcoming deliveries and low stock.
+// ---------------------------------------------------------------------------
+const MONTHS = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre'
+];
+function shortDate(iso) {
+  if (!iso) return 'Sin fecha';
+  const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number);
+  return d + ' ' + MONTHS[m - 1].slice(0, 3) + (y !== new Date().getFullYear() ? ' ' + y : '');
+}
+// Compact CLP for small tiles on phones: $1,28 M, $468 mil.
+function clpShort(v) {
+  const x = Math.round(n(v));
+  if (Math.abs(x) >= 1e6) return '$' + (x / 1e6).toLocaleString('es-CL', { maximumFractionDigits: 2 }) + ' M';
+  if (Math.abs(x) >= 1e4) return '$' + Math.round(x / 1e3).toLocaleString('es-CL') + ' mil';
+  return clp(x);
+}
+function addDays(iso, days) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d + days).toLocaleDateString('sv-SE');
 }
