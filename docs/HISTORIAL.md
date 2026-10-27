@@ -2,6 +2,12 @@
 
 Resumen de cada versión, de la más reciente a la más antigua. El detalle completo de cada una está en `docs/versiones/`.
 
+## 5.2.1 · Claridad y accesibilidad
+
+- Inicio prioriza pendientes y cifras operativas; conserva todos los indicadores y accesos.
+- Etiquetas únicas en el costeo, IVA con controles independientes y objetivos táctiles más cómodos.
+- Orientación en filtros vacíos y mensajes de WhatsApp desplegables, sin cambiar cálculos ni reglas.
+
 ## 5.2 · Estado «Enviado»
 
 - Nuevo estado de pedido **Enviado**, entre Listo y Entregado: el pedido va en camino, sigue en curso pero no se

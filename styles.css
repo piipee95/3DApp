@@ -29,6 +29,9 @@
   --side-w: 240px;
   --tab-h: 64px;
   --top-h: 64px;
+  --control-h: 38px;
+  --touch-target: 44px;
+  --text-meta: 12px;
 }
 
 /* Light theme: chosen in the menu, or following the device when set to automatic. */
@@ -437,7 +440,7 @@ main.shell {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  height: 38px;
+  height: var(--control-h);
   padding: 0 14px;
   border: 1px solid var(--line2);
   border-radius: var(--r);
@@ -496,7 +499,7 @@ main.shell {
   color: #fff;
 }
 .icon-btn {
-  width: 38px;
+  width: var(--control-h);
   padding: 0;
   color: var(--muted);
 }
@@ -539,6 +542,11 @@ main.shell {
   align-content: start;
 }
 .field > label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--label);
+}
+.label-switch > label:first-child {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--label);
@@ -1519,7 +1527,7 @@ div.shell {
   color: var(--yellow);
 }
 .sub {
-  font-size: 12px;
+  font-size: var(--text-meta);
   color: var(--muted);
 }
 .home-date {
@@ -1532,6 +1540,18 @@ div.shell {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 18px;
+}
+.home .home-kpis {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+.home-kpis > .kpi {
+  grid-column: span 3;
+}
+.home-kpis > .kpi-priority {
+  grid-column: span 4;
+}
+.home-kpis > .kpi:not(.kpi-priority) .kpi-v {
+  font-size: 20px;
 }
 .kpi {
   background: var(--surface);
@@ -1637,9 +1657,9 @@ div.shell {
 .data-table th {
   padding: 10px 16px;
   text-align: left;
-  font-size: 11.5px;
+  font-size: var(--text-meta);
   font-weight: 600;
-  color: var(--faint);
+  color: var(--muted);
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
@@ -1952,6 +1972,12 @@ div.shell {
 @media (max-width: 899px) {
   .home-cols {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .home-kpis > .kpi {
+    grid-column: span 6;
+  }
+  .home-kpis > .kpi-priority:nth-child(3) {
+    grid-column: 1 / -1;
   }
 }
 @media (max-width: 759px) {
@@ -3117,7 +3143,7 @@ dd.warn {
   }
 }
 @media (max-width: 1199px) {
-  .kpis > .kpi:last-child:nth-child(odd) {
+  .kpis:not(.home-kpis) > .kpi:last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
 }
@@ -4724,6 +4750,9 @@ td.row-actions .sell-btn {
 }
 .quick-action {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
   justify-items: start;
   gap: 2px;
   padding: 14px;
@@ -4759,7 +4788,8 @@ td.row-actions .sell-btn {
   place-items: center;
   width: 38px;
   height: 38px;
-  margin-bottom: 8px;
+  grid-row: span 2;
+  margin-right: 8px;
   border-radius: 11px;
   color: #fff;
 }
@@ -5869,4 +5899,42 @@ button.sheet-user > svg {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Shared controls: comfortable touch targets without expanding desktop data tables. */
+.notify-message {
+  margin: 10px 0;
+}
+.notify-message > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--cyan);
+  font-size: 13px;
+  font-weight: 600;
+}
+.notify-message .notify-preview {
+  margin-top: 10px;
+}
+@media (pointer: coarse) {
+  .btn,
+  .quick-action,
+  .stock-row,
+  .list-row,
+  .reminder,
+  .notify-message > summary {
+    min-height: var(--touch-target);
+  }
+  .btn.icon-btn {
+    min-width: var(--touch-target);
+  }
+  .field input:not([type='checkbox']):not([type='color']):not([type='file']),
+  .field select,
+  .field textarea {
+    min-height: var(--touch-target);
+    font-size: 16px;
+  }
+  .notify-message > summary {
+    display: flex;
+    align-items: center;
+  }
 }

@@ -136,12 +136,12 @@ function homeView() {
         .join('')
     : '<div class="panel-empty">' +
       icon('boxes') +
-      '<b>Sin alertas de stock</b><span>' +
+      '<b>Sin materiales con mínimo definido</b><span>' +
       (uncounted.length
         ? uncounted.length +
           (uncounted.length === 1 ? ' material pendiente' : ' materiales pendientes') +
           ' de conteo inicial.'
-        : 'Define un stock mínimo en tus materiales para ver alertas aquí.') +
+        : 'Define un stock mínimo en tus materiales para comparar su disponibilidad aquí.') +
       '</span></div>';
   root.innerHTML =
     header(
@@ -156,7 +156,44 @@ function homeView() {
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
     homeHero(weekday, open, late, dueTotal) +
     remindersPanel() +
-    '<div class="kpis">' +
+    '<div class="kpis home-kpis">' +
+    kpi(
+      'Pedidos en curso',
+      'clipboard-list',
+      String(open.length),
+      late.length
+        ? '<span class="down">' +
+            icon('triangle-alert') +
+            late.length +
+            (late.length === 1 ? ' atrasado' : ' atrasados') +
+            '</span>'
+        : '<span class="muted">Todos al día</span>',
+      ' kpi-priority'
+    ) +
+    kpi(
+      'Por cobrar',
+      'wallet',
+      '<span class="full">' + clp(dueTotal) + '</span><span class="short">' + clpShort(dueTotal) + '</span>',
+      dueOrders.length
+        ? '<button type="button" class="link-btn" id="homeDue">' +
+            dueOrders.length +
+            (dueOrders.length === 1 ? ' pedido con saldo' : ' pedidos con saldo') +
+            '</button>'
+        : '<span class="muted">Todo cobrado</span>',
+      ' kpi-priority'
+    ) +
+    kpi(
+      'Materiales bajo mínimo',
+      'boxes',
+      String(low.length),
+      low.length
+        ? '<span class="warn">' +
+            icon('triangle-alert') +
+            (low.length === 1 ? 'material bajo mínimo' : 'materiales bajo mínimo') +
+            '</span>'
+        : '<span class="muted">Stock en orden</span>',
+      ' kpi-priority'
+    ) +
     kpi(
       'Ventas de ' + MONTHS[now.getMonth()],
       'wallet',
@@ -178,29 +215,6 @@ function homeView() {
       '<span class="muted">' +
         (cur.margin == null ? 'Sin ventas este mes' : 'Margen ' + pct(cur.margin)) +
         '</span>'
-    ) +
-    kpi(
-      'Pedidos en curso',
-      'clipboard-list',
-      String(open.length),
-      late.length
-        ? '<span class="down">' +
-            icon('triangle-alert') +
-            late.length +
-            (late.length === 1 ? ' atrasado' : ' atrasados') +
-            '</span>'
-        : '<span class="muted">Todos al día</span>'
-    ) +
-    kpi(
-      'Inventario',
-      'boxes',
-      String(low.length),
-      low.length
-        ? '<span class="warn">' +
-            icon('triangle-alert') +
-            (low.length === 1 ? 'material bajo mínimo' : 'materiales bajo mínimo') +
-            '</span>'
-        : '<span class="muted">Stock en orden</span>'
     ) +
     kpi(
       'Productos en stock',
@@ -226,20 +240,9 @@ function homeView() {
         '</span>',
       '<button type="button" class="link-btn" id="homeMaterials">Filamento e insumos</button>'
     ) +
-    kpi(
-      'Por cobrar',
-      'wallet',
-      '<span class="full">' + clp(dueTotal) + '</span><span class="short">' + clpShort(dueTotal) + '</span>',
-      dueOrders.length
-        ? '<button type="button" class="link-btn" id="homeDue">' +
-            dueOrders.length +
-            (dueOrders.length === 1 ? ' pedido con saldo' : ' pedidos con saldo') +
-            '</button>'
-        : '<span class="muted">Todo cobrado</span>'
-    ) +
     '</div><div class="home-cols"><section class="panel"><div class="panel-h"><h2>Próximas entregas</h2><button type="button" class="link-btn" data-go="production">Ver pedidos</button></div>' +
     deliveries +
-    '</section><section class="panel"><div class="panel-h"><h2>Stock bajo</h2><button type="button" class="link-btn" data-go="inventory">Inventario</button></div>' +
+    '</section><section class="panel"><div class="panel-h"><h2>Stock y mínimos</h2><button type="button" class="link-btn" data-go="inventory">Inventario</button></div>' +
     stock +
     '</section></div></main>';
   common();

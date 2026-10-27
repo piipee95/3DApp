@@ -419,9 +419,9 @@ function mountCustomerNotify(order, dialog) {
     '</div>' +
     (phone
       ? text
-        ? '<p class="notify-preview">' +
+        ? '<details class="notify-message"><summary>Ver mensaje antes de enviar</summary><p class="notify-preview">' +
           esc(text) +
-          '</p><div class="wrap-row"><a class="btn btn-primary btn-sm" target="_blank" rel="noopener" id="notifySend" href="' +
+          '</p></details><div class="wrap-row"><a class="btn btn-secondary btn-sm" target="_blank" rel="noopener" id="notifySend" href="' +
           esc(waUrl(phone, text)) +
           '">' +
           icon('message-circle') +
@@ -444,7 +444,7 @@ function mountCustomerNotify(order, dialog) {
     '<div id="notifyFeedback" class="small" role="status"></div>';
   const askPhone = () => {
     box.querySelector('.wrap-row')?.remove();
-    box.querySelector('.notify-preview')?.remove();
+    box.querySelector('.notify-message')?.remove();
     const form = document.createElement('form');
     form.id = 'notifyPhoneForm';
     form.className = 'notify-phone';

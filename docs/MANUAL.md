@@ -22,8 +22,10 @@ computador, y se puede instalar como app.
 
 Saludo, accesos rápidos (Vender, Nuevo pedido, Fabricar, Cotizar), las cifras del mes (ventas, utilidad,
 pedidos), **Productos en stock** y **Materia prima** (dinero invertido), **Por cobrar**, próximas entregas,
-stock bajo y **Pendientes**: atrasos, entregas de hoy y mañana, pedidos listos, saldos por cobrar,
+**Stock y mínimos** (disponible frente al mínimo definido) y **Pendientes**: atrasos, entregas de hoy y mañana, pedidos listos, saldos por cobrar,
 cotizaciones por vencer, mantenciones y el conteo de inventario cuando toca.
+Las cifras de pedidos en curso, por cobrar y materiales bajo mínimo aparecen primero; los otros
+indicadores permanecen en la misma pantalla.
 
 ## Productos
 
@@ -64,6 +66,7 @@ cotizaciones por vencer, mantenciones y el conteo de inventario cuando toca.
   se ve como documento, PDF o imagen para WhatsApp.
 - Estados: abierta, aceptada, rechazada, vencida. **Convertir en pedido** crea el pedido con su abono.
 - Si se guardó sin costo, su utilidad usa el costo del producto vinculado.
+- Si un filtro de estado no tiene cotizaciones, **Ver todas las cotizaciones** vuelve al filtro *Todas*.
 
 ## Pedidos
 
@@ -74,6 +77,8 @@ cotizaciones por vencer, mantenciones y el conteo de inventario cuando toca.
   estado; **Pagos** (abonos, saldo, recordatorios); **Materiales y stock** (reserva, consumo real, «Usar
   materiales actuales del producto»); **Fotos del trabajo**; estado, entrega, costos reales y notas;
   *Registrar falla* y *Eliminar*.
+- **Ver mensaje antes de enviar** despliega la vista previa de WhatsApp; el botón de envío conserva el
+  mensaje correspondiente al estado y saldo del pedido.
 - **Estados**: pendiente → imprimiendo → armado → listo → **enviado** → entregado (o cancelado). Al cambiar el
   estado, la app ofrece enviar el aviso al cliente. Un pedido **enviado** va en camino: sigue «en curso» hasta
   marcarlo entregado, pero ya no aparece como atrasado; el cliente lo ve en su seguimiento. Solo existe en

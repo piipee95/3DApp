@@ -769,7 +769,11 @@ function quotesView() {
         (S.quotes.length
           ? ''
           : 'Desde un producto, en Resumen → «Compartir cotización». Se guardan al compartir o imprimir.') +
-        '</span></div>') +
+        '</span>' +
+        (S.quotes.length && !term && filter !== 'all'
+          ? '<button type="button" class="btn btn-secondary" data-quote-filter="all">Ver todas las cotizaciones</button>'
+          : '') +
+        '</div>') +
     '</section></main>';
   common();
   bindSearch('quoteSearch', v => (S.quoteSearch = v), quotesView);

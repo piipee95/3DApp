@@ -915,7 +915,7 @@ function setupPhotoAndFilaments() {
   const quote = document.createElement('div');
   quote.className = 'quote-actions row';
   quote.innerHTML =
-    '<button type="button" class="btn btn-primary" id="quote">' +
+    '<button type="button" class="btn btn-secondary" id="quote">' +
     icon('file-text') +
     'Compartir cotización</button>';
   q('[data-panel="summary"]').prepend(quote);
@@ -1252,13 +1252,18 @@ function setupEditorLayout() {
       ivaField = iva.closest('.field'),
       ivarField = q('#ivar').closest('.field'),
       label = ivarField.querySelector('label');
-    label.classList.add('label-switch');
+    const labelRow = document.createElement('div');
+    labelRow.className = 'label-switch';
+    label.before(labelRow);
+    labelRow.append(label);
+    label.htmlFor = 'ivar';
     label.textContent = 'IVA %';
-    const sw = document.createElement('span');
+    const sw = document.createElement('label');
     sw.className = 'switch';
+    sw.htmlFor = 'iva';
     sw.append(iva);
     sw.insertAdjacentHTML('beforeend', '<i></i><span>Aplicar</span>');
-    label.append(sw);
+    labelRow.append(sw);
     ivaField.remove();
     q('#ivar').disabled = !iva.checked || !canEdit();
     iva.addEventListener('change', () => (q('#ivar').disabled = !iva.checked));
