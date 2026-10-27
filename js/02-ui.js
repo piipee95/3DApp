@@ -1,12 +1,20 @@
 'use strict';
 // Interfaz común: íconos, diálogos, avisos, campos, buscadores, menús flotantes, carga y tema.
+let fieldSequence = 0;
 function enhanceFields() {
-  qa('.field').forEach((field, i) => {
+  qa('.field').forEach(field => {
     const input = field.querySelector('input,textarea,select'),
       label = field.querySelector('label');
     if (input && label) {
-      if (!input.id) input.id = 'field-' + i;
-      label.htmlFor = input.id;
+      if (!input.id) {
+        let id;
+        do {
+          id = 'field-' + ++fieldSequence;
+        } while (document.getElementById(id));
+        input.id = id;
+      }
+      // Preserve explicit associations, including fields containing a separate switch.
+      if (!label.htmlFor) label.htmlFor = input.id;
     }
   });
   q('#email')?.setAttribute('autocomplete', 'email');
