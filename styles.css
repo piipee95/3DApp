@@ -6,22 +6,24 @@
   --side: #101016;
   --surface: #15151c;
   --raised: #1b1b24;
-  --field: #17171f;
-  --line: #24242e;
+  --field: #1b1b24;
+  --line: #30303c;
   --line2: #30303c;
   --text: #ececf1;
-  --muted: #9a9aa8;
-  --faint: #6b6b78;
+  --muted: #a6a6b5;
+  --faint: #9696a6;
   --label: #c2c2cc;
   --action: #e0117a; /* #F31987 from the kit, darkened so white text meets AA */
-  --action-h: #f0198a;
+  --action-h: #cb106e;
   --cyan: #01d3fa;
   --yellow: #ffd800;
   --magenta: #f31987;
+  --brand-cyan: #01d3fa;
+  --brand-yellow: #ffd800;
   --green: #2fd48a;
   --red: #ff5c7f;
   --violet: #b79cff;
-  --stripe: linear-gradient(90deg, var(--cyan), var(--yellow) 50%, var(--magenta));
+  --stripe: linear-gradient(90deg, var(--brand-cyan), var(--brand-yellow) 50%, var(--magenta));
   --r: 8px;
   --r-lg: 12px;
   --shadow: 0 16px 40px #00000073;
@@ -46,14 +48,14 @@
   --line2: #d5d9e3;
   --text: #151a26;
   --muted: #5d6577;
-  --faint: #8a92a3;
+  --faint: #646c7d;
   --label: #3b4354;
   --action: #d1106f;
   --action-h: #e0117a;
-  --cyan: #0e7fa8;
-  --yellow: #a37500;
-  --green: #138a57;
-  --red: #d6284f;
+  --cyan: #0c7399;
+  --yellow: #8a6200;
+  --green: #117b4e;
+  --red: #ce254c;
   --violet: #6d4fd6;
   --shadow: 0 10px 30px #1a223a1f;
 }
@@ -69,14 +71,14 @@
     --line2: #d5d9e3;
     --text: #151a26;
     --muted: #5d6577;
-    --faint: #8a92a3;
+    --faint: #646c7d;
     --label: #3b4354;
     --action: #d1106f;
     --action-h: #e0117a;
-    --cyan: #0e7fa8;
-    --yellow: #a37500;
-    --green: #138a57;
-    --red: #d6284f;
+    --cyan: #0c7399;
+    --yellow: #8a6200;
+    --green: #117b4e;
+    --red: #ce254c;
     --violet: #6d4fd6;
     --shadow: 0 10px 30px #1a223a1f;
   }
@@ -265,7 +267,7 @@ svg.i {
   display: grid;
   place-items: center;
   flex: none;
-  background: linear-gradient(135deg, var(--cyan), var(--action));
+  background: var(--action);
   color: #fff;
   font-weight: 700;
   font-size: 12px;
@@ -4791,19 +4793,24 @@ td.row-actions .sell-btn {
   grid-row: span 2;
   margin-right: 8px;
   border-radius: 11px;
-  color: #fff;
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 10%, var(--surface));
 }
 .qa-sell .qa-ic {
-  background: linear-gradient(135deg, var(--action), color-mix(in srgb, var(--action) 65%, var(--yellow)));
+  color: var(--action);
+  background: color-mix(in srgb, var(--action) 10%, var(--surface));
 }
 .qa-order .qa-ic {
-  background: linear-gradient(135deg, var(--cyan), color-mix(in srgb, var(--cyan) 60%, var(--violet)));
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 10%, var(--surface));
 }
 .qa-stock .qa-ic {
-  background: linear-gradient(135deg, var(--green), color-mix(in srgb, var(--green) 60%, var(--cyan)));
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 10%, var(--surface));
 }
 .qa-quote .qa-ic {
-  background: linear-gradient(135deg, var(--violet), color-mix(in srgb, var(--violet) 60%, var(--action)));
+  color: var(--action);
+  background: color-mix(in srgb, var(--action) 10%, var(--surface));
 }
 @media (max-width: 599px) {
   .home-hello {
