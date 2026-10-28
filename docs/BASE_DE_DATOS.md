@@ -38,13 +38,18 @@ permisos del taller) y se llaman desde un envoltorio en `public`:
 
 - Inventario: `inventory_consume_order`, `refresh_order_materials`, y los disparadores que reservan, consumen
   y validan movimientos (`inventory_order_trigger`, `inventory_apply_movement`, `inventory_resource_guard`).
-- Productos: `save_product_bundle_v5` (guarda el producto completo), `adjust_product_stock` y el disparador de
+- Productos: `adjust_product_stock` y el disparador de
   stock terminado de pedidos.
 - Pedidos: `link_order_product`, `order_tracking_link`, `printer_hours`.
 - Taller: `bootstrap_workspace`, `create_workspace_invite`, `accept_workspace_invite`.
 - Kit de marca: `brand_storage_usage` (espacio usado por el kit y por el proyecto, solo totales).
 - Público (sin cuenta, por token): `order_tracking`, `public_catalog`, `customer_upload`.
 - Las versiones antiguas `save_product_bundle` a `_v4` se conservan sin permiso de ejecución (5.0).
+
+El guardado `public.save_product_bundle_v5` es SECURITY INVOKER: valida sesión y edición del equipo y
+trabaja bajo RLS. Desde la reparación `kultiapp_v523_inline_save_bundle_chain`, integra la lógica de las
+versiones anteriores sin invocarlas. Conserva su firma y ACL; authenticated puede ejecutar v5, pero no
+las funciones antiguas. Ver `docs/versiones/V5_2_3.md`.
 
 ## Storage
 
