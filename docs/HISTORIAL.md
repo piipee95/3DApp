@@ -2,6 +2,12 @@
 
 Resumen de cada versión, de la más reciente a la más antigua. El detalle completo de cada una está en `docs/versiones/`.
 
+## Reparación de backend · Guardado de productos
+
+- `save_product_bundle_v5` incorpora su cadena interna para dejar de llamar a las RPC retiradas en 5.0.
+- Permisos, RLS, validaciones y cálculos conservados. No requiere recargar el borrador ni cambia la
+  versión visible 5.2.2. Detalle en `docs/versiones/V5_2_3.md`.
+
 ## 5.2.2 · Paleta Kultiverso Pop
 
 - Paletas clara y oscura con superficies neutras, magenta como acción y cian como apoyo.
