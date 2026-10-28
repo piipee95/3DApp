@@ -2,6 +2,12 @@
 
 Resumen de cada versión, de la más reciente a la más antigua. El detalle completo de cada una está en `docs/versiones/`.
 
+## 5.2.2 · Paleta Kultiverso Pop
+
+- Paletas clara y oscura con superficies neutras, magenta como acción y cian como apoyo.
+- Mejora de contraste en textos, enlaces, estados y botones; acentos originales del logo conservados.
+- Accesos rápidos más sobrios; selección de tema y funcionamiento existentes conservados.
+
 ## 5.2.1 · Claridad y accesibilidad
 
 - Inicio prioriza pendientes y cifras operativas; conserva todos los indicadores y accesos.
