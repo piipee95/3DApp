@@ -12,7 +12,7 @@ async function test(){
  assert.equal(run('!!q(".product-grid")'),false);
  run(`q('#viewToggle').click()`);
  assert.equal(run('localStorage.getItem("kultiapp_product_view")'),'grid');assert.equal(run('qa(".product-card").length'),2);
- assert.match(run('q(".product-card .pc-stock").textContent'),/1 en stock/);assert.equal(run('qa(".product-card [data-sell]").length'),1);
+ assert.match(run('q(".product-card .product-metrics").textContent'),/Disponible1 un\./);assert.equal(run('qa(".product-card [data-sell]").length'),1);
  run(`q('#viewToggle').click()`);assert.equal(run('!!q(".product-grid")'),false);
  // Inicio: greeting with the user's name, the day in one sentence, quick actions.
  run(`S.mode='home';render()`);

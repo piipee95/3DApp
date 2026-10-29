@@ -547,3 +547,19 @@ function dailyNotice(list) {
     ].filter(Boolean);
   toast('Hoy: ' + (parts.length ? parts.join(' · ') : list.length + ' pendientes') + '.');
 }
+
+// The bell exposes the same computed reminders as Inicio. It stores no new notification state.
+function showNotifications() {
+  const list = reminders();
+  const dialog = showDialog('notificationsDialog',
+    '<div class="section-title"><h2>Notificaciones y pendientes</h2><button type="button" data-close>Cerrar</button></div>' +
+    '<p class="small muted">Avisos actuales del taller. No son notificaciones push.</p>' +
+    (list.length ? '<div class="reminders">' + list.map((r, i) =>
+      '<button type="button" class="list-row reminder" data-notice="' + i + '"><span class="rem-ic ' + r.tone + '">' +
+      icon(r.icon) + '</span><span class="lr-main"><b>' + esc(r.text) + '</b><span>' + esc(r.sub) +
+      '</span></span>' + icon('chevron-right') + '</button>').join('') + '</div>' :
+      '<div class="panel-empty">' + icon('circle-check') + '<b>Todo al día</b><span>No hay pendientes urgentes.</span></div>'));
+  dialog.querySelectorAll('[data-notice]').forEach(b => {
+    b.onclick = () => { dialog.close(); openReminder(list[+b.dataset.notice]); };
+  });
+}

@@ -1,0 +1,28 @@
+const assert = require('node:assert/strict');
+const {boot} = require('./boot.cjs');
+const dom = boot(), run = code => dom.window.run(code);
+run(`S.products=[{id:'p1',name:'Producto de prueba',quantity:1,target_margin:0.3,round_to:1000,
+ stock_qty:5,stock_reserved:2,status:'active',sale_price:17990}];
+ S.productView='grid';S.summaries=new Map([['p1',{total_cost:10110}]]);S.mode='dashboard';
+ window.beforeNumbers=JSON.stringify(productNumbers(S.products[0]));dashboard();`);
+assert.ok(run(`!!q('.product-grid')`));
+assert.equal(run(`q('.product-metrics').textContent.includes('3 un.')`),true);
+run(`q('[data-preview]').click()`);
+assert.ok(run(`!!q('.product-preview')`));
+assert.equal(run(`document.activeElement.id`),'closeProductPreview');
+assert.equal(run(`q('.product-preview .product-metrics').textContent.includes('$17.990')`),true);
+assert.equal(run(`JSON.stringify(productNumbers(S.products[0]))`),run('beforeNumbers'));
+run(`q('#closeProductPreview').click()`);
+assert.equal(run(`q('.product-preview')`),null);
+assert.ok(run(`document.activeElement.matches('[data-preview]')`));
+run(`q('[data-preview]').click();S.search='no coincide';dashboard()`);
+assert.equal(run(`q('.product-preview')`),null);
+run(`S.search='';dashboard();q('#viewToggle').click()`);
+assert.ok(run(`!!q('.products-table')`));
+assert.equal(run(`localStorage.getItem('kultiapp_product_view')`),'list');
+run(`q('[data-notifications]').click()`);
+assert.match(run(`q('#notificationsDialog').textContent`),/Todo al día/);
+assert.equal(run(`qa('[data-notice]').length`),0);
+run(`q('#notificationsDialog').close();q('[data-header-profile]').click()`);
+assert.ok(run(`!!q('#moreSheet')`));
+console.log('PASS galería, vista previa, navegación, cifras y campana sin escrituras backend');
