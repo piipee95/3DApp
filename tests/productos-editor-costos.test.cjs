@@ -78,7 +78,7 @@ async function test(){
  assert.equal(run('q(".sidebar .nav-item.active").dataset.appMode'),'dashboard');
  assert.equal(run('qa(".tabbar .tab-item").length'),5);
  assert.equal(run('q(".page-title").textContent'),'Productos');
- assert(run('q("#accountMenu #editProfile")'));
+ assert(run('q("#accountButton")'));
  console.log('PASS V1.2: multicolor/purge, legacy-compatible totals, duplication, seven-color limit, reload/drafts, cloud success/failure, photo safety, quote privacy, viewer permissions and compact dashboard.');
  dom.window.close();
 }

@@ -548,18 +548,47 @@ function dailyNotice(list) {
   toast('Hoy: ' + (parts.length ? parts.join(' · ') : list.length + ' pendientes') + '.');
 }
 
-// The bell exposes the same computed reminders as Inicio. It stores no new notification state.
-function showNotifications() {
-  const list = reminders();
-  const dialog = showDialog('notificationsDialog',
-    '<div class="section-title"><h2>Notificaciones y pendientes</h2><button type="button" data-close>Cerrar</button></div>' +
-    '<p class="small muted">Avisos actuales del taller. No son notificaciones push.</p>' +
+// Only device preferences are stored: hashed reminder signatures, scoped to user/workspace.
+function notificationSeenKey() {
+  return S.session?.user?.id && S.workspace?.id
+    ? 'kultiapp_notice_seen:' + encodeURIComponent(S.session.user.id) + ':' + encodeURIComponent(S.workspace.id)
+    : null;
+}
+function notificationSignature(r) {
+  const value = JSON.stringify([r.order || '', r.quote || '', r.go || '', r.text, r.sub, r.tone]);
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i++) hash = Math.imul(hash ^ value.charCodeAt(i), 16777619);
+  return (hash >>> 0).toString(36);
+}
+function unseenNotifications(list = reminders()) {
+  const key = notificationSeenKey();
+  if (!key) return list.length;
+  let seen = [];
+  try {
+    const stored = JSON.parse(localStorage.getItem(key) || '[]');
+    if (Array.isArray(stored)) seen = stored;
+  } catch {}
+  return list.filter(r => !seen.includes(notificationSignature(r))).length;
+}
+function markNotificationsSeen() {
+  const key = notificationSeenKey();
+  if (key) {
+    try { localStorage.setItem(key, JSON.stringify(reminders().map(notificationSignature))); } catch {}
+  }
+  q('.notification-badge')?.remove();
+  q('[data-notifications]')?.setAttribute('aria-label', 'Notificaciones y pendientes');
+}
+function notificationDropdown() {
+  const list = reminders(), unread = unseenNotifications(list);
+  return '<details class="utility-dropdown" id="notificationsMenu"><summary class="btn icon-btn utility-summary" data-notifications aria-label="Notificaciones y pendientes' +
+    (unread ? ': ' + unread + ' nuevos' : '') + '" aria-expanded="false">' + icon('bell') +
+    (unread ? '<span class="notification-badge" aria-hidden="true">' + (unread > 99 ? '99+' : unread) + '</span>' : '') +
+    '</summary><section class="utility-pop notifications-pop" aria-label="Notificaciones y pendientes"><div class="utility-heading"><h2>Notificaciones</h2><button type="button" class="btn icon-btn" data-close-utility aria-label="Cerrar notificaciones">' +
+    icon('x') + '</button></div><p class="small muted">Pendientes del taller · Visto en este dispositivo</p>' +
     (list.length ? '<div class="reminders">' + list.map((r, i) =>
       '<button type="button" class="list-row reminder" data-notice="' + i + '"><span class="rem-ic ' + r.tone + '">' +
       icon(r.icon) + '</span><span class="lr-main"><b>' + esc(r.text) + '</b><span>' + esc(r.sub) +
       '</span></span>' + icon('chevron-right') + '</button>').join('') + '</div>' :
-      '<div class="panel-empty">' + icon('circle-check') + '<b>Todo al día</b><span>No hay pendientes urgentes.</span></div>'));
-  dialog.querySelectorAll('[data-notice]').forEach(b => {
-    b.onclick = () => { dialog.close(); openReminder(list[+b.dataset.notice]); };
-  });
+      '<div class="utility-empty">' + icon('circle-check') + '<b>Todo al día</b><span>No hay pendientes urgentes.</span></div>') +
+    '</section></details>';
 }

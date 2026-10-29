@@ -114,8 +114,6 @@ function common() {
   enhanceFields();
   flashMessages();
   if (S.mode === 'dashboard' || S.mode === 'home') showDraftResume();
-  q('#invite')?.addEventListener('click', invite);
-  q('#editProfile')?.addEventListener('click', showProfile);
 }
 function render() {
   if (!S.session || S.mode === 'auth') return authView();
@@ -641,9 +639,13 @@ function header(title = PAGE_TITLES[S.mode] || 'KultiApp', actions = '', { back 
         icon('search') +
         '</button>') +
     actions +
-    '<div class="header-utilities"><button type="button" class="btn icon-btn" data-notifications aria-label="Notificaciones y pendientes" title="Notificaciones y pendientes">' +
-    icon('bell') + '</button><button type="button" class="btn icon-btn header-profile" data-header-profile aria-label="Abrir menú de cuenta" aria-haspopup="dialog">' +
-    userAvatar() + icon('chevron-down') + '</button></div></div></header>'
+    '<div class="header-utilities">' + notificationDropdown() +
+    '<details class="utility-dropdown" id="accountMenu"><summary class="btn icon-btn utility-summary" aria-label="Configuración" aria-expanded="false">' +
+    icon('settings') + '</summary><section class="utility-pop settings-pop" aria-label="Configuración"><div class="utility-heading"><h2>Configuración</h2><button type="button" class="btn icon-btn" data-close-utility aria-label="Cerrar configuración">' +
+    icon('x') + '</button></div><p class="small muted">Apariencia en este dispositivo</p>' + themeSwitch() +
+    '<div id="settingsActions">' + accountMenuItems() + '</div><button type="button" class="menu-item" id="settingsLogout">' + icon('log-out') +
+    'Cerrar sesión</button></section></details></div>' +
+    '</div></header>'
   );
 }
 function accountMenuItems() {
@@ -655,10 +657,7 @@ function accountMenuItems() {
       : '') +
     (isOwner()
       ? '<button type="button" class="menu-item" id="invite">' + icon('user-plus') + 'Invitar socio</button>'
-      : '') +
-    '<button type="button" class="menu-item" id="editProfile">' +
-    icon('user') +
-    'Mi perfil</button>'
+      : '')
   );
 }
 function mountShell() {
@@ -700,16 +699,14 @@ function mountShell() {
         '</button>'
       );
     }).join('') +
-    '</nav><div class="side-user"><div class="account-menu" id="accountMenu" hidden>' +
-    accountMenuItems() +
-    '</div><button type="button" class="user-chip" id="accountButton" aria-haspopup="menu" aria-expanded="false">' +
+    '</nav><div class="side-user"><button type="button" class="user-chip" id="accountButton" aria-label="Mi perfil">' +
     userAvatar() +
     '<span class="user-text"><b>' +
     esc(displayName() || S.session?.user?.email || '') +
     '</b><span>' +
     roleName() +
     '</span></span>' +
-    icon('ellipsis-vertical') +
+    icon('chevron-right') +
     '</button><p class="powered">Powered by <b>ELARA</b></p></div>';
   root.prepend(side);
   loadAvatarUrl();
@@ -741,15 +738,11 @@ function mountShell() {
   qa('[data-app-mode],[data-tab-mode]').forEach(
     b => (b.onclick = () => goMode(b.dataset.appMode || b.dataset.tabMode))
   );
-  const menu = q('#accountMenu'),
-    button = q('#accountButton');
-  button.onclick = e => {
-    e.stopPropagation();
-    menu.hidden = !menu.hidden;
-    button.setAttribute('aria-expanded', String(!menu.hidden));
-  };
-  q('[data-header-profile]')?.addEventListener('click', showMoreSheet);
-  q('[data-notifications]')?.addEventListener('click', showNotifications);
+  q('#accountButton').onclick = showProfile;
+  if (q('#settingsActions')) q('#settingsActions').innerHTML = accountMenuItems();
+  if (q('#invite')) q('#invite').onclick = invite;
+  bindUtilityDropdowns();
+  if (q('#settingsLogout')) q('#settingsLogout').onclick = () => supabase.auth.signOut();
   q('#moreTab').onclick = showMoreSheet;
   qa('[data-open-search]').forEach(b => (b.onclick = showSearch));
   qa('[data-open-create]').forEach(b => (b.onclick = showCreateMenu));
@@ -760,11 +753,9 @@ document.addEventListener('click', e => {
   qa('details.row-menu[open],details.editor-more[open]').forEach(d => {
     if (!d.contains(e.target)) d.open = false;
   });
-  const menu = q('#accountMenu');
-  if (menu && !menu.hidden && !e.target.closest('.side-user,.header-utilities')) {
-    menu.hidden = true;
-    q('#accountButton')?.setAttribute('aria-expanded', 'false');
-  }
+  qa('.utility-dropdown[open]').forEach(d => {
+    if (!d.contains(e.target)) closeUtilityDropdown(d);
+  });
 });
 function showMoreSheet() {
   const dialog = showDialog(
@@ -830,4 +821,35 @@ function showMoreSheet() {
         actions[b.dataset.more]();
       })
   );
+}
+
+function closeUtilityDropdown(dropdown, restoreFocus = false) {
+  dropdown.open = false;
+  const trigger = dropdown.querySelector('summary');
+  trigger.setAttribute('aria-expanded', 'false');
+  if (restoreFocus) trigger.focus();
+}
+function bindUtilityDropdowns() {
+  qa('.utility-dropdown').forEach(dropdown => {
+    const trigger = dropdown.querySelector('summary');
+    trigger.onclick = e => {
+      e.preventDefault();
+      const opening = !dropdown.open;
+      qa('.utility-dropdown[open]').forEach(d => closeUtilityDropdown(d));
+      dropdown.open = opening;
+      trigger.setAttribute('aria-expanded', String(opening));
+      if (opening && dropdown.id === 'notificationsMenu') markNotificationsSeen();
+    };
+    dropdown.querySelector('[data-close-utility]').onclick = () => closeUtilityDropdown(dropdown, true);
+    dropdown.onkeydown = e => {
+      if (e.key === 'Escape') { e.preventDefault(); closeUtilityDropdown(dropdown, true); }
+    };
+  });
+  const notices = reminders();
+  qa('[data-notice]').forEach(b => {
+    b.onclick = () => {
+      closeUtilityDropdown(q('#notificationsMenu'));
+      openReminder(notices[+b.dataset.notice]);
+    };
+  });
 }
