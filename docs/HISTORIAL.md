@@ -1,3 +1,7 @@
+# V5.3.1 — Editor de estudio
+
+Resumen lateral en escritorio, guardado accesible en móvil y jerarquía financiera unificada. Sin cambios en cálculos ni backend. Ver `versiones/V5_3_1.md`.
+
 # V5.3.0 — Estudio de productos
 
 Galería con vista previa, campana de pendientes existentes y acceso superior de cuenta. Conserva tabla, preferencias, datos y cálculos. Ver `versiones/V5_3_0.md`.
