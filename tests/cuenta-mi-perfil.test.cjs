@@ -7,8 +7,8 @@ async function test(){
  run(`S.session={user:{id:'u',email:'felipe@kultiversopop.cl',created_at:'2026-01-10T12:00:00Z',last_sign_in_at:'2026-10-24T12:00:00Z',user_metadata:{name:'Felipe'}}};
   window.calls=[];supabase.auth={updateUser:async v=>{calls.push(v);const u=S.session.user;return{data:{user:{...u,user_metadata:{...u.user_metadata,...(v.data||{})}}},error:null}},signOut:async()=>{calls.push('out')}};
   checkNewPassword=async pw=>pw.length<10?'corta':'';S.mode='home';render()`);
- // Reached from the account menu and from the Más sheet (tapping your name too).
- run(`q('#editProfile').click()`);await flush();
+ // Reached directly from the sidebar profile button; Más keeps its mobile shortcut.
+ run(`q('#accountButton').click()`);await flush();
  assert.equal(run('S.mode'),'profile');assert.match(run('q(".page-title").textContent'),/Mi perfil/);
  assert.match(run('q(".profile-id").textContent'),/Felipe.*felipe@kultiversopop\.cl/);
  assert.match(run('q(".profile-facts").textContent'),/Último ingreso24 de octubre de 2026.*Versiónv\d+\.\d+/);

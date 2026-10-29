@@ -5,9 +5,10 @@ const flush=async(k=10)=>{for(let i=0;i<k;i++)await new Promise(r=>setTimeout(r,
 async function test(){
  const dom=boot(),run=s=>dom.window.run(s);
  run(`S.session={user:{id:'u',email:'f@k.cl',user_metadata:{}}};S.workspace={id:'w',role:'editor',name:'Kultiverso Pop'};S.mode='home';render()`);
- // Account menu and Más: only Mi perfil remains of the personal items; no theme switch there.
- assert.equal(run('[...qa("#accountMenu .menu-item")].map(b=>b.textContent).join("|")'),'Mi perfil');
- assert.equal(run('!!q("#accountMenu .theme-switch")'),false);
+ // Settings has device appearance; the sidebar opens the profile directly.
+ assert.equal(run('[...qa("#accountMenu .menu-item")].map(b=>b.textContent).join("|")'),'Cerrar sesión');
+ assert.equal(run('q("#accountButton").getAttribute("aria-label")'),'Mi perfil');
+ assert.equal(run('!!q("#accountMenu .theme-switch")'),true);
  run('showMoreSheet()');
  const more=run('[...qa("#moreSheet .menu-item")].map(b=>b.textContent).join("|")');
  assert.doesNotMatch(more,/Mi perfil|contraseña|Cerrar sesión|Respaldo/);assert.equal(run('!!q("#moreSheet .theme-switch")'),false);
@@ -30,6 +31,6 @@ async function test(){
  run(`history.replaceState(null,'','#clientes');S.mode='home';loadQuotes=loadCustomers=async()=>{}`);assert.equal(await dom.window.eval('restoreView()'),true);
  assert.equal(run('S.mode'),'customers');
  dom.window.close();
- console.log('PASS V4.5: menus trimmed to Mi perfil; section links (#pedidos…), back button, login hashes kept, link restore.');
+ console.log('PASS V4.5: settings dropdown and direct profile; section links (#pedidos…), back button, login hashes kept, link restore.');
 }
 test().catch(e=>{console.error(e);process.exitCode=1});

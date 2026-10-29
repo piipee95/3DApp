@@ -1,3 +1,7 @@
+# V5.3.2 — Menús anclados y avisos nuevos
+
+Campana con burbuja de nuevos, Configuración desplegable, perfil único abajo y logo centrado. Ajuste responsive a 320 px. Ver `versiones/V5_3_2.md`.
+
 # V5.3.1 — Editor de estudio
 
 Resumen lateral en escritorio, guardado accesible en móvil y jerarquía financiera unificada. Sin cambios en cálculos ni backend. Ver `versiones/V5_3_1.md`.
