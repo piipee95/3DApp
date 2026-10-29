@@ -46,42 +46,40 @@ const sellButton = p =>
       icon('wallet') +
       'Vender</button>'
     : '';
-// V4.2: gallery view, a shop window of the products with their photo, price and stock.
+// The preview only reads loaded products; editing and stock actions keep their existing handlers.
+let productPreviewId = null;
+function productMetrics(p) {
+  const t = productNumbers(p), s = productStock(p);
+  return '<dl class="product-metrics"><div><dt>Costo unitario</dt><dd>' +
+    (t.unit > 0 ? clp(t.unit) : '—') + '</dd></div><div><dt>Precio final</dt><dd>' +
+    (t.unit > 0 || p.sale_price != null ? clp(t.price) : '—') +
+    '</dd></div><div><dt>Margen</dt><dd>' + (t.margin == null ? '—' : pct(t.margin)) +
+    '</dd></div><div><dt>Disponible</dt><dd>' + s.available + ' un.</dd></div></dl>';
+}
 function productGrid(rows) {
-  return (
-    '<div class="product-grid">' +
-    rows
-      .map(p => {
-        const t = productNumbers(p),
-          s = productStock(p),
-          src = photoSrc(p);
-        return (
-          '<article class="product-card' +
-          (p.status === 'archived' ? ' archived' : '') +
-          '" data-open="' +
-          p.id +
-          '" role="button" tabindex="0"><div class="pc-photo">' +
-          (src
-            ? '<img src="' + esc(src) + '" alt="" loading="lazy">'
-            : '<span class="pc-empty">' + icon('package') + '</span>') +
-          (s.qty ? '<span class="pc-stock">' + s.available + ' en stock</span>' : '') +
-          '</div><div class="pc-body"><b class="pc-name">' +
-          esc(p.name) +
-          '</b><div class="pc-price"><b class="num">' +
-          (t.unit > 0 || p.sale_price != null ? clp(t.price) : '—') +
-          '</b>' +
-          marginChip(p) +
-          '</div><span class="pc-cost">' +
-          (t.unit > 0 ? 'Costo ' + clp(t.unit) : 'Sin costos registrados') +
-          '</span><div class="pc-actions">' +
-          sellButton(p) +
-          productMenu(p) +
-          '</div></div></article>'
-        );
-      })
-      .join('') +
-    '</div>'
-  );
+  return '<div class="product-grid">' + rows.map(p => {
+    const src = photoSrc(p);
+    return '<article class="product-card' + (p.status === 'archived' ? ' archived' : '') +
+      (p.id === productPreviewId ? ' selected' : '') + '"><button type="button" class="pc-preview" data-preview="' +
+      esc(p.id) + '" aria-label="Vista previa de ' + esc(p.name) + '" aria-pressed="' +
+      (p.id === productPreviewId) + '"><span class="pc-photo">' + (src ? '<img src="' + esc(src) +
+      '" alt="" loading="lazy">' : '<span class="pc-empty">' + icon('package') +
+      '</span>') + '</span><b class="pc-name">' + esc(p.name) + '</b></button><div class="pc-body">' +
+      productMetrics(p) + '<div class="pc-actions"><button type="button" class="btn btn-secondary btn-sm" data-open="' +
+      esc(p.id) + '">Abrir</button>' + sellButton(p) + productMenu(p) + '</div></div></article>';
+  }).join('') + '</div>';
+}
+function productPreview(p) {
+  const src = photoSrc(p);
+  return '<aside class="product-preview" aria-labelledby="previewTitle"><div class="preview-heading"><h2 id="previewTitle">' +
+    esc(p.name) + '</h2><button type="button" class="btn icon-btn" id="closeProductPreview" aria-label="Cerrar vista previa">' +
+    icon('x') + '</button></div>' + (src ? '<img class="preview-photo" src="' + esc(src) + '" alt="' +
+    esc(p.name) + '">' : '<div class="preview-no-photo">' + icon('package') + '<span>Sin fotografía</span></div>') +
+    '<p class="preview-description">' + esc(p.description || 'Sin descripción') + '</p>' + productMetrics(p) +
+    '<p class="small muted">' + (p.status === 'archived' ? 'Archivado' : 'Activo') +
+    (productStock(p).reserved ? ' · ' + productStock(p).reserved + ' un. reservadas' : '') +
+    '</p><button type="button" class="btn btn-primary" data-open="' + esc(p.id) +
+    '">Abrir producto</button></aside>';
 }
 function productMenu(p) {
   if (!canEdit()) return '';
@@ -133,6 +131,7 @@ function dashboard() {
     .filter(p => (p.name + ' ' + (p.description || '')).toLocaleLowerCase('es').includes(term))
     .filter(p => matchesProfit(p))
     .sort(compareProducts);
+  const preview = rows.find(p => p.id === productPreviewId);
   const cost = p => {
     const { unit } = productNumbers(p);
     return unit > 0 ? clp(unit) : '<span class="muted">—</span>';
@@ -160,18 +159,18 @@ function dashboard() {
   root.innerHTML =
     header(
       'Productos',
-      '<button class="btn btn-secondary" id="priceListsBtn" type="button">' +
+      '<button class="btn btn-secondary" id="priceListsBtn" type="button" aria-label="Precios rápidos">' +
         icon('calculator') +
-        '<span>Precios rápidos</span></button><button class="btn btn-secondary" id="catalogBtn" type="button">' +
+        '<span>Precios rápidos</span></button><button class="btn btn-secondary" id="catalogBtn" type="button" aria-label="Catálogo">' +
         icon('store') +
         '<span>Catálogo</span></button>' +
         (canEdit()
-          ? '<button class="btn btn-primary" id="new">' +
+          ? '<button class="btn btn-primary" id="new" type="button" aria-label="Nuevo producto">' +
             icon('plus') +
             '<span>Nuevo producto</span></button>'
           : '')
     ) +
-    '<main class="shell">' +
+    '<main class="shell products-studio">' +
     (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') +
     '<div class="toolbar"><label class="search-box">' +
     icon('search') +
@@ -198,7 +197,7 @@ function dashboard() {
     (S.productView === 'grid' ? 'Ver como lista' : 'Ver como galería') +
     '">' +
     icon(S.productView === 'grid' ? 'list' : 'layout-grid') +
-    '</button><select id="profitFilter" class="select-compact" aria-label="Rentabilidad"><option value="all">Margen: todos</option><option value="positive">Sin pérdida</option><option value="loss">Con pérdida</option><option value="uncosted">Sin costos registrados</option></select><select id="productSort" class="select-compact" aria-label="Ordenar"><option value="recent">Más recientes</option><option value="name">Nombre A–Z</option><option value="price">Precio mayor a menor</option><option value="cost">Costo mayor a menor</option><option value="margin">Margen mayor a menor</option></select></div><section class="panel product-panel">' +
+    '</button><select id="profitFilter" class="select-compact" aria-label="Rentabilidad"><option value="all">Margen: todos</option><option value="positive">Sin pérdida</option><option value="loss">Con pérdida</option><option value="uncosted">Sin costos registrados</option></select><select id="productSort" class="select-compact" aria-label="Ordenar"><option value="recent">Más recientes</option><option value="name">Nombre A–Z</option><option value="price">Precio mayor a menor</option><option value="cost">Costo mayor a menor</option><option value="margin">Margen mayor a menor</option></select></div><div class="product-workspace' + (preview ? ' has-preview' : '') + '"><section class="panel product-panel">' +
     (rows.length
       ? S.productView === 'grid'
         ? productGrid(rows)
@@ -261,7 +260,7 @@ function dashboard() {
             .join('') +
           '</div>'
       : empty) +
-    '</section></main>';
+    '</section>' + (preview ? productPreview(preview) : '') + '</div></main>';
   common();
   q('#productSort').value = S.sort;
   q('#profitFilter').value = S.profitFilter;
@@ -305,6 +304,23 @@ function dashboard() {
     S.showStock = false;
     dashboard();
   };
+  qa('[data-preview]').forEach(button => {
+    button.onclick = () => {
+      productPreviewId = button.dataset.preview;
+      dashboard();
+      q('#closeProductPreview')?.focus();
+    };
+  });
+  const closePreview = () => {
+    const id = productPreviewId;
+    productPreviewId = null;
+    dashboard();
+    qa('[data-preview]').find(b => b.dataset.preview === id)?.focus();
+  };
+  q('#closeProductPreview')?.addEventListener('click', closePreview);
+  q('.product-preview')?.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); closePreview(); }
+  });
   // Rows open the product; the ⋯ menu and its actions don't.
   qa('[data-open]').forEach(row => {
     row.onclick = e => {

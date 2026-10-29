@@ -1,3 +1,7 @@
+# V5.3.0 — Estudio de productos
+
+Galería con vista previa, campana de pendientes existentes y acceso superior de cuenta. Conserva tabla, preferencias, datos y cálculos. Ver `versiones/V5_3_0.md`.
+
 # Historial de KultiApp
 
 Resumen de cada versión, de la más reciente a la más antigua. El detalle completo de cada una está en `docs/versiones/`.

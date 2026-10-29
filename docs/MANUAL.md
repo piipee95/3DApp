@@ -138,3 +138,8 @@ instalar la app y cerrar sesión.
 - `seguimiento.html#…`: el cliente ve el avance de su pedido (sin montos).
 - `catalogo.html#…`: catálogo de productos visibles con pedido por WhatsApp.
 - `subir.html#…`: el cliente sube sus fotos con el enlace de 48 horas.
+
+
+## Galería y vista previa (V5.3.0)
+
+En Productos, usa el botón de vista para alternar lista y galería. La preferencia permanece en el dispositivo. Toca la foto para consultar costo, precio, margen y stock disponible; Abrir producto lleva a la ficha completa. Cerrar vuelve a la galería. La campana superior reúne los pendientes actuales del taller; el avatar abre el menú de cuenta.

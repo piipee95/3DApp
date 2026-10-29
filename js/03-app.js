@@ -641,7 +641,9 @@ function header(title = PAGE_TITLES[S.mode] || 'KultiApp', actions = '', { back 
         icon('search') +
         '</button>') +
     actions +
-    '</div></header>'
+    '<div class="header-utilities"><button type="button" class="btn icon-btn" data-notifications aria-label="Notificaciones y pendientes" title="Notificaciones y pendientes">' +
+    icon('bell') + '</button><button type="button" class="btn icon-btn header-profile" data-header-profile aria-label="Abrir menú de cuenta" aria-haspopup="dialog">' +
+    userAvatar() + icon('chevron-down') + '</button></div></div></header>'
   );
 }
 function accountMenuItems() {
@@ -746,6 +748,8 @@ function mountShell() {
     menu.hidden = !menu.hidden;
     button.setAttribute('aria-expanded', String(!menu.hidden));
   };
+  q('[data-header-profile]')?.addEventListener('click', showMoreSheet);
+  q('[data-notifications]')?.addEventListener('click', showNotifications);
   q('#moreTab').onclick = showMoreSheet;
   qa('[data-open-search]').forEach(b => (b.onclick = showSearch));
   qa('[data-open-create]').forEach(b => (b.onclick = showCreateMenu));
@@ -757,7 +761,7 @@ document.addEventListener('click', e => {
     if (!d.contains(e.target)) d.open = false;
   });
   const menu = q('#accountMenu');
-  if (menu && !menu.hidden && !e.target.closest('.side-user')) {
+  if (menu && !menu.hidden && !e.target.closest('.side-user,.header-utilities')) {
     menu.hidden = true;
     q('#accountButton')?.setAttribute('aria-expanded', 'false');
   }
