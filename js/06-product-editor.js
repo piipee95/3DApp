@@ -543,6 +543,7 @@ function setupEditor() {
     .join('');
   details.before(nav);
   const feedback = document.createElement('div');
+  feedback.className = 'editor-feedback';
   feedback.setAttribute('aria-live', 'polite');
   feedback.innerHTML = (S.err ? '<div class="error">' + esc(S.err) + '</div>' : '') + '';
   nav.before(feedback);
@@ -555,7 +556,10 @@ function setupEditor() {
     '</b></div><div><span>Precio final / un.</span><b id="quickPrice">' +
     clp(t.rounded) +
     '</b></div>';
-  q('.sticky-actions').prepend(quick);
+  const saveHeading = document.createElement('h2');
+  saveHeading.className = 'save-heading';
+  saveHeading.textContent = 'Resumen del producto';
+  q('.sticky-actions').prepend(saveHeading, quick);
   const select = key => {
     S.editorTab = key;
     qa('[data-panel]').forEach(el => (el.hidden = el.dataset.panel !== key));
@@ -578,7 +582,10 @@ function setupEditor() {
   status.id = 'draftStatus';
   status.className = 'small muted';
   status.setAttribute('role', 'status');
-  nav.after(status);
+  const syncbar = document.createElement('div');
+  syncbar.className = 'editor-syncbar';
+  nav.after(syncbar);
+  syncbar.append(status);
   if (canEdit()) {
     const discard = document.createElement('button');
     discard.type = 'button';
@@ -599,7 +606,7 @@ function setupEditor() {
       if (S.settingsDirty) loadSettings().then(render);
       render();
     };
-    status.after(discard);
+    syncbar.append(discard);
     persistDraft(false);
   }
 }
@@ -940,6 +947,7 @@ function updateSyncStatus() {
   const el = q('#draftStatus');
   if (!el) return;
   if (S.saving) {
+    el.className = 'small sync-saving';
     el.textContent = 'Guardando…';
     return;
   }

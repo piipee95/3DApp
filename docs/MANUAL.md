@@ -143,3 +143,8 @@ instalar la app y cerrar sesión.
 ## Galería y vista previa (V5.3.0)
 
 En Productos, usa el botón de vista para alternar lista y galería. La preferencia permanece en el dispositivo. Toca la foto para consultar costo, precio, margen y stock disponible; Abrir producto lleva a la ficha completa. Cerrar vuelve a la galería. La campana superior reúne los pendientes actuales del taller; el avatar abre el menú de cuenta.
+
+
+## Editor de estudio (V5.3.1)
+
+En pantallas anchas, el costo, precio final y Guardar cambios permanecen a la derecha de las pestañas. En el celular, están en la barra inferior. Los estados distinguen borrador local, guardando y guardado en la nube; cerrar el navegador conserva las reglas de borrador existentes.

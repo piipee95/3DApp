@@ -6027,3 +6027,55 @@ button.sheet-user > svg {
   background: var(--side);
   color: var(--text);
 }
+
+/* Editor de estudio: contextual totals on wide screens, save controls within reach on phones. */
+.editor-feedback:empty { display: none; }
+.editor-syncbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 18px; }
+.editor-syncbar #draftStatus { margin: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--r); }
+.editor-syncbar .sync-cloud { color: var(--green); }
+.editor-syncbar .sync-local { color: var(--yellow); }
+.editor-syncbar .sync-saving { color: var(--cyan); }
+.save-heading { display: none; }
+.editor .price-hero { background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--action); border-radius: var(--r-lg); padding: 24px; }
+.editor .ph-main b { color: var(--text); font-variant-numeric: tabular-nums; }
+.editor .ph-main span { font-weight: 600; }
+.editor .ph-stats { gap: 16px; }
+.editor .form-heading { padding-top: 16px; border-top: 1px solid var(--line); }
+.editor .print-card { border-color: var(--line); box-shadow: none; }
+.editor .editor-tabs .btn { min-height: 44px; }
+.editor .editor-tabs .btn.active { color: var(--action); font-weight: 700; }
+@media (min-width: 1280px) {
+  main.shell.editor { max-width: 1560px; display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 0 24px; align-items: start; }
+  .editor > .editor-feedback { grid-column: 1 / -1; grid-row: 1; }
+  .editor > .editor-tabs { grid-column: 1 / -1; grid-row: 2; margin: -24px -28px 20px; }
+  .editor > .editor-syncbar { grid-column: 1; grid-row: 3; }
+  .editor > [data-panel] { grid-column: 1; grid-row: 4; min-width: 0; margin-top: 0 !important; }
+  .editor > .sticky-actions { grid-column: 2; grid-row: 3 / span 2; position: sticky; top: calc(var(--top-h) + 64px); bottom: auto; display: flex; flex-direction: column; align-items: stretch; margin: 0; padding: 20px; background: var(--surface); box-shadow: none; }
+  .editor .save-heading { display: block; font-size: 16px; margin: 0 0 18px; }
+  .editor .quick-summary { flex-direction: column; gap: 20px; margin: 0 0 20px; padding: 0; }
+  .editor .quick-summary b { font-size: 24px; display: block; margin-top: 4px; }
+  .editor .quick-summary > div:last-child b { color: var(--text); }
+  .editor .sticky-actions #save { order: 2; min-height: 44px; }
+  .editor .sticky-actions #del { order: 3; }
+  .editor [data-panel="details"] > .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .editor [data-panel="costs"].grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 599px) {
+  .editor-syncbar { gap: 4px; }
+  .editor-syncbar .btn { min-height: 44px; font-size: 12px; }
+  .editor .sticky-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .editor .quick-summary { grid-column: 1 / -1; width: 100%; justify-content: space-between; padding: 0; }
+  .editor .sticky-actions #save { grid-column: 1; grid-row: 2; min-height: 44px; }
+  .editor .sticky-actions #del { grid-column: 2; grid-row: 2; min-height: 44px; }
+  .editor .price-hero { padding: 16px; }
+  .editor .ph-stats { gap: 8px; }
+}
+@media (max-width: 959px) {
+  .is-detail .page-top { flex-wrap: nowrap; gap: 8px; height: 64px; min-height: 64px; }
+  .is-detail .page-title { flex: 1; width: auto; font-size: 15px; min-width: 0; }
+  .is-detail .page-actions { flex-wrap: nowrap; flex-shrink: 0; gap: 4px; }
+  .is-detail .editor-tabs { top: 64px; }
+}
+@media (max-width: 959px) {
+  body:has(#app.is-detail) #toasts { bottom: calc(144px + env(safe-area-inset-bottom)); }
+}
